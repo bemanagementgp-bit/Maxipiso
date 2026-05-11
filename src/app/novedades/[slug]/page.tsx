@@ -11,7 +11,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const article = articles.find((a) => a.slug === slug);
   if (!article) notFound();
 
-  const others = articles.filter((a) => a.slug !== params.slug).slice(0, 3);
+  const others = articles.filter((a) => a.slug !== slug).slice(0, 3);
 
   return (
     <div className="min-h-screen bg-white">
