@@ -70,7 +70,7 @@ export default function EmpresaPage() {
             </div>
             <div className="rounded-2xl overflow-hidden shadow-2xl aspect-video w-full">
               <video
-                src="/drone.mp4"
+                src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
                 autoPlay
                 muted
                 loop

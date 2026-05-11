@@ -441,7 +441,7 @@ export default function Home() {
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-          src="/drone.mp4"
+          src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
         />
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20" />
@@ -551,7 +551,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
             <Reveal className="rounded-2xl overflow-hidden shadow-lg aspect-video w-full">
               <video
-                src="/drone.mp4"
+                src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
                 autoPlay
                 muted
                 loop
