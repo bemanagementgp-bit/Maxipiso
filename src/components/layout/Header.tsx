@@ -6,10 +6,7 @@ import Image from "next/image";
 
 const navLinks = [
   { href: "/empresa", label: "Empresa" },
-  { href: "/catalogo", label: "Catálogo" },
-  { href: "/tienda", label: "Tienda" },
   { href: "/novedades", label: "Novedades" },
-  { href: "/distribuidores", label: "Distribuidores" },
 ];
 
 export default function Header() {

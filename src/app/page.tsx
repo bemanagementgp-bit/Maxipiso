@@ -65,7 +65,7 @@ const stats = [
 const features = [
   {
     title: "Importación directa",
-    description: "Importamos directamente de origen para garantizar la mejor calidad y precio del mercado.",
+    description: "Importamos directamente de origen para garantizar la mejor calidad y precio.",
     path: "M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z",
   },
   {
@@ -74,8 +74,8 @@ const features = [
     path: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
   },
   {
-    title: "Precios mayoristas",
-    description: "El mejor precio del mercado por volumen. Competitividad real para tu negocio.",
+    title: "Amplia variedad",
+    description: "+1000 productos en stock, la mayor variedad del mercado.",
     path: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   {
@@ -87,12 +87,12 @@ const features = [
 
 const TICKER_ITEMS = [
   "Importación directa",
-  "+100 distribuidores activos",
-  "24 provincias cubiertas",
+  "+1000 distribuidores activos",
+  "Entregas a todo el país",
   "+60 años de trayectoria",
   "Stock garantizado",
   "El N°1 en Argentina",
-  "Precios mayoristas",
+  "Distribución mayorista",
   "Asesoramiento técnico",
   "5 continentes de importación",
   "La mayor variedad del mercado",
@@ -245,7 +245,7 @@ function GalleryMarquee() {
           La mayor variedad del mercado
         </p>
         <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
-          87+ productos en catálogo
+          +1000 productos en catálogo
         </h2>
       </Reveal>
       <div className="flex gap-3 mb-3 animate-ticker">
@@ -263,15 +263,17 @@ function GalleryMarquee() {
         ))}
       </div>
       <Reveal className="text-center mt-10 px-4">
-        <Link
-          href="/catalogo"
+        <a
+          href="https://maxipiso.com.ar/collections/all"
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-2 border border-[#111111] text-[#111111] text-sm font-semibold px-7 py-3 rounded-full hover:bg-[#111111] hover:text-white transition-colors"
         >
           Ver catálogo completo
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
-        </Link>
+        </a>
       </Reveal>
     </section>
   );
@@ -283,34 +285,43 @@ function CadenaValor() {
   return (
     <section className="py-24 bg-[#F9F8F6]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Reveal className="text-center mb-16">
-          <p className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3">
-            Cómo trabajamos
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
-            Del fabricante a tu negocio,<br />sin intermediarios
-          </h2>
+        {/* Video importación */}
+        <Reveal className="mt-14">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">Importación directa</span>
+              <h3 className="text-2xl md:text-3xl font-bold text-[#111111] leading-tight mb-4">
+                Del fabricante a tu negocio, sin intermediarios
+              </h3>
+              <p className="text-gray-500 leading-relaxed mb-6">
+                Importamos directamente desde los mejores fabricantes de Europa, Asia y América. Eso nos permite ofrecerte el precio más competitivo del mercado con la mayor variedad disponible.
+              </p>
+              <ul className="space-y-3">
+                {["Stock permanente de más de 1.000 productos", "Control de calidad en origen", "Precios de mayorista directo", "Envíos a todo el país con flota propia"].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-gray-600 text-sm">
+                    <span className="w-5 h-5 rounded-full bg-[#DF8635]/15 flex items-center justify-center shrink-0">
+                      <svg className="w-3 h-3 text-[#DF8635]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative rounded-2xl overflow-hidden shadow-xl aspect-video bg-black">
+              <video
+                src="/importacion.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
         </Reveal>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {/* Connecting line (desktop only) */}
-          <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px bg-gradient-to-r from-[#DF8635]/30 via-[#DF8635] to-[#DF8635]/30" />
-          {CADENA.map((item, i) => (
-            <Reveal key={item.step} delay={i * 0.12}>
-              <div className="relative bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow text-center group">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#DF8635]/10 text-[#DF8635] mb-6 group-hover:bg-[#DF8635] group-hover:text-white transition-colors mx-auto">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.path} />
-                  </svg>
-                </div>
-                <span className="absolute top-6 right-6 text-6xl font-black text-gray-50 select-none leading-none">
-                  {item.step}
-                </span>
-                <h3 className="text-xl font-bold text-[#111111] mb-3">{item.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -433,7 +444,7 @@ export default function Home() {
   return (
     <>
       {/* Hero — video background */}
-      <section className="relative overflow-hidden h-[90vh] min-h-[560px] flex items-center">
+      <section className="relative overflow-hidden h-[86vh] min-h-[560px] flex items-center">
         {/* Drone video */}
         <video
           autoPlay
@@ -444,14 +455,14 @@ export default function Home() {
           src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
         />
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent" />
 
-        {/* Sello — esquina superior izquierda, solo desktop */}
+        {/* Sello — esquina superior derecha, solo desktop */}
         <div className="absolute top-8 right-10 z-10 hidden lg:block opacity-90">
           <img
             src="/sello-blanco.gif"
             alt="Maxipiso N°1"
-            className="w-28 drop-shadow-lg"
+            className="w-36 drop-shadow-lg"
           />
         </div>
 

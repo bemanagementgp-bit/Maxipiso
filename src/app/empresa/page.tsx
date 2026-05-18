@@ -60,23 +60,13 @@ export default function EmpresaPage() {
                 Nuestra historia
               </span>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
-                Más de 60 años siendo
+                Más de 30 años siendo
                 <span className="text-[#DF8635]"> el N°1 en Argentina.</span>
               </h1>
               <p className="text-gray-300 text-lg leading-relaxed">
                 Maxipiso nació con una visión clara: acercar los mejores pisos y revestimientos del mundo
                 a distribuidores y profesionales argentinos, con el mejor precio y el mayor stock del país.
               </p>
-            </div>
-            <div className="rounded-2xl overflow-hidden shadow-2xl aspect-video w-full">
-              <video
-                src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover"
-              />
             </div>
           </div>
         </div>
