@@ -7,7 +7,7 @@ import { CATEGORIES } from "@/data/products";
 import { GiWoodPile } from "react-icons/gi";
 import { BsFillGridFill } from "react-icons/bs";
 import { MdLayers, MdDeck } from "react-icons/md";
-import { FaTools } from "react-icons/fa";
+import { FaTools, FaLayerGroup, FaWater } from "react-icons/fa";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -48,11 +48,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Maderas",        href: "/catalogo?categoria=Madera",      Icon: GiWoodPile },
-  { label: "Pisos",          href: "/catalogo?categoria=Porcelanato", Icon: BsFillGridFill },
-  { label: "Revestimientos", href: "/catalogo?categoria=Cerámica",    Icon: MdLayers },
-  { label: "Decks",          href: "/catalogo?categoria=Placas",      Icon: MdDeck },
-  { label: "Accesorios",     href: "/catalogo?categoria=Accesorios",  Icon: FaTools },
+  { label: "Pisos Flotantes", href: "https://maxipiso.com.ar/collections/pisos-flotantes", Icon: BsFillGridFill },
+  { label: "Pisos de Madera", href: "https://maxipiso.com.ar/collections/pisos-de-madera", Icon: GiWoodPile },
+  { label: "Porcelanato",     href: "https://maxipiso.com.ar/collections/porcelanato",     Icon: MdLayers },
+  { label: "Revestimientos",  href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", Icon: FaLayerGroup },
+  { label: "Deck WPC",        href: "https://maxipiso.com.ar/collections/deck-wpc",        Icon: MdDeck },
+  { label: "Pisos Vinílicos", href: "https://maxipiso.com.ar/collections/pisos-vinilicos", Icon: FaWater },
 ];
 
 const stats = [
@@ -311,7 +312,7 @@ function CadenaValor() {
             </div>
             <div className="relative rounded-2xl overflow-hidden shadow-xl aspect-video bg-black">
               <video
-                src="/importacion.mp4"
+                src="https://res.cloudinary.com/dnaom2evd/video/upload/v1779135594/Importacion_qz91dt.mp4"
                 autoPlay
                 muted
                 loop
@@ -490,12 +491,14 @@ export default function Home() {
               className="flex flex-wrap gap-4 animate-fade-up"
               style={{ animationDelay: "0.38s" }}
             >
-              <Link
-                href="/catalogo"
+              <a
+                href="https://maxipiso.com.ar/collections/all"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="bg-[#DF8635] text-white font-semibold px-8 py-3.5 rounded-full hover:bg-[#c97220] transition-colors text-base"
               >
                 Ver catálogo
-              </Link>
+              </a>
               <a
                 href="https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
                 target="_blank"
@@ -517,33 +520,67 @@ export default function Home() {
       <Ticker />
 
       {/* Líneas de producto */}
-      <section className="bg-[#DF8635] py-16">
+      <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          <Reveal className="text-center mb-12">
+            <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3 block">Catálogo</span>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
               Nuestras líneas de producto
             </h2>
-            <p className="text-white/70 text-lg">
+            <p className="text-gray-400 text-lg mt-3">
               La mayor variedad en importación, en un solo lugar
             </p>
           </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {lineas.map(({ label, href, Icon }, i) => (
-              <Reveal key={label} delay={i * 0.07}>
-                <Link
+              <Reveal key={label} delay={i * 0.08}>
+                <a
                   href={href}
-                  className="group bg-white/10 hover:bg-white rounded-2xl p-6 text-center transition-all border border-white/20 hover:border-transparent hover:shadow-lg block"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative overflow-hidden rounded-xl bg-[#DF8635] border border-[#DF8635] hover:border-[#c97220] transition-all duration-400 hover:shadow-[0_0_30px_rgba(223,134,53,0.35)] hover:bg-[#c97220] block aspect-[4/3]"
                 >
-                  <div className="flex justify-center mb-3 text-white group-hover:text-[#DF8635] transition-colors">
-                    <Icon size={36} />
+                  {/* Barra blanca inferior que se desliza */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-out" />
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4">
+                    {/* Ícono */}
+                    <div className="text-white/60 group-hover:text-white transition-all duration-300 group-hover:scale-110 transform">
+                      <Icon size={32} />
+                    </div>
+
+                    {/* Label */}
+                    <p className="font-bold text-white text-center text-sm leading-tight group-hover:-translate-y-1 transition-transform duration-300">
+                      {label}
+                    </p>
+
+                    {/* CTA que aparece en hover */}
+                    <div className="flex items-center gap-1 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                      Ver colección
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
+                    </div>
                   </div>
-                  <p className="font-semibold text-white group-hover:text-[#111111] transition-colors text-sm">
-                    {label}
-                  </p>
-                </Link>
+                </a>
               </Reveal>
             ))}
           </div>
+
+          {/* Link al catálogo completo */}
+          <Reveal className="text-center mt-10">
+            <a
+              href="https://maxipiso.com.ar/collections/all"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all duration-300"
+            >
+              Ver catálogo completo
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </a>
+          </Reveal>
         </div>
       </section>
 

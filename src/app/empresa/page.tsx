@@ -1,4 +1,51 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, inView };
+}
+
+function StatCard({ target, suffix, label, active, delay }: { target: number; suffix: string; label: string; active: boolean; delay: number }) {
+  const count = useCounter(target, active, 2000, delay);
+  return (
+    <div
+      className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10 transition-all duration-500"
+      style={{ opacity: active ? 1 : 0, transform: active ? "translateY(0)" : "translateY(20px)", transitionDelay: `${delay}ms` }}
+    >
+      <p className="text-2xl font-bold text-white">{count}{suffix}</p>
+      <p className="text-white/60 text-xs mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function useCounter(target: number, active: boolean, duration = 1800, delay = 0) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    let raf: number;
+    const timer = setTimeout(() => {
+      const start = performance.now();
+      function tick(now: number) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setVal(Math.round(eased * target));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      }
+      raf = requestAnimationFrame(tick);
+    }, delay);
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, [target, active, duration, delay]);
+  return val;
+}
 
 const valores = [
   {
@@ -47,32 +94,62 @@ const hitos = [
 ];
 
 export default function EmpresaPage() {
+  const hero = useInView(0.1);
+  const flota = useInView(0.1);
+  const valores_ = useInView(0.1);
+
   return (
     <div className="min-h-screen bg-white">
 
       {/* Hero */}
-      <div className="bg-[#111111] text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="bg-[#111111] text-white overflow-hidden" ref={hero.ref}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[70vh]">
+          {/* Texto — entra desde la izquierda */}
+          <div
+            className="flex items-center px-12 sm:px-16 lg:px-20 py-14 transition-all duration-700 ease-out"
+            style={{
+              opacity: hero.inView ? 1 : 0,
+              transform: hero.inView ? "translateX(0)" : "translateX(-48px)",
+            }}
+          >
             <div>
-              <span className="inline-flex items-center gap-2 text-[#DF8635] text-sm font-semibold uppercase tracking-widest mb-6">
-                <span className="w-8 h-px bg-[#DF8635]" />
+              <span className="inline-flex items-center gap-2 text-[#DF8635] text-xs font-semibold uppercase tracking-widest mb-4">
+                <span className="w-6 h-px bg-[#DF8635]" />
                 Nuestra historia
               </span>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
                 Más de 30 años siendo
                 <span className="text-[#DF8635]"> el N°1 en Argentina.</span>
               </h1>
-              <p className="text-gray-300 text-lg leading-relaxed">
+              <p className="text-gray-400 text-base leading-relaxed">
                 Maxipiso nació con una visión clara: acercar los mejores pisos y revestimientos del mundo
                 a distribuidores y profesionales argentinos, con el mejor precio y el mayor stock del país.
               </p>
             </div>
           </div>
+          {/* Imagen — entra desde la derecha con zoom */}
+          <div
+            className="relative min-h-[340px] lg:min-h-0 overflow-hidden transition-all duration-700 ease-out"
+            style={{
+              opacity: hero.inView ? 1 : 0,
+              transform: hero.inView ? "translateX(0)" : "translateX(48px)",
+              transitionDelay: "150ms",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/equipo.jpg"
+              alt="Equipo Maxipiso"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ease-out"
+              style={{ transform: hero.inView ? "scale(1)" : "scale(1.06)" }}
+            />
+            {/* Shadow de integración — se funde con el lado oscuro del texto */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#111111]/60 via-[#111111]/10 to-transparent" />
+          </div>
         </div>
       </div>
 
-      {/* Equipo + Instagram — combinado */}
+      {/* Equipo + Instagram */}
       <section className="py-16 bg-[#F9F8F6]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -92,7 +169,7 @@ export default function EmpresaPage() {
                     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                   </svg>
                 </div>
-                <span className="text-white text-xs font-semibold drop-shadow">@maxipiso</span>
+                <span className="text-white text-xs font-semibold drop-shadow">@maxipiso.mayorista</span>
               </div>
             </div>
             {/* Texto */}
@@ -104,7 +181,7 @@ export default function EmpresaPage() {
                 Un equipo que mueve al país
               </h2>
               <p className="text-gray-500 leading-relaxed mb-8">
-                Más de 60 años de historia se sostienen gracias a las personas. Logística, equipo y el día a día de Maxipiso. Seguinos en Instagram y enterate de todo lo que pasa en el N°1 de Argentina.
+                Más de 30 años de historia se sostienen gracias a las personas. Logística, equipo y el día a día de Maxipiso. Seguinos en Instagram y enterate de todo lo que pasa en el N°1 de Argentina.
               </p>
               <div className="flex gap-10 mb-10">
                 {[
@@ -119,7 +196,7 @@ export default function EmpresaPage() {
                 ))}
               </div>
               <a
-                href="https://www.instagram.com/maxipiso"
+                href="https://www.instagram.com/maxipiso.mayorista"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-3 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white font-semibold px-6 py-3 rounded-full hover:opacity-90 transition-opacity"
@@ -134,44 +211,78 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-      {/* Logística propia */}
-      <section className="py-16 bg-[#111111]">
+      {/* Distribución nacional */}
+      <section className="py-20 bg-[#111111] overflow-hidden" ref={flota.ref}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            {/* Foto flota */}
-            <div className="relative h-[420px] lg:h-[480px] overflow-hidden rounded-2xl">
+
+            {/* Foto flota con stats encima */}
+            <div
+              className="relative h-[460px] lg:h-[520px] overflow-hidden rounded-2xl transition-all duration-700 ease-out"
+              style={{
+                opacity: flota.inView ? 1 : 0,
+                transform: flota.inView ? "translateX(0) scale(1)" : "translateX(-60px) scale(0.97)",
+              }}
+            >
               <img
                 src="/flota.jpg"
                 alt="Flota de camiones Maxipiso"
                 className="w-full h-full object-cover"
+                style={{
+                  transform: flota.inView ? "scale(1)" : "scale(1.08)",
+                  transition: "transform 1.2s cubic-bezier(0.22,1,0.36,1)",
+                }}
               />
-              <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+              {/* Stats flotantes sobre la imagen */}
+              <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-3">
+                <StatCard target={24}   suffix=""  label="provincias"          active={flota.inView} delay={500} />
+                <StatCard target={60}   suffix="+" label="años de trayectoria" active={flota.inView} delay={620} />
+                <StatCard target={1300} suffix="+" label="clientes activos"    active={flota.inView} delay={740} />
+              </div>
             </div>
+
             {/* Texto */}
-            <div className="flex flex-col justify-center px-8 py-16 lg:px-16">
-              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">
-                Distribución nacional
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
-                Flota propia.<br />Llegamos a donde estés.
+            <div
+              className="flex flex-col justify-center transition-all duration-700 ease-out"
+              style={{
+                opacity: flota.inView ? 1 : 0,
+                transform: flota.inView ? "translateX(0)" : "translateX(60px)",
+                transitionDelay: "150ms",
+              }}
+            >
+              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">Logística propia</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-8">
+                Flota propia.<br /> Llegamos a donde estés.
               </h2>
-              <p className="text-gray-400 leading-relaxed mb-8">
+              <p className="text-gray-400 leading-relaxed mb-10 text-lg">
                 Contamos con nuestra propia flota de camiones para garantizar entregas a todo el país. Sin terceros, sin demoras. Desde La Plata hasta la Patagonia, el stock llega donde lo necesitás.
               </p>
-              <ul className="space-y-4">
+
+              <ul className="space-y-5">
                 {[
-                  "Entregas en las 24 provincias",
-                  "Flota propia — sin intermediarios",
-                  "Despacho inmediato desde stock",
-                  "Seguimiento de tu pedido",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-gray-300 text-sm">
-                    <span className="w-5 h-5 rounded-full bg-[#DF8635]/20 flex items-center justify-center shrink-0">
-                      <svg className="w-3 h-3 text-[#DF8635]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  { text: "Entregas en las 24 provincias", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" },
+                  { text: "Flota propia", icon: "M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" },
+                  { text: "Despacho inmediato desde stock", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { text: "Seguimiento de tu pedido", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+                ].map(({ text, icon }, i) => (
+                  <li
+                    key={text}
+                    className="flex items-center gap-4 transition-all duration-500 ease-out"
+                    style={{
+                      opacity: flota.inView ? 1 : 0,
+                      transform: flota.inView ? "translateX(0)" : "translateX(24px)",
+                      transitionDelay: flota.inView ? `${350 + i * 100}ms` : "0ms",
+                    }}
+                  >
+                    <span className="w-10 h-10 rounded-xl bg-[#DF8635]/15 flex items-center justify-center shrink-0 border border-[#DF8635]/20">
+                      <svg className="w-5 h-5 text-[#DF8635]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={icon} />
                       </svg>
                     </span>
-                    {item}
+                    <span className="text-gray-200 font-medium">{text}</span>
                   </li>
                 ))}
               </ul>
@@ -180,23 +291,28 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-
       {/* Nuestros valores */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-[#DF8635]" ref={valores_.ref}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-[#DF8635] text-sm font-semibold uppercase tracking-widest">
+            <span className="text-white/70 text-sm font-semibold uppercase tracking-widest">
               Lo que nos define
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mt-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mt-3">
               Nuestros valores
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {valores.map((v) => (
+            {valores.map((v, i) => (
               <div
                 key={v.titulo}
-                className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-[#DF8635] hover:shadow-md transition-all group"
+                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
+                style={{
+                  opacity: valores_.inView ? 1 : 0,
+                  transform: valores_.inView ? "translateY(0)" : "translateY(32px)",
+                  transition: `opacity 0.5s ease, transform 0.5s ease`,
+                  transitionDelay: valores_.inView ? `${i * 100}ms` : "0ms",
+                }}
               >
                 <div className="w-12 h-12 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635] mb-4 group-hover:bg-[#DF8635] group-hover:text-white transition-colors">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +338,9 @@ export default function EmpresaPage() {
               Una historia de crecimiento
             </h2>
           </div>
-          <div className="max-w-3xl mx-auto">
+
+          {/* Vertical — mobile */}
+          <div className="lg:hidden max-w-xl mx-auto">
             <div className="relative">
               <div className="absolute left-[60px] top-0 bottom-0 w-px bg-[#DF8635]/20" />
               <div className="space-y-8">
@@ -233,13 +351,34 @@ export default function EmpresaPage() {
                     </div>
                     <div className="relative pl-8">
                       <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-[#DF8635] ring-4 ring-gray-50" />
-                      <p className="text-gray-700 leading-relaxed">{h.hecho}</p>
+                      <p className="text-gray-700 text-sm leading-relaxed">{h.hecho}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* Horizontal — desktop */}
+          <div className="hidden lg:block overflow-x-auto pb-4">
+            <div className="relative min-w-[900px]">
+              {/* Línea horizontal */}
+              <div className="absolute top-[52px] left-0 right-0 h-px bg-[#DF8635]/30" />
+              <div className="flex">
+                {hitos.map((h, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center px-3 group">
+                    {/* Año */}
+                    <span className="text-[#DF8635] font-bold text-sm mb-3 block">{h.año}</span>
+                    {/* Punto */}
+                    <div className="w-4 h-4 rounded-full bg-[#DF8635] ring-4 ring-gray-50 z-10 shrink-0 group-hover:scale-125 transition-transform duration-200" />
+                    {/* Texto */}
+                    <p className="text-gray-600 text-xs text-center leading-relaxed mt-4">{h.hecho}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 

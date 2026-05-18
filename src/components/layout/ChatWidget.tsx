@@ -13,7 +13,7 @@ const QUICK_ACTIONS = [
 
 const WELCOME: Message = {
   role: "assistant",
-  content: "¡Hola! Soy el asistente de Maxipiso 👋 Contame qué estás buscando — tipo de ambiente, estilo, m² aproximados — y te oriento con las mejores opciones.",
+  content: "¡Hola! Soy Nacho, tu asesor de Maxipiso 👋 Contame qué estás buscando — tipo de ambiente, estilo, m² aproximados — y te oriento con las mejores opciones.",
 };
 
 export default function ChatWidget() {
@@ -73,22 +73,41 @@ export default function ChatWidget() {
 
   return (
     <>
+      {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 w-[340px] max-h-[540px] flex flex-col rounded-2xl shadow-2xl border border-gray-100 bg-white overflow-hidden">
+        <div
+          className="fixed bottom-28 right-5 z-50 w-[420px] max-h-[640px] flex flex-col rounded-2xl overflow-hidden"
+          style={{
+            boxShadow: "0 8px 40px rgba(223,134,53,0.18), 0 2px 16px rgba(0,0,0,0.18)",
+            border: "1.5px solid rgba(223,134,53,0.18)",
+            background: "#fff",
+          }}
+        >
           {/* Header */}
-          <div className="bg-[#111111] px-4 py-3 flex items-center justify-between shrink-0">
+          <div
+            className="px-4 py-3 flex items-center justify-between shrink-0"
+            style={{ background: "linear-gradient(135deg, #1a1a1a 60%, #2d1a00 100%)" }}
+          >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#DF8635] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                MX
+              {/* Avatar */}
+              <div className="relative shrink-0">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base"
+                  style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)" }}
+                >
+                  N
+                </div>
+                {/* Online dot */}
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-[#1a1a1a] rounded-full" />
               </div>
               <div>
-                <p className="text-white text-sm font-semibold leading-tight">Asistente Maxipiso</p>
-                <p className="text-white/50 text-xs">Respondemos al instante</p>
+                <p className="text-white text-sm font-bold leading-tight">Nacho</p>
+                <p className="text-[#DF8635] text-xs font-medium">Asesor Maxipiso · En línea</p>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="text-white/60 hover:text-white transition-colors p-1"
+              className="text-white/50 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -100,10 +119,21 @@ export default function ChatWidget() {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50">
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+                {m.role === "assistant" && (
+                  <div className="flex items-end gap-2 mb-0.5">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                      style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)" }}
+                    >
+                      N
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-medium">Nacho</span>
+                  </div>
+                )}
                 <div
                   className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     m.role === "user"
-                      ? "bg-[#DF8635] text-white rounded-br-sm"
+                      ? "bg-[#DF8635] text-white rounded-br-sm ml-6"
                       : "bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-sm"
                   }`}
                 >
@@ -141,7 +171,13 @@ export default function ChatWidget() {
             ))}
 
             {loading && (
-              <div className="flex justify-start">
+              <div className="flex items-end gap-2">
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                  style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)" }}
+                >
+                  N
+                </div>
                 <div className="bg-white shadow-sm border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
                   <span className="flex gap-1">
                     {[0, 1, 2].map((i) => (
@@ -165,7 +201,7 @@ export default function ChatWidget() {
                 <button
                   key={q}
                   onClick={() => send(q)}
-                  className="text-xs border border-gray-200 rounded-full px-3 py-1 text-gray-600 hover:border-[#DF8635] hover:text-[#DF8635] transition-colors bg-white"
+                  className="text-xs border border-[#DF8635]/30 rounded-full px-3 py-1 text-[#DF8635] hover:bg-[#DF8635] hover:text-white transition-colors bg-white font-medium"
                 >
                   {q}
                 </button>
@@ -180,14 +216,15 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="Escribí tu consulta..."
+              placeholder="Escribile a Nacho..."
               disabled={loading}
               className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#DF8635] disabled:opacity-50"
             />
             <button
               onClick={() => send()}
               disabled={loading || !input.trim()}
-              className="w-9 h-9 bg-[#DF8635] text-white rounded-xl flex items-center justify-center hover:bg-[#c9782e] transition-colors disabled:opacity-40 shrink-0"
+              className="w-9 h-9 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-40 shrink-0"
+              style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)" }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -199,10 +236,13 @@ export default function ChatWidget() {
 
       {/* Proactive bubble */}
       {bubble && !open && (
-        <div className="fixed bottom-24 right-5 z-50 flex items-end gap-2 animate-fade-up">
-          <div className="relative bg-white text-[#111111] text-sm font-medium px-4 py-3 rounded-2xl rounded-br-sm shadow-lg border border-gray-100 max-w-[220px]">
-            ¡Hola! Estoy listo para ayudarte 👋
-            <div className="absolute -bottom-2 right-4 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45" />
+        <div className="fixed bottom-28 right-5 z-50 flex items-end gap-2 animate-fade-up">
+          <div className="relative bg-white text-[#111111] text-sm font-medium px-4 py-3 rounded-2xl rounded-br-sm max-w-[230px]"
+            style={{ boxShadow: "0 4px 20px rgba(223,134,53,0.2), 0 2px 8px rgba(0,0,0,0.12)" }}>
+            <p className="font-semibold text-[#DF8635] text-xs mb-0.5">Nacho · Asesor Maxipiso</p>
+            Hola, soy Nacho. Estoy listo para ayudarte 👋
+            <div className="absolute -bottom-2 right-4 w-3 h-3 bg-white rotate-45"
+              style={{ boxShadow: "2px 2px 4px rgba(0,0,0,0.06)" }} />
           </div>
           <button
             onClick={() => setBubble(false)}
@@ -217,21 +257,32 @@ export default function ChatWidget() {
       )}
 
       {/* Floating button */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-50 w-14 h-14 bg-[#111111] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#333] transition-colors"
-        aria-label="Abrir chat"
-      >
-        {open ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        )}
-      </button>
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+
+        <button
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Abrir chat"
+          className="relative w-16 h-16 rounded-full text-white flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+          style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)", boxShadow: "0 4px 24px rgba(223,134,53,0.5), 0 2px 8px rgba(0,0,0,0.2)" }}
+        >
+          {/* Pulse ring */}
+          {!open && (
+            <span
+              className="absolute inset-0 rounded-full animate-ping opacity-30"
+              style={{ background: "#DF8635" }}
+            />
+          )}
+          {open ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          )}
+        </button>
+      </div>
     </>
   );
 }
