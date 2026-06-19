@@ -525,7 +525,7 @@ export default function Home() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300"
+                  className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
                   style={{ aspectRatio: "2/5" }}
                 >
                   {/* Foto de fondo */}
@@ -542,9 +542,9 @@ export default function Home() {
                       preserveAspectRatio="none"
                       className="w-full h-full"
                     >
-                      {/* Path extendido más allá del viewBox para evitar pixels en bordes */}
+                      <rect x="-10" y="-10" width="320" height="135" fill="#FAFAF8" />
                       <path
-                        d="M-5,-5 L305,-5 L305,118 Q155,90 -5,210 Z"
+                        d="M-10,125 Q155,90 310,118 L310,-10 L-10,-10 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
