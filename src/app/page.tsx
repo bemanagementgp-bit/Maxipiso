@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CATEGORIES } from "@/data/products";
 import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
-import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiBox, FiDroplet } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiShoppingBag } from "react-icons/fi";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -47,12 +47,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos",         href: "https://maxipiso.com.ar/collections/pisos-flotantes",        img: "/pisos.png",         Icon: FiGrid },
-  { label: "Maderas",       href: "https://maxipiso.com.ar/collections/pisos-de-madera",         img: "/maderas.jpg",       Icon: FiLayers },
-  { label: "Deck WPC",      href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/deck.png",          Icon: FiBox },
-  { label: "Revestimientos",href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiDroplet },
-  { label: "Accesorios",    href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/accesorios.png",    Icon: FiTool },
-  { label: "Otros",         href: "https://maxipiso.com.ar/collections/pisos-vinilicos",         img: "/adhesivos.png",     Icon: FiPackage },
+  { label: "Pisos",          href: "https://maxipiso.com.ar/collections/pisos",                  img: "/pisos.png",         Icon: FiGrid },
+  { label: "Maderas",        href: "https://maxipiso.com.ar/collections/madera",                 img: "/maderas.jpg",       Icon: FiLayers },
+  { label: "Deck WPC",       href: "https://maxipiso.com.ar/collections/deck-exterior",          img: "/deck.png",          Icon: FiSun },
+  { label: "Revestimientos", href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiLayout },
+  { label: "Accesorios",     href: "https://maxipiso.com.ar/collections/accesorios",             img: "/accesorios.png",    Icon: FiTool },
+  { label: "Otros",          href: "https://maxipiso.com.ar/collections/all",                    img: "/adhesivos.png",     Icon: FiShoppingBag },
 ];
 
 const stats = [
@@ -544,8 +544,8 @@ export default function Home() {
                     >
                       {/* Path extendido más allá del viewBox para evitar pixels en bordes */}
                       <path
-                        d="M-5,-5 L305,-5 L305,118 Q155,235 -5,210 Z"
-                        fill="#F5F3F0"
+                        d="M-5,-5 L305,-5 L305,118 Q155,90 -5,210 Z"
+                        fill="#FAFAF8"
                       />
                     </svg>
                   </div>
@@ -556,7 +556,7 @@ export default function Home() {
                       <Icon size={22} strokeWidth={1.5} />
                     </div>
                     <div className="w-5 h-px bg-[#DF8635] my-2.5" />
-                    <p className="font-black text-[#1a1a1a] uppercase text-[10px] leading-snug tracking-[0.1em]">
+                    <p className="font-black text-[#1a1a1a] uppercase text-xs leading-snug tracking-[0.08em]">
                       {label}
                     </p>
                   </div>
@@ -568,7 +568,7 @@ export default function Home() {
           {/* Link al catálogo completo */}
           <Reveal className="text-center mt-10">
             <a
-              href="https://maxipiso.com.ar/collections/"
+              href="https://maxipiso.com.ar/collections/all"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all duration-300"
