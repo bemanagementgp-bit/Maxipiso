@@ -6,8 +6,9 @@ import Link from "next/link";
 import { CATEGORIES } from "@/data/products";
 import { GiWoodPile } from "react-icons/gi";
 import { BsFillGridFill } from "react-icons/bs";
-import { MdLayers, MdDeck } from "react-icons/md";
-import { FaTools, FaLayerGroup, FaWater } from "react-icons/fa";
+import { MdLayers, MdDeck, MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
+import { FaTools, FaLayerGroup, FaWater, FaWhatsapp, FaGlobe } from "react-icons/fa";
+import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings } from "react-icons/fi";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -48,12 +49,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos Flotantes", href: "https://maxipiso.com.ar/collections/pisos-flotantes", Icon: BsFillGridFill },
-  { label: "Pisos de Madera", href: "https://maxipiso.com.ar/collections/pisos-de-madera", Icon: GiWoodPile },
-  { label: "Porcelanato",     href: "https://maxipiso.com.ar/collections/porcelanato",     Icon: MdLayers },
-  { label: "Revestimientos",  href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", Icon: FaLayerGroup },
-  { label: "Deck WPC",        href: "https://maxipiso.com.ar/collections/deck-wpc",        Icon: MdDeck },
-  { label: "Pisos Vinílicos", href: "https://maxipiso.com.ar/collections/pisos-vinilicos", Icon: FaWater },
+  { label: "Pisos",         href: "https://maxipiso.com.ar/collections/pisos-flotantes",        img: "/pisos.png",         Icon: BsFillGridFill },
+  { label: "Maderas",       href: "https://maxipiso.com.ar/collections/pisos-de-madera",         img: "/maderas.jpg",       Icon: GiWoodPile },
+  { label: "Deck WPC",      href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/deck.png",         Icon: MdDeck },
+  { label: "Revestimientos",href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FaLayerGroup },
+  { label: "Accesorios",    href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/accesorios.png",   Icon: FaTools },
+  { label: "Otros",         href: "https://maxipiso.com.ar/collections/pisos-vinilicos",         img: "/adhesivos.png",    Icon: FiPackage },
 ];
 
 const stats = [
@@ -67,22 +68,22 @@ const features = [
   {
     title: "Importación directa",
     description: "Importamos directamente de origen para garantizar la mejor calidad y precio.",
-    path: "M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z",
+    Icon: MdVerifiedUser,
   },
   {
     title: "Cobertura nacional",
     description: "Red de distribuidores en todo el país. Del norte al sur, llegamos donde estés.",
-    path: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
+    Icon: FiMapPin,
   },
   {
     title: "Amplia variedad",
     description: "+1000 productos en stock, la mayor variedad del mercado.",
-    path: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+    Icon: FiPackage,
   },
   {
     title: "Asesoramiento técnico",
     description: "Más de 60 años de experiencia a tu disposición para cada proyecto.",
-    path: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z",
+    Icon: FiSettings,
   },
 ];
 
@@ -128,19 +129,19 @@ const CADENA = [
     step: "01",
     title: "Importación directa",
     desc: "Trabajamos con los mejores fabricantes de Europa, Asia y América. Sin intermediarios, precio de origen.",
-    path: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+    Icon: FaGlobe,
   },
   {
     step: "02",
     title: "Stock permanente",
     desc: "Depósito propio con miles de m² en stock. Disponibilidad inmediata para pedidos de cualquier volumen.",
-    path: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
+    Icon: MdWarehouse,
   },
   {
     step: "03",
     title: "Distribución nacional",
     desc: "24 provincias cubiertas. Red de distribuidores activos en todo el país con despacho garantizado.",
-    path: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4",
+    Icon: MdOutlineLocalShipping,
   },
 ];
 
@@ -265,15 +266,13 @@ function GalleryMarquee() {
       </div>
       <Reveal className="text-center mt-10 px-4">
         <a
-          href="https://maxipiso.com.ar/collections/all"
+          href="https://maxipiso.com.ar/collections/"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 border border-[#111111] text-[#111111] text-sm font-semibold px-7 py-3 rounded-full hover:bg-[#111111] hover:text-white transition-colors"
         >
           Ver catálogo completo
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
+          <FiArrowRight size={16} />
         </a>
       </Reveal>
     </section>
@@ -300,10 +299,8 @@ function CadenaValor() {
               <ul className="space-y-3">
                 {["Stock permanente de más de 1.000 productos", "Control de calidad en origen", "Precios de mayorista directo", "Envíos a todo el país con flota propia"].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-gray-600 text-sm">
-                    <span className="w-5 h-5 rounded-full bg-[#DF8635]/15 flex items-center justify-center shrink-0">
-                      <svg className="w-3 h-3 text-[#DF8635]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                      </svg>
+                    <span className="w-5 h-5 rounded-full bg-[#DF8635]/15 flex items-center justify-center shrink-0 text-[#DF8635]">
+                      <FiCheck size={12} strokeWidth={3} />
                     </span>
                     {item}
                   </li>
@@ -358,20 +355,16 @@ function ContactSection() {
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635] shrink-0">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
+                  <FaWhatsapp size={20} />
                 </div>
                 <div>
                   <p className="font-semibold text-[#111111]">WhatsApp</p>
-                  <a href="https://wa.me/542214400536" target="_blank" rel="noopener noreferrer" className="text-[#DF8635] hover:underline">+54 221 440-0536</a>
+                  <a href="https://wa.me/5422143888894" target="_blank" rel="noopener noreferrer" className="text-[#DF8635] hover:underline">+54 221 438-8894</a>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635] shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <FiMail size={20} />
                 </div>
                 <div>
                   <p className="font-semibold text-[#111111]">Email de ventas</p>
@@ -386,10 +379,8 @@ function ContactSection() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
               {status === "success" ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
+                    <FiCheck size={32} strokeWidth={2.5} />
                   </div>
                   <h3 className="text-xl font-bold text-[#111111] mb-2">¡Mensaje enviado!</h3>
                   <p className="text-gray-500 mb-6">Te contactaremos a la brevedad.</p>
@@ -453,7 +444,7 @@ export default function Home() {
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-          src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
+          src="https://res.cloudinary.com/dnaom2evd/video/upload/v1778512357/drone_lgjdsd.mp4"
         />
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent" />
@@ -492,7 +483,7 @@ export default function Home() {
               style={{ animationDelay: "0.38s" }}
             >
               <a
-                href="https://maxipiso.com.ar/collections/all"
+                href="https://maxipiso.com.ar/collections/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#DF8635] text-white font-semibold px-8 py-3.5 rounded-full hover:bg-[#c97220] transition-colors text-base"
@@ -500,14 +491,12 @@ export default function Home() {
                 Ver catálogo
               </a>
               <a
-                href="https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+                href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="border-2 border-white text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white hover:text-[#111111] transition-colors text-base flex items-center gap-2"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                </svg>
+                <FaWhatsapp size={20} />
                 Contactar Asesor
               </a>
             </div>
@@ -521,7 +510,7 @@ export default function Home() {
 
       {/* Líneas de producto */}
       <section className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[104rem] mx-auto px-4 sm:px-6 lg:px-6">
           <Reveal className="text-center mb-12">
             <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3 block">Catálogo</span>
             <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
@@ -531,35 +520,48 @@ export default function Home() {
               La mayor variedad en importación, en un solo lugar
             </p>
           </Reveal>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {lineas.map(({ label, href, Icon }, i) => (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {lineas.map(({ label, href, img, Icon }, i) => (
               <Reveal key={label} delay={i * 0.08}>
                 <a
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-xl bg-[#DF8635] border border-[#DF8635] hover:border-[#c97220] transition-all duration-400 hover:shadow-[0_0_30px_rgba(223,134,53,0.35)] hover:bg-[#c97220] block aspect-[4/3]"
+                  className="group relative overflow-hidden rounded-xl border border-transparent hover:border-[#DF8635] transition-all duration-400 block aspect-[4/3.9]"
                 >
-                  {/* Barra blanca inferior que se desliza */}
-                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-out" />
+                  {/* Background image */}
+                  <img
+                    src={img}
+                    alt={label}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
 
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4">
+                  {/* Overlay solo para Pisos */}
+                  {label === "Pisos" && (
+                    <div className="absolute inset-0 bg-black/30" />
+                  )}
+
+                  {/* Gradiente inferior para legibilidad del texto */}
+                  <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/60 to-transparent" />
+
+                  {/* Orange bottom accent bar */}
+                  <div className="absolute bottom-0  left-0 right-0 h-[3px] bg-[#DF8635] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-out" />
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4 translate-y-[20%]">
                     {/* Ícono */}
-                    <div className="text-white/60 group-hover:text-white transition-all duration-300 group-hover:scale-110 transform">
-                      <Icon size={32} />
+                    <div className="text-white/80 group-hover:text-[#DF8635] transition-colors duration-300">
+                      <Icon size={30} />
                     </div>
 
                     {/* Label */}
-                    <p className="font-bold text-white text-center text-sm leading-tight group-hover:-translate-y-1 transition-transform duration-300">
+                    <p className="font-bold text-white text-center text-base leading-tight group-hover:-translate-y-1 transition-transform duration-300">
                       {label}
                     </p>
 
                     {/* CTA que aparece en hover */}
-                    <div className="flex items-center gap-1 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                    <div className="flex items-center gap-1 text-[#DF8635] text-sm font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                       Ver colección
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                      </svg>
+                      <FiArrowRight size={16} />
                     </div>
                   </div>
                 </a>
@@ -570,15 +572,13 @@ export default function Home() {
           {/* Link al catálogo completo */}
           <Reveal className="text-center mt-10">
             <a
-              href="https://maxipiso.com.ar/collections/all"
+              href="https://maxipiso.com.ar/collections/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all duration-300"
             >
               Ver catálogo completo
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+              <FiArrowRight size={16} />
             </a>
           </Reveal>
         </div>
@@ -599,7 +599,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
             <Reveal className="rounded-2xl overflow-hidden shadow-lg aspect-video w-full">
               <video
-                src="https://res.cloudinary.com/dnaom2evd/video/upload/drone_lgjdsd.mp4"
+                src="https://res.cloudinary.com/dnaom2evd/video/upload/v1778512357/drone_lgjdsd.mp4"
                 autoPlay
                 muted
                 loop
@@ -624,9 +624,7 @@ export default function Home() {
                   <Reveal key={f.title} delay={i * 0.08}>
                     <div className="flex gap-4 items-start group">
                       <div className="shrink-0 w-11 h-11 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635] group-hover:bg-[#DF8635] group-hover:text-white transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={f.path} />
-                        </svg>
+                        <f.Icon size={20} />
                       </div>
                       <div>
                         <h3 className="font-bold text-[#111111] mb-1">{f.title}</h3>
@@ -643,9 +641,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 bg-[#111111] text-white font-semibold px-7 py-3 rounded-full hover:bg-[#333] transition-colors"
                 >
                   Conocé nuestra empresa
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
+                  <FiArrowRight size={16} />
                 </Link>
               </Reveal>
             </div>

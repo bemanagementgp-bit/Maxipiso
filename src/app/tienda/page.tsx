@@ -27,7 +27,7 @@ const MOCK_PRICES: Record<string, { price: number; original?: number; mlUrl: str
   "compact-city":          { price: 27000, mlUrl: "#" },
 };
 
-const WA_BASE = "https://wa.me/542214400536?text=";
+const WA_BASE = "https://wa.me/5422143888894?text=";
 
 function fmtPrice(n: number) {
   return "$ " + n.toLocaleString("es-AR");
@@ -36,11 +36,11 @@ function fmtPrice(n: number) {
 type SortOption = "relevancia" | "precio-asc" | "precio-desc";
 
 const categoryLabel: Record<Category, string> = {
-  Porcelanato: "Pisos",
+  Porcelanato: "Pisos Flotantes",
   Cerámica: "Revestimientos",
-  Madera: "Maderas",
-  Placas: "Decks",
-  Accesorios: "Accesorios",
+  Madera: "Pisos de Madera",
+  Placas: "Deck WPC",
+  Accesorios: "Pisos Vinílicos",
 };
 
 export default function TiendaPage() {

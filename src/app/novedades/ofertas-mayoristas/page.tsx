@@ -76,7 +76,7 @@ const categorias = [
   { label: "Revestimientos",   href: "https://maxipiso.com.ar/collections/revestimiento-de-pared",     badge: "Oferta" },
 ];
 
-const WA_OFERTAS = "https://wa.me/542214400536?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";
+const WA_OFERTAS = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";
 
 export default function OfertasMayoristasPage() {
   const stats  = useInView(0.2);
@@ -136,7 +136,7 @@ export default function OfertasMayoristasPage() {
 
             <div className="flex flex-wrap gap-4">
               <a
-                href="https://maxipiso.com.ar/collections/all"
+                href="https://maxipiso.com.ar/collections/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-3 bg-[#DF8635] text-white font-bold px-8 py-4 rounded-full hover:bg-[#c97220] transition-colors text-base shadow-lg shadow-[#DF8635]/20"
@@ -244,7 +244,7 @@ export default function OfertasMayoristasPage() {
           </div>
           <div className="text-center mt-10">
             <a
-              href="https://maxipiso.com.ar/collections/all"
+              href="https://maxipiso.com.ar/collections/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 border border-white/20 text-white/60 hover:text-white hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all"
@@ -276,7 +276,7 @@ export default function OfertasMayoristasPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a
-                href="https://maxipiso.com.ar/collections/all"
+                href="https://maxipiso.com.ar/collections/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white text-[#DF8635] font-bold px-8 py-4 rounded-full hover:bg-gray-100 transition-colors"

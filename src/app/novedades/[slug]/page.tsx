@@ -65,7 +65,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <h3 className="text-2xl font-bold text-white mb-3">¿Querés más información?</h3>
           <p className="text-gray-400 mb-6">Consultá con nuestros asesores sobre este y otros productos Maxipiso.</p>
           <a
-            href="https://wa.me/542214400536"
+            href="https://wa.me/5422143888894"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-[#DF8635] text-white font-semibold px-8 py-3 rounded-full hover:bg-[#c97220] transition-colors"

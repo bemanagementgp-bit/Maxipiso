@@ -1,0 +1,161 @@
+// This is your Prisma schema file for MaxiPiso Admin Panel
+// Database: Turso (libSQL / SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String?
+  passwordHash       String
+  role               UserRole @default(VIEWER)
+
+  // Seguridad: lockout por intentos fallidos
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+  passwordChangedAt  DateTime  @default(now())
+  mustChangePassword Boolean   @default(false)
+
+  // 2FA TOTP
+  totpSecret         String?   // base32, cifrado idealmente
+  totpEnabled        Boolean   @default(false)
+  totpBackupCodes    String?   // JSON array de hashes bcrypt de códigos de recuperación
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  changeLogs         ChangeLog[]
+  sessions           Session[]
+  authEvents         AuthEvent[]
+
+  @@map("users")
+}
+
+// Product Model
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  nombre        String
+  marca         String
+  descripcion   String?
+  precio        Float
+  imagen        String?
+  categoria     String?  // Pisos | Maderas | Decks | Revestimientos | Accesorios | Otros
+  subcategoria  String?  // subcategoría específica según la categoría
+  destacado     Boolean  @default(false)
+  specs         String?  // JSON con atributos extra (origen, espesores, medidas, secado, etc.)
+  unidadMedida  String?  // p2 | m2 | ml | unidad | etc.
+  moneda        String?  // USD | ARS
+  stock         Int?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  imagenes      ImagenProducto[]
+  changeLogs    ChangeLog[]
+
+  @@index([sku])
+  @@index([nombre])
+  @@index([isActive])
+  @@index([categoria])
+  @@map("products")
+}
+
+// Change Log Model
+model ChangeLog {
+  id            String         @id @default(cuid())
+  productId     String
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  usuarioId     String
+  usuario       User           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  campo         String
+  valorAnterior String?
+  valorNuevo    String?
+  tipo          ChangeType
+  fechaCambio   DateTime       @default(now())
+
+  @@index([productId])
+  @@index([usuarioId])
+  @@index([fechaCambio])
+  @@map("change_logs")
+}
+
+// Imagen Producto Model
+model ImagenProducto {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  url           String
+  nombre        String?
+  fechaCarga    DateTime @default(now())
+
+  @@index([productId])
+  @@map("imagenes_productos")
+}
+
+// Session Model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@map("sessions")
+}
+
+// ==================== ENUMS ====================
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+enum ChangeType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum AuthEventType {
+  LOGIN_OK
+  LOGIN_FAIL
+  LOGOUT
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET_COMPLETED
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  ROLE_CHANGED
+  TOTP_ENABLED
+  TOTP_DISABLED
+  TOTP_FAIL
+}
+
+// Auditoría de eventos de seguridad
+model AuthEvent {
+  id        String        @id @default(cuid())
+  type      AuthEventType
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email     String?
+  ip        String?
+  userAgent String?
+  metadata  String?       // JSON con contexto adicional
+  createdAt DateTime      @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("auth_events")
+}

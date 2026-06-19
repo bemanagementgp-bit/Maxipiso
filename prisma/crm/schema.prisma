@@ -1,0 +1,56 @@
+// Prisma schema dedicado al CRM (clientes + interacciones del chat).
+// Motor: PostgreSQL (Neon). Convive con el schema principal de productos (Turso/SQLite).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/crm-client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("CRM_DATABASE_URL")
+  directUrl = env("CRM_DIRECT_URL")
+}
+
+enum EstadoCrm {
+  NUEVO
+  EN_CONTACTO
+  COMPRO
+  DESCARTADO
+}
+
+model Cliente {
+  id                   String    @id @default(uuid()) @db.Uuid
+  nombre               String    @db.VarChar(150)
+  email                String?   @unique @db.VarChar(150)
+  telefono             String    @db.VarChar(30)
+  telefonoNormalizado  String    @unique @map("telefono_normalizado") @db.VarChar(30)
+  estadoCrm            EstadoCrm @default(NUEVO) @map("estado_crm")
+  notasInternas        String?   @map("notas_internas") @db.Text
+
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt      @map("updated_at") @db.Timestamptz(6)
+
+  interacciones        InteraccionChat[]
+
+  @@index([estadoCrm])
+  @@index([createdAt])
+  @@map("clientes")
+}
+
+model InteraccionChat {
+  id              String   @id @default(uuid()) @db.Uuid
+  clienteId       String   @map("cliente_id") @db.Uuid
+  cliente         Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  urlOrigen       String?  @map("url_origen")       @db.VarChar(512)
+  mensajeInicial  String?  @map("mensaje_inicial")  @db.Text
+  userAgent       String?  @map("user_agent")       @db.VarChar(255)
+  ipHash          String?  @map("ip_hash")          @db.VarChar(64)
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([clienteId])
+  @@index([createdAt])
+  @@map("interacciones_chat")
+}

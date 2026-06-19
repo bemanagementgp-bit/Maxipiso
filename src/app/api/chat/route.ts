@@ -1,7 +1,14 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { sanitizeText, verifyOrigin } from "@/lib/security";
+import { hashIp, normalizePhone, upsertLeadAndInteraction } from "@/lib/crm";
 
-const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const runtime = "nodejs";
+
+const apiKey = process.env.GROQ_API_KEY;
+const client = apiKey ? new Groq({ apiKey }) : null;
 
 const SYSTEM = `Sos Nacho, el asistente comercial virtual de Maxipiso Mayorista, el N°1 en Argentina en importación y distribución de pisos, maderas y revestimientos, con más de 60 años en el mercado. Tu nombre es Nacho y así te presentás siempre.
 
@@ -106,39 +113,167 @@ Recopilar datos de forma progresiva. No hacer muchas preguntas juntas. Lógica: 
 Siempre JSON puro, sin texto extra afuera. Tres casos:
 
 Normal: { "reply": "...", "waText": null, "storeUrl": false }
-Derivar a tienda online: { "reply": "¡Perfecto! Podés ver el catálogo completo en nuestra tienda online 🛒", "waText": null, "storeUrl": true }
-Derivar a asesor: { "reply": "Perfecto, te conecto con un asesor que te da precio y disponibilidad enseguida 👌", "waText": "...", "storeUrl": false }
+Derivar a tienda online: { "reply": "¡Perfecto! Podés ver el catálogo completo en nuestra tienda online 🛒", "waText": null, "storeUrl": true, "lead": {} }
+Derivar a asesor: { "reply": "Perfecto, te conecto con un asesor que te da precio y disponibilidad enseguida 👌", "waText": "...", "storeUrl": false, "lead": { "nombre": "...", "email": "...", "telefono": "..." } }
 
 El waText debe sonar como si lo escribiera el cliente e incluir TODO el contexto recopilado: tipo de cliente, producto, m², localidad, uso/destino, urgencia y cualquier detalle relevante. Cerrar siempre con "¿Pueden asesorarme?".
-Incluir al inicio del waText si es consumidor final: "[CONSUMIDOR FINAL]" para que el vendedor lo identifique.`;
+Incluir al inicio del waText si es consumidor final: "[CONSUMIDOR FINAL]" para que el vendedor lo identifique.
 
-const WA_BASE = "https://wa.me/542214400536?text=";
+━━ EXTRACCIÓN DE DATOS DEL LEAD ('lead' en el JSON) ━━
+En TODA respuesta incluí el objeto 'lead' con cualquier dato personal que el usuario haya mencionado en CUALQUIER mensaje previo de la conversación:
+- nombre: si dijo "me llamo X", "soy X", "mi nombre es X", etc.
+- email: si dijo un email válido.
+- telefono: si dijo un número de WhatsApp/teléfono (con o sin +54, con o sin código de área).
+Si un campo no fue mencionado, omitilo o pone null. NO inventes datos. Estos datos los usamos para pre-llenar el formulario y registrar el lead en el CRM.
+
+━━ OBJETIVO COMERCIAL PRIORITARIO ━━
+Tu meta SIEMPRE es conducir la conversación hacia la derivación al asesor por WhatsApp. NO seas pesado ni insistas, pero:
+- Respondé la duda concreta del cliente primero (información útil, breve).
+- Cerrá cada respuesta con una micro-pregunta o invitación que avance hacia la derivación (ej: "¿Te paso opciones concretas con precio?", "¿Querés que un asesor te confirme stock y te envíe ficha técnica?").
+- A los 2-3 mensajes útiles, si el usuario sigue interesado, derivá con waText (devolvé 'waText' lleno). El formulario previo al WhatsApp se muestra solo, vos no lo menciones explícitamente.
+- Evitá respuestas largas que cierren la conversación sin pregunta de seguimiento.
+- Si el usuario pregunta algo genérico ("qué tipos de pisos tienen"), respondé corto y terminá con: "¿Para qué ambiente lo necesitás?" o similar.
+
+NUNCA derives sin contexto. Antes del waText asegurate de tener al menos: tipo de cliente o uso, producto de interés, y un dato concreto más (m², localidad, urgencia).`;
+
+const WA_BASE = "https://wa.me/542214388894?text=";
+
+const EMAIL_RE = /^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
+
+/** Sanitiza y valida los campos opcionales de 'lead' que devuelve el LLM. */
+function extractLead(raw: unknown): {
+  nombre: string | null;
+  email: string | null;
+  telefono: string | null;
+} {
+  const empty = { nombre: null, email: null, telefono: null };
+  if (!raw || typeof raw !== "object") return empty;
+  const obj = raw as Record<string, unknown>;
+
+  const nombreRaw = typeof obj.nombre === "string" ? sanitizeText(obj.nombre, 150) : "";
+  const emailRaw = typeof obj.email === "string" ? sanitizeText(obj.email, 150).toLowerCase() : "";
+  const telefonoRaw = typeof obj.telefono === "string" ? sanitizeText(obj.telefono, 30) : "";
+
+  return {
+    nombre: nombreRaw.length >= 2 ? nombreRaw : null,
+    email: emailRaw.length > 0 && EMAIL_RE.test(emailRaw) ? emailRaw : null,
+    telefono: normalizePhone(telefonoRaw).length >= 8 ? telefonoRaw : null,
+  };
+}
+
+const MessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string().min(1).max(2000),
+});
+
+const BodySchema = z.object({
+  messages: z.array(MessageSchema).min(1).max(30),
+});
 
 export async function POST(req: NextRequest) {
-  const { messages } = await req.json();
+  const originErr = verifyOrigin(req);
+  if (originErr) return originErr;
+
+  const rateErr = enforceRateLimit(req, {
+    key: "chat",
+    limit: 20,
+    windowMs: 60 * 1000,
+  });
+  if (rateErr) return rateErr;
+
+  if (!client) {
+    return NextResponse.json({ error: "Servicio no disponible" }, { status: 503 });
+  }
+
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
+  }
+
+  const parsed = BodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  // Ignoramos cualquier mensaje 'system' del cliente (anti prompt-injection del rol)
+  const safeMessages = parsed.data.messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({
+      role: m.role,
+      content: sanitizeText(m.content, 2000),
+    }));
 
   try {
     const response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       max_tokens: 400,
       response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: SYSTEM },
-        ...messages.map((m: { role: string; content: string }) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      ],
+      messages: [{ role: "system", content: SYSTEM }, ...safeMessages],
     });
 
-    const raw = response.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw);
-    const waUrl = parsed.waText ? WA_BASE + encodeURIComponent(parsed.waText) : null;
-    const storeUrl = parsed.storeUrl ? "/tienda" : null;
+    const rawReply = response.choices[0]?.message?.content ?? "{}";
+    let parsedReply: {
+      reply?: unknown;
+      waText?: unknown;
+      storeUrl?: unknown;
+      lead?: unknown;
+    } = {};
+    try {
+      parsedReply = JSON.parse(rawReply);
+    } catch {
+      parsedReply = {};
+    }
 
-    return NextResponse.json({ reply: parsed.reply ?? "", waUrl, storeUrl });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Error al procesar tu consulta";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const reply = sanitizeText(parsedReply.reply ?? "", 2000);
+    const waText =
+      typeof parsedReply.waText === "string" && parsedReply.waText.length > 0
+        ? sanitizeText(parsedReply.waText, 1500)
+        : null;
+    const storeUrl = parsedReply.storeUrl === true ? "/tienda" : null;
+
+    const waUrl = waText ? WA_BASE + encodeURIComponent(waText) : null;
+
+    // Extracción de datos del lead que Nacho identifica progresivamente.
+    const leadExtracted = extractLead(parsedReply.lead);
+
+    // Si ya tenemos teléfono + nombre, persistimos el lead silenciosamente.
+    // El formulario previo al WhatsApp sigue mostrándose como confirmación,
+    // pero el dato ya queda en el CRM.
+    if (
+      process.env.CRM_DATABASE_URL &&
+      leadExtracted.telefono &&
+      leadExtracted.nombre &&
+      normalizePhone(leadExtracted.telefono).length >= 8
+    ) {
+      const lastUserMsg = [...safeMessages].reverse().find((m) => m.role === "user");
+      try {
+        await upsertLeadAndInteraction({
+          nombre: leadExtracted.nombre,
+          telefono: leadExtracted.telefono,
+          email: leadExtracted.email,
+          urlOrigen: sanitizeText(req.headers.get("referer") ?? "", 512) || null,
+          mensajeInicial: lastUserMsg?.content ?? null,
+          userAgent: sanitizeText(req.headers.get("user-agent") ?? "", 255) || null,
+          ipHash: hashIp(getClientIp(req)),
+        });
+      } catch (err) {
+        console.error("[chat] upsert lead fail:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    return NextResponse.json({
+      reply,
+      waUrl,
+      storeUrl,
+      lead: leadExtracted,
+    });
+  } catch (err) {
+    console.error("[chat] error:", err instanceof Error ? err.message : err);
+    return NextResponse.json(
+      { error: "Error al procesar tu consulta" },
+      { status: 502 },
+    );
   }
 }

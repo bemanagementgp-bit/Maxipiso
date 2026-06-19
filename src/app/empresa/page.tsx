@@ -234,14 +234,7 @@ export default function EmpresaPage() {
                   transition: "transform 1.2s cubic-bezier(0.22,1,0.36,1)",
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-              {/* Stats flotantes sobre la imagen */}
-              <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-3">
-                <StatCard target={24}   suffix=""  label="provincias"          active={flota.inView} delay={500} />
-                <StatCard target={60}   suffix="+" label="años de trayectoria" active={flota.inView} delay={620} />
-                <StatCard target={1300} suffix="+" label="clientes activos"    active={flota.inView} delay={740} />
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             </div>
 
             {/* Texto */}
@@ -399,7 +392,7 @@ export default function EmpresaPage() {
               Quiero ser distribuidor
             </Link>
             <a
-              href="https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20Maxipiso"
+              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="border border-white/30 text-white font-semibold px-8 py-3 rounded-full hover:bg-white/10 transition-colors flex items-center gap-2"

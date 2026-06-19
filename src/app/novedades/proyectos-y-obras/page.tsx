@@ -95,7 +95,7 @@ const proyectos = [
   },
 ];
 
-const WA_OBRAS = "https://wa.me/542214400536?text=Hola%2C%20tengo%20un%20proyecto%20de%20obra%20y%20quiero%20solicitar%20un%20presupuesto%20de%20Maxipiso";
+const WA_OBRAS = "https://wa.me/5422143888894?text=Hola%2C%20tengo%20un%20proyecto%20de%20obra%20y%20quiero%20solicitar%20un%20presupuesto%20de%20Maxipiso";
 
 export default function ProyectosObrasPage() {
   const stats = useInView(0.2);
@@ -153,7 +153,7 @@ export default function ProyectosObrasPage() {
                 Solicitar presupuesto
               </a>
               <a
-                href="https://maxipiso.com.ar/collections/all"
+                href="https://maxipiso.com.ar/collections/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 border border-white/20 text-white font-semibold px-8 py-4 rounded-full hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"

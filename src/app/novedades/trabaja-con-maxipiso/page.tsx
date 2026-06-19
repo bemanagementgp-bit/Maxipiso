@@ -104,7 +104,7 @@ const lineas = [
   { label: "Pisos Vinílicos", href: "https://maxipiso.com.ar/collections/pisos-vinilicos" },
 ];
 
-const WA_URL = "https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";
+const WA_URL = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";
 
 export default function TrabajaConMaxipisoPage() {
   const stats = useInView(0.2);
@@ -144,7 +144,7 @@ export default function TrabajaConMaxipisoPage() {
                 Quiero ser distribuidor
               </a>
               <a
-                href="https://maxipiso.com.ar/collections/all"
+                href="https://maxipiso.com.ar/collections/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 border border-white/20 text-white font-semibold px-8 py-4 rounded-full hover:border-[#DF8635] hover:text-[#DF8635] transition-colors text-base"
@@ -284,7 +284,7 @@ export default function TrabajaConMaxipisoPage() {
           </div>
           <div className="text-center mt-10">
             <a
-              href="https://maxipiso.com.ar/collections/all"
+              href="https://maxipiso.com.ar/collections/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 border border-gray-300 text-gray-600 hover:border-[#DF8635] hover:text-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all"

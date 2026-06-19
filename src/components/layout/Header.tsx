@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 const navLinks = [
+  { href: "https://maxipiso.com.ar/collections/", label: "Catálogo" },
   { href: "/empresa", label: "Empresa" },
   { href: "/novedades", label: "Novedades" },
 ];
@@ -38,7 +39,7 @@ export default function Header() {
               </Link>
             ))}
             <a
-              href="https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#DF8635] text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-[#c97220] transition-colors"
@@ -81,7 +82,7 @@ export default function Header() {
               </Link>
             ))}
             <a
-              href="https://wa.me/542214400536?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#DF8635] text-white font-semibold px-5 py-2 rounded-full text-center hover:bg-[#c97220] transition-colors"
