@@ -528,23 +528,24 @@ export default function Home() {
                   className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
                   style={{ aspectRatio: "2/5" }}
                 >
-                  {/* Foto de fondo */}
-                  <img
-                    src={img}
-                    alt={label}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  {/* Foto solo en la parte inferior — arriba queda el fondo blanco del card */}
+                  <div className="absolute left-0 right-0 bottom-0" style={{ top: "40%" }}>
+                    <img
+                      src={img}
+                      alt={label}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
 
-                  {/* Sección blanca con arco asimétrico via SVG */}
+                  {/* Arco SVG sobre la transición */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
                     <svg
                       viewBox="0 0 300 500"
                       preserveAspectRatio="none"
                       className="w-full h-full"
-                      style={{ overflow: "visible" }}
                     >
                       <path
-                        d="M-20,-20 L320,-20 L320,120 Q155,95 -20,220 Z"
+                        d="M0,0 L300,0 L300,120 Q155,95 0,220 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
