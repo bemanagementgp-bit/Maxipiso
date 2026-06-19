@@ -541,10 +541,10 @@ export default function Home() {
                       viewBox="0 0 300 500"
                       preserveAspectRatio="none"
                       className="w-full h-full"
+                      style={{ overflow: "visible" }}
                     >
-                      <rect x="-10" y="-10" width="320" height="135" fill="#FAFAF8" />
                       <path
-                        d="M-10,125 Q155,90 310,118 L310,-10 L-10,-10 Z"
+                        d="M-20,-20 L320,-20 L320,120 Q155,95 -20,220 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
