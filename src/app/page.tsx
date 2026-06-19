@@ -4,11 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { CATEGORIES } from "@/data/products";
-import { GiWoodPile } from "react-icons/gi";
-import { BsFillGridFill } from "react-icons/bs";
-import { MdLayers, MdDeck, MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
-import { FaTools, FaLayerGroup, FaWater, FaWhatsapp, FaGlobe } from "react-icons/fa";
-import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings } from "react-icons/fi";
+import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
+import { FaWhatsapp, FaGlobe } from "react-icons/fa";
+import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiBox, FiDroplet } from "react-icons/fi";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -49,12 +47,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos",         href: "https://maxipiso.com.ar/collections/pisos-flotantes",        img: "/pisos.png",         Icon: BsFillGridFill },
-  { label: "Maderas",       href: "https://maxipiso.com.ar/collections/pisos-de-madera",         img: "/maderas.jpg",       Icon: GiWoodPile },
-  { label: "Deck WPC",      href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/deck.png",         Icon: MdDeck },
-  { label: "Revestimientos",href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FaLayerGroup },
-  { label: "Accesorios",    href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/accesorios.png",   Icon: FaTools },
-  { label: "Otros",         href: "https://maxipiso.com.ar/collections/pisos-vinilicos",         img: "/adhesivos.png",    Icon: FiPackage },
+  { label: "Pisos",         href: "https://maxipiso.com.ar/collections/pisos-flotantes",        img: "/pisos.png",         Icon: FiGrid },
+  { label: "Maderas",       href: "https://maxipiso.com.ar/collections/pisos-de-madera",         img: "/maderas.jpg",       Icon: FiLayers },
+  { label: "Deck WPC",      href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/deck.png",          Icon: FiBox },
+  { label: "Revestimientos",href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiDroplet },
+  { label: "Accesorios",    href: "https://maxipiso.com.ar/collections/deck-wpc",               img: "/accesorios.png",    Icon: FiTool },
+  { label: "Otros",         href: "https://maxipiso.com.ar/collections/pisos-vinilicos",         img: "/adhesivos.png",     Icon: FiPackage },
 ];
 
 const stats = [
@@ -544,20 +542,21 @@ export default function Home() {
                       preserveAspectRatio="none"
                       className="w-full h-full"
                     >
+                      {/* Path extendido más allá del viewBox para evitar pixels en bordes */}
                       <path
-                        d="M0,0 L300,0 L300,148 Q155,305 0,272 Z"
+                        d="M-5,-5 L305,-5 L305,118 Q155,235 -5,210 Z"
                         fill="#F5F3F0"
                       />
                     </svg>
                   </div>
 
                   {/* Contenido encima del SVG */}
-                  <div className="absolute top-0 left-0 z-20 px-5 pt-7 flex flex-col items-start">
-                    <div className="text-[#555] group-hover:text-[#DF8635] transition-colors duration-300">
-                      <Icon size={26} />
+                  <div className="absolute top-0 left-0 z-20 px-5 pt-6 flex flex-col items-start">
+                    <div className="text-[#666] group-hover:text-[#DF8635] transition-colors duration-300">
+                      <Icon size={22} strokeWidth={1.5} />
                     </div>
-                    <div className="w-6 h-0.5 bg-[#DF8635] my-3" />
-                    <p className="font-bold text-[#111111] uppercase text-xs leading-snug tracking-wide">
+                    <div className="w-5 h-px bg-[#DF8635] my-2.5" />
+                    <p className="font-black text-[#1a1a1a] uppercase text-[10px] leading-snug tracking-[0.1em]">
                       {label}
                     </p>
                   </div>
