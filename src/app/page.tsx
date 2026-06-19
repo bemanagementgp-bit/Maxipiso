@@ -520,50 +520,47 @@ export default function Home() {
               La mayor variedad en importación, en un solo lugar
             </p>
           </Reveal>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">
             {lineas.map(({ label, href, img, Icon }, i) => (
               <Reveal key={label} delay={i * 0.08}>
                 <a
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-xl border border-transparent hover:border-[#DF8635] transition-all duration-400 block aspect-[4/3.9]"
+                  className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300"
+                  style={{ aspectRatio: "3/5" }}
                 >
-                  {/* Background image */}
+                  {/* Foto de fondo */}
                   <img
                     src={img}
                     alt={label}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
 
-                  {/* Overlay solo para Pisos */}
-                  {label === "Pisos" && (
-                    <div className="absolute inset-0 bg-black/30" />
-                  )}
-
-                  {/* Gradiente inferior para legibilidad del texto */}
-                  <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/60 to-transparent" />
-
-                  {/* Orange bottom accent bar */}
-                  <div className="absolute bottom-0  left-0 right-0 h-[3px] bg-[#DF8635] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-out" />
-
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4 translate-y-[20%]">
-                    {/* Ícono */}
-                    <div className="text-white/80 group-hover:text-[#DF8635] transition-colors duration-300">
-                      <Icon size={30} />
-                    </div>
-
-                    {/* Label */}
-                    <p className="font-bold text-white text-center text-base leading-tight group-hover:-translate-y-1 transition-transform duration-300">
-                      {label}
-                    </p>
-
-                    {/* CTA que aparece en hover */}
-                    <div className="flex items-center gap-1 text-[#DF8635] text-sm font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                      Ver colección
-                      <FiArrowRight size={16} />
+                  {/* Sección blanca superior */}
+                  <div className="absolute top-0 left-0 right-0 bg-[#F5F3F0] z-10" style={{ height: "48%" }}>
+                    <div className="px-5 pt-7 flex flex-col items-start">
+                      <div className="text-[#555] group-hover:text-[#DF8635] transition-colors duration-300">
+                        <Icon size={26} strokeWidth={1.5} />
+                      </div>
+                      <div className="w-6 h-0.5 bg-[#DF8635] my-3" />
+                      <p className="font-bold text-[#111111] uppercase text-xs leading-snug tracking-wide">
+                        {label}
+                      </p>
                     </div>
                   </div>
+
+                  {/* Arco separador */}
+                  <div
+                    className="absolute left-1/2 z-10 bg-[#F5F3F0]"
+                    style={{
+                      top: "calc(48% - 18px)",
+                      width: "135%",
+                      height: "56px",
+                      borderRadius: "50%",
+                      transform: "translateX(-50%)",
+                    }}
+                  />
                 </a>
               </Reveal>
             ))}
