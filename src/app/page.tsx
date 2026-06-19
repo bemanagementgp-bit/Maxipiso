@@ -526,7 +526,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300"
-                  style={{ aspectRatio: "3/5" }}
+                  style={{ aspectRatio: "2/5" }}
                 >
                   {/* Foto de fondo */}
                   <img
