@@ -1,6 +1,6 @@
 export type Category =
   | "Porcelanato"
-  | "Cer�mica"
+  | "Cerámica"
   | "Madera"
   | "Placas"
   | "Accesorios";
@@ -17,7 +17,7 @@ export interface Product {
 
 export const CATEGORIES: Category[] = [
   "Porcelanato",
-  "Cer�mica",
+  "Cerámica",
   "Madera",
   "Placas",
   "Accesorios",
