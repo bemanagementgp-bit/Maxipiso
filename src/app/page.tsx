@@ -537,30 +537,30 @@ export default function Home() {
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
 
-                  {/* Sección blanca superior */}
-                  <div className="absolute top-0 left-0 right-0 bg-[#F5F3F0] z-10" style={{ height: "48%" }}>
-                    <div className="px-5 pt-7 flex flex-col items-start">
-                      <div className="text-[#555] group-hover:text-[#DF8635] transition-colors duration-300">
-                        <Icon size={26} strokeWidth={1.5} />
-                      </div>
-                      <div className="w-6 h-0.5 bg-[#DF8635] my-3" />
-                      <p className="font-bold text-[#111111] uppercase text-xs leading-snug tracking-wide">
-                        {label}
-                      </p>
-                    </div>
+                  {/* Sección blanca con arco asimétrico via SVG */}
+                  <div className="absolute inset-0 z-10 pointer-events-none">
+                    <svg
+                      viewBox="0 0 300 500"
+                      preserveAspectRatio="none"
+                      className="w-full h-full"
+                    >
+                      <path
+                        d="M0,0 L300,0 L300,148 Q155,305 0,272 Z"
+                        fill="#F5F3F0"
+                      />
+                    </svg>
                   </div>
 
-                  {/* Arco separador */}
-                  <div
-                    className="absolute left-1/2 z-10 bg-[#F5F3F0]"
-                    style={{
-                      top: "calc(48% - 18px)",
-                      width: "135%",
-                      height: "56px",
-                      borderRadius: "50%",
-                      transform: "translateX(-50%)",
-                    }}
-                  />
+                  {/* Contenido encima del SVG */}
+                  <div className="absolute top-0 left-0 z-20 px-5 pt-7 flex flex-col items-start">
+                    <div className="text-[#555] group-hover:text-[#DF8635] transition-colors duration-300">
+                      <Icon size={26} />
+                    </div>
+                    <div className="w-6 h-0.5 bg-[#DF8635] my-3" />
+                    <p className="font-bold text-[#111111] uppercase text-xs leading-snug tracking-wide">
+                      {label}
+                    </p>
+                  </div>
                 </a>
               </Reveal>
             ))}
