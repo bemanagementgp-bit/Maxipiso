@@ -660,11 +660,13 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
-                href="/distribuidores#ser-distribuidor"
+                href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20para%20ser%20distribuidor%20de%20Maxipiso"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="bg-white text-[#DF8635] font-semibold px-8 py-3 rounded-full hover:bg-gray-100 transition-colors"
               >
                 Quiero ser distribuidor
-              </Link>
+              </a>
               <a
                 href="#contacto"
                 className="border border-white text-white font-semibold px-8 py-3 rounded-full hover:bg-white/10 transition-colors"
