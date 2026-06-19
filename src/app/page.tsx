@@ -528,8 +528,8 @@ export default function Home() {
                   className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
                   style={{ aspectRatio: "2/5" }}
                 >
-                  {/* Foto solo en la parte inferior — arriba queda el fondo blanco del card */}
-                  <div className="absolute left-0 right-0 bottom-0" style={{ top: "40%" }}>
+                  {/* Foto solo en la parte inferior */}
+                  <div className="absolute left-0 right-0 bottom-0" style={{ top: "35%" }}>
                     <img
                       src={img}
                       alt={label}
@@ -537,15 +537,16 @@ export default function Home() {
                     />
                   </div>
 
-                  {/* Arco SVG sobre la transición */}
+                  {/* Arco SVG — endpoints alineados con donde empieza la imagen */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
                     <svg
                       viewBox="0 0 300 500"
                       preserveAspectRatio="none"
                       className="w-full h-full"
                     >
+                      {/* derecha termina en ~33% (y=165), izquierda en ~54% (y=270), control arriba para arco cóncavo */}
                       <path
-                        d="M0,0 L300,0 L300,120 Q155,95 0,220 Z"
+                        d="M0,0 L300,0 L300,165 Q155,145 0,270 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
