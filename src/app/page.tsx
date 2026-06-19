@@ -48,7 +48,7 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 
 const lineas = [
   { label: "Pisos",          href: "https://maxipiso.com.ar/collections/pisos",                  img: "/pisos.png",         Icon: FiGrid },
-  { label: "Maderas",        href: "https://maxipiso.com.ar/collections/madera",                 img: "/maderas.jpg",       Icon: FiLayers },
+  { label: "Maderas",        href: "https://maxipiso.com.ar/collections/madera",                 img: "/maderas-categorias.png", Icon: FiLayers },
   { label: "Deck WPC",       href: "https://maxipiso.com.ar/collections/deck-exterior",          img: "/deck.png",          Icon: FiSun },
   { label: "Revestimientos", href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiLayout },
   { label: "Accesorios",     href: "https://maxipiso.com.ar/collections/accesorios",             img: "/accesorios.png",    Icon: FiTool },
@@ -659,7 +659,7 @@ export default function Home() {
               Convertite en distribuidor Maxipiso y accedé a precios exclusivos, stock garantizado y el respaldo del N°1 en Argentina.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
+              <a
                 href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20para%20ser%20distribuidor%20de%20Maxipiso"
                 target="_blank"
                 rel="noopener noreferrer"
