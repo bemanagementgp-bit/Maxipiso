@@ -528,25 +528,24 @@ export default function Home() {
                   className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
                   style={{ aspectRatio: "2/5" }}
                 >
-                  {/* Foto — empieza más arriba para más imagen visible */}
-                  <div className="absolute left-0 right-0 bottom-0" style={{ top: "20%" }}>
-                    <img
-                      src={img}
-                      alt={label}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
+                  {/* Imagen full-background */}
+                  <img
+                    src={img}
+                    alt={label}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
 
-                  {/* Arco SVG más pronunciado */}
+                  {/* Arco blanco — cubre la parte superior, igual que en la referencia */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
                     <svg
                       viewBox="0 0 300 500"
                       preserveAspectRatio="none"
                       className="w-full h-full"
+                      style={{ overflow: "visible" }}
                     >
-                      {/* derecha y=105 (21%), izquierda y=300 (60%), control y=70 = curva muy pronunciada */}
+                      {/* derecha 44% (y=220), izquierda 62% (y=310), arco suave y amplio */}
                       <path
-                        d="M0,0 L300,0 L300,105 Q155,70 0,300 Z"
+                        d="M-10,-10 L310,-10 L310,220 Q155,205 -10,310 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
