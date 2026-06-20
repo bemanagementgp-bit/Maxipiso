@@ -543,9 +543,9 @@ export default function Home() {
                       className="w-full h-full"
                       style={{ overflow: "visible" }}
                     >
-                      {/* derecha 44% (y=220), izquierda 62% (y=310), arco suave y amplio */}
+                      {/* derecha 29% (y=145), izquierda 50% (y=250), control arriba = curva suave hacia arriba */}
                       <path
-                        d="M-10,-10 L310,-10 L310,220 Q155,205 -10,310 Z"
+                        d="M-10,-10 L310,-10 L310,145 Q155,125 -10,250 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
