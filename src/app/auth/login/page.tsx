@@ -205,9 +205,17 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="mt-10 text-center text-xs text-gray-300">
-            Acceso restringido — Solo personal autorizado
-          </p>
+          <div className="mt-10 text-center space-y-2">
+            <a
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#DF8635] transition-colors"
+            >
+              ← Volver al sitio
+            </a>
+            <p className="text-xs text-gray-300">
+              Acceso restringido — Solo personal autorizado
+            </p>
+          </div>
         </div>
       </div>
 
