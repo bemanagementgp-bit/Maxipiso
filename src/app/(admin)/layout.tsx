@@ -8,6 +8,7 @@ import Link from "next/link";
 
 const NAV = [
   { href: "/panel", label: "Productos" },
+  { href: "/panel/importacion", label: "Importación" },
   { href: "/panel/reportes", label: "Reportes" },
 ];
 
