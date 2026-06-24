@@ -204,18 +204,17 @@ export default function LoginPage() {
             )}
           </form>
 
-          {/* Footer */}
-          <div className="mt-10 space-y-4">
-            <a
-              href="/"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-[#DF8635] hover:text-[#DF8635] transition-all"
-            >
-              ← Volver a maxipiso.com.ar
-            </a>
-            <p className="text-center text-xs text-gray-300">
-              Acceso restringido — Solo personal autorizado
-            </p>
-          </div>
+          {/* Volver al inicio */}
+          <a
+            href="/"
+            className="mt-8 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#DF8635] hover:bg-[#c97220] text-white font-semibold text-sm transition-colors"
+          >
+            Volver al inicio
+          </a>
+
+          <p className="mt-4 text-center text-xs text-gray-300">
+            Acceso restringido — Solo personal autorizado
+          </p>
         </div>
       </div>
 
