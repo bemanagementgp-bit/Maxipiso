@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiToggleLeft, FiToggleRight } from "react-icons/fi";
 import { Product } from "@/types";
 import { isRemoteImageUrl } from "@/lib/google-drive";
 
@@ -48,6 +48,7 @@ export function ProductTable({
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const router = useRouter();
 
   const PER_PAGE = 10;
@@ -94,6 +95,20 @@ export function ProductTable({
     setDeleteConfirm(null);
   };
 
+  const handleToggle = async (productId: string) => {
+    setTogglingId(productId);
+    try {
+      const res = await fetch(`/api/productos/${productId}/toggle`, { method: "PATCH" });
+      if (res.ok) {
+        const data = await res.json();
+        setProductos((prev) =>
+          prev.map((p) => p.id === productId ? { ...p, isActive: data.data.isActive } : p)
+        );
+      }
+    } catch {}
+    setTogglingId(null);
+  };
+
   const goToPage = (p: number) => {
     setPage(p);
     fetchProductos((p - 1) * PER_PAGE);
@@ -121,6 +136,7 @@ export function ProductTable({
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-white/60">Categoría</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-white/60">Imagen</th>
               <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-white/60">Precio</th>
+              <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-white/60">Estado</th>
               <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-white/60">Acciones</th>
             </tr>
           </thead>
@@ -129,7 +145,7 @@ export function ProductTable({
               Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
             ) : productos.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-16 text-center">
+                <td colSpan={8} className="px-5 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-300">
                     <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                       <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/>
@@ -150,9 +166,6 @@ export function ProductTable({
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="font-medium text-[#111] leading-snug">{p.nombre}</span>
-                    {!p.isActive && (
-                      <span className="ml-2 text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded uppercase">Inactivo</span>
-                    )}
                   </td>
                   <td className="px-5 py-3.5 text-gray-500">{p.marca}</td>
                   <td className="px-5 py-3.5">
@@ -188,6 +201,28 @@ export function ProductTable({
                   </td>
                   <td className="px-5 py-3.5 text-right font-semibold text-[#111]">
                     ${p.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  </td>
+                  {/* Estado toggle */}
+                  <td className="px-5 py-3.5 text-center">
+                    <button
+                      onClick={() => handleToggle(p.id)}
+                      disabled={togglingId === p.id}
+                      title={p.isActive ? "Activo — click para desactivar" : "Inactivo — click para activar"}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                        p.isActive
+                          ? "bg-green-50 text-green-700 hover:bg-green-100"
+                          : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                      } ${togglingId === p.id ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      {togglingId === p.id ? (
+                        <div className="w-3 h-3 border border-current/30 border-t-current rounded-full animate-spin" />
+                      ) : p.isActive ? (
+                        <FiToggleRight size={14} />
+                      ) : (
+                        <FiToggleLeft size={14} />
+                      )}
+                      {p.isActive ? "Activo" : "Inactivo"}
+                    </button>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-center gap-1">

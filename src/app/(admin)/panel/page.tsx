@@ -10,6 +10,8 @@ import {
 import { ProductTable } from "../../../components/admin/ProductTable";
 import { ProductModal } from "../../../components/admin/ProductModal";
 import { HistorialModal } from "../../../components/admin/HistorialModal";
+import { ImportPreviewModal } from "../../../components/admin/ImportPreviewModal";
+import { PriceChart } from "../../../components/admin/PriceChart";
 import { Product } from "../../../types";
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -65,6 +67,9 @@ export default function PanelPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
+  const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
+  const [importPreviewData, setImportPreviewData] = useState<any>(null);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -141,19 +146,41 @@ export default function PanelPage() {
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = "";
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/productos/import", { method: "POST", body: formData });
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/productos/import/preview", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Error al analizar el archivo");
+      const data = await res.json();
+      setPendingImportFile(file);
+      setImportPreviewData(data.data);
+      setIsImportPreviewOpen(true);
+    } catch {
+      addToast("error", "No se pudo analizar el archivo");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!pendingImportFile) return;
+    setIsLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", pendingImportFile);
+      const res = await fetch("/api/productos/import", { method: "POST", body: fd });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      addToast("success", `Importación: ${data.data.createdCount} creados, ${data.data.updatedCount} actualizados`);
-      e.target.value = "";
+      setIsImportPreviewOpen(false);
+      setPendingImportFile(null);
+      setImportPreviewData(null);
       setTableRefreshKey((v) => v + 1);
+      addToast("success", `${data.data.createdCount} creados, ${data.data.updatedCount} actualizados`);
     } catch {
       addToast("error", "Error al importar el archivo");
     } finally {
@@ -209,7 +236,7 @@ export default function PanelPage() {
             <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-800 transition-all shadow-sm cursor-pointer">
               <FiUpload size={15} />
               Importar
-              <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImport} className="hidden" disabled={isLoading} />
+              <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
             </label>
             <button
               onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }}
@@ -228,6 +255,9 @@ export default function PanelPage() {
           <KpiCard icon={FiTag} label="Marcas" value={stats.marcas || "—"} color="gray" />
           <KpiCard icon={FiLayers} label="Categorías" value={categorias.length} color="gray" />
         </div>
+
+        {/* Gráfico de precios */}
+        <PriceChart />
 
         {/* Filtros */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
@@ -284,6 +314,13 @@ export default function PanelPage() {
         isOpen={isHistorialOpen}
         onClose={() => { setIsHistorialOpen(false); setHistorialProductId(undefined); }}
         productId={historialProductId}
+      />
+      <ImportPreviewModal
+        isOpen={isImportPreviewOpen}
+        previewData={importPreviewData}
+        isLoading={isLoading}
+        onConfirm={handleImportConfirm}
+        onClose={() => { setIsImportPreviewOpen(false); setPendingImportFile(null); setImportPreviewData(null); }}
       />
 
       {/* Toasts */}
