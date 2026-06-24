@@ -177,12 +177,12 @@ export default function ProductosPage() {
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#222] border border-[#555] bg-white hover:bg-[#F4F4F2] transition-all rounded-sm"
+            className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-white bg-[#3D3D3D] hover:bg-[#555] transition-colors rounded-sm"
           >
             <FiDownload size={13} />
             Exportar
           </button>
-          <label className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-[#F5F4F1] hover:border-[#bbb] hover:text-[#333] transition-all rounded-sm cursor-pointer">
+          <label className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#333] border border-[#888] bg-white hover:border-[#444] hover:text-[#111] transition-all rounded-sm cursor-pointer">
             <FiUpload size={13} />
             Importar
             <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
