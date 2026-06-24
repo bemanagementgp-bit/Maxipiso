@@ -200,14 +200,14 @@ export function ProductTable({
                       <button
                         onClick={() => onViewHistory(p.id)}
                         title="Historial"
-                        className="p-1.5 text-[#ccc] hover:text-[#777] hover:bg-[#F0EEE8] rounded-sm transition-colors"
+                        className="p-1.5 text-[#999] hover:text-[#444] hover:bg-[#F0EEE8] rounded-sm transition-colors"
                       >
                         <FiClock size={13} />
                       </button>
                       <button
                         onClick={() => onEdit(p)}
                         title="Editar"
-                        className="p-1.5 text-[#bbb] hover:text-[#111] hover:bg-[#F0EEE8] rounded-sm transition-colors"
+                        className="p-1.5 text-[#999] hover:text-[#111] hover:bg-[#F0EEE8] rounded-sm transition-colors"
                       >
                         <FiEdit2 size={13} />
                       </button>
@@ -231,7 +231,7 @@ export function ProductTable({
                         <button
                           onClick={() => setDeleteConfirm(p.id)}
                           title="Eliminar"
-                          className="p-1.5 text-[#ccc] hover:text-red-400 hover:bg-red-50 rounded-sm transition-colors"
+                          className="p-1.5 text-[#999] hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors"
                         >
                           <FiTrash2 size={13} />
                         </button>
