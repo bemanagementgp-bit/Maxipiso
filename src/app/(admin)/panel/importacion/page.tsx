@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FiUploadCloud, FiCheckCircle, FiAlertCircle, FiX, FiFile, FiDownload } from "react-icons/fi";
+import { FiUploadCloud, FiCheckCircle, FiAlertCircle, FiX, FiFile, FiDownload, FiChevronDown } from "react-icons/fi";
 
 type Step = "idle" | "preview" | "importing" | "done" | "error";
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -42,6 +42,10 @@ export default function ImportacionPage() {
   const [preview, setPreview] = useState<any>(null);
   const [sesiones, setSesiones] = useState<any[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [infoOpen, setInfoOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("import_info_seen") !== "1";
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addToast = useCallback((type: "success" | "error", message: string) => {
@@ -290,52 +294,63 @@ export default function ImportacionPage() {
         </div>
       </div>
 
-      {/* ── Info de formato ── */}
-      <div className="bg-white border border-[#E0DED8] overflow-hidden">
-        <div className="bg-[#111] px-8 py-5">
-          <p className="text-[13px] font-medium text-white leading-relaxed">
-            El sistema detecta automáticamente nuevos registros y actualizaciones,
-            y te muestra una vista previa antes de confirmar cualquier cambio.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#E0DED8]">
-          {[
-            {
-              title: "Columnas requeridas",
-              accent: true,
-              items: ["SKU / Código", "Nombre del producto", "Marca", "Precio"],
-            },
-            {
-              title: "Columnas opcionales",
-              accent: false,
-              items: ["Categoría", "Subcategoría", "Descripción", "Imagen (URL)"],
-            },
-            {
-              title: "Consideraciones",
-              accent: false,
-              items: [
-                "Máximo 1.000 productos por archivo",
-                "Tamaño máximo: 5 MB",
-                "SKUs duplicados en el archivo son ignorados",
-                "SKUs existentes son actualizados",
-              ],
-            },
-          ].map(({ title, accent, items }) => (
-            <div key={title} className="px-8 py-6">
-              <p className={`text-[9px] uppercase tracking-[0.12em] font-semibold mb-4 ${accent ? "text-[#DF8635]" : "text-[#888]"}`}>
-                {title}
-              </p>
-              <ul className="space-y-2.5">
-                {items.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-[12px] text-[#444]">
-                    <span className={`w-1 h-1 rounded-full shrink-0 mt-[6px] ${accent ? "bg-[#DF8635]" : "bg-[#ccc]"}`} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+      {/* ── Info de formato (colapsable) ── */}
+      <div className="border border-[#E0DED8] bg-white overflow-hidden">
+        <button
+          onClick={() => {
+            const next = !infoOpen;
+            setInfoOpen(next);
+            if (!next) localStorage.setItem("import_info_seen", "1");
+          }}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#FAFAF8] transition-colors"
+        >
+          <span className="text-[11px] text-[#999] uppercase tracking-[0.08em]">Especificaciones del formato</span>
+          <FiChevronDown
+            size={14}
+            className={`text-[#ccc] transition-transform duration-200 ${infoOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {infoOpen && (
+          <div className="border-t border-[#E0DED8] grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#E0DED8]">
+            {[
+              {
+                title: "Columnas requeridas",
+                accent: true,
+                items: ["SKU / Código", "Nombre del producto", "Marca", "Precio"],
+              },
+              {
+                title: "Columnas opcionales",
+                accent: false,
+                items: ["Categoría", "Subcategoría", "Descripción", "Imagen (URL)"],
+              },
+              {
+                title: "Consideraciones",
+                accent: false,
+                items: [
+                  "Máximo 1.000 productos por archivo",
+                  "Tamaño máximo: 5 MB",
+                  "SKUs duplicados en el archivo son ignorados",
+                  "SKUs existentes son actualizados",
+                ],
+              },
+            ].map(({ title, accent, items }) => (
+              <div key={title} className="px-7 py-5">
+                <p className={`text-[9px] uppercase tracking-[0.12em] font-semibold mb-3.5 ${accent ? "text-[#DF8635]" : "text-[#888]"}`}>
+                  {title}
+                </p>
+                <ul className="space-y-2">
+                  {items.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-[12px] text-[#555]">
+                      <span className={`w-1 h-1 rounded-full shrink-0 mt-[6px] ${accent ? "bg-[#DF8635]" : "bg-[#ccc]"}`} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <ToastContainer toasts={toasts} onRemove={(id) => setToasts((p) => p.filter((t) => t.id !== id))} />
