@@ -295,7 +295,7 @@ export default function ImportacionPage() {
             {
               title: "Consideraciones",
               items: [
-                "Máximo 5.000 filas por archivo",
+                "Máximo 1.000 productos por archivo",
                 "Tamaño máximo: 5 MB",
                 "SKUs duplicados en el archivo son ignorados",
                 "SKUs existentes son actualizados",

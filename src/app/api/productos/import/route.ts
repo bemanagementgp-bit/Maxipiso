@@ -9,7 +9,7 @@ import { verifyOrigin } from "@/lib/security";
 export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-const MAX_ROWS = 5000;
+const MAX_ROWS = 1000;
 
 function normalizeHeader(value: unknown) {
   return String(value || "")
