@@ -32,16 +32,20 @@ export async function GET(req: NextRequest) {
     const marca = sanitizeText(searchParams.get("marca") ?? "", 100);
     const categoria = sanitizeText(searchParams.get("categoria") ?? "", 100);
     const subcategoria = sanitizeText(searchParams.get("subcategoria") ?? "", 100);
+    const estado = searchParams.get("estado") ?? "activo"; // activo | inactivo | todos
     const skip = parseIntSafe(searchParams.get("skip"), 0, 0, 1_000_000);
     const take = parseIntSafe(searchParams.get("take"), 10, 1, 100);
 
     const where: {
-      isActive: boolean;
+      isActive?: boolean;
       OR?: Array<Record<string, { contains: string; mode: "insensitive" }>>;
       marca?: { contains: string; mode: "insensitive" };
       categoria?: { equals: string };
       subcategoria?: { equals: string };
-    } = { isActive: true };
+    } = {};
+
+    if (estado === "activo") where.isActive = true;
+    else if (estado === "inactivo") where.isActive = false;
 
     if (search) {
       where.OR = [
