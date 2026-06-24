@@ -44,39 +44,36 @@ export function PriceChart() {
     : (data?.marcas ?? []).map((m) => ({ name: m.marca, value: m.avgPrecio, count: m.count }));
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white border border-[#E0DED8] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635]">
-            <FiTrendingUp size={16} />
-          </div>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0DED8]">
+        <div className="flex items-center gap-3">
+          <FiTrendingUp size={14} className="text-[#DF8635]" />
           <div>
-            <h3 className="text-sm font-semibold text-[#111]">Variaciones de Precio</h3>
-            <p className="text-xs text-gray-400">Precio promedio por {view === "categorias" ? "categoría" : "marca"}</p>
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#111]">Variaciones de Precio</h3>
+            <p className="text-[10px] text-[#aaa] mt-0.5">Precio promedio por {view === "categorias" ? "categoría" : "marca"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Toggle categorias/marcas */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
+          <div className="flex border border-[#E0DED8] rounded overflow-hidden text-[10px] font-medium">
             <button
               onClick={() => setView("categorias")}
-              className={`px-3 py-1.5 rounded-md transition-colors ${view === "categorias" ? "bg-white text-[#111] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`px-3 py-1.5 transition-colors ${view === "categorias" ? "bg-[#111] text-white" : "text-[#888] hover:text-[#111]"}`}
             >
               Categorías
             </button>
             <button
               onClick={() => setView("marcas")}
-              className={`px-3 py-1.5 rounded-md transition-colors ${view === "marcas" ? "bg-white text-[#111] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`px-3 py-1.5 border-l border-[#E0DED8] transition-colors ${view === "marcas" ? "bg-[#111] text-white" : "text-[#888] hover:text-[#111]"}`}
             >
               Marcas
             </button>
           </div>
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+            className="p-1.5 text-[#ccc] hover:text-[#777] transition-colors"
           >
-            {expanded ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
+            {expanded ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
           </button>
         </div>
       </div>
@@ -86,10 +83,10 @@ export function PriceChart() {
         <div className="px-5 py-5">
           {loading ? (
             <div className="h-48 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-[#DF8635]/30 border-t-[#DF8635] rounded-full animate-spin" />
+              <div className="w-4 h-4 border-[1.5px] border-[#111]/20 border-t-[#111] rounded-full animate-spin" />
             </div>
           ) : chartData.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-sm text-gray-300">
+            <div className="h-48 flex items-center justify-center text-[11px] text-[#ccc] uppercase tracking-[0.08em]">
               Sin datos disponibles
             </div>
           ) : (

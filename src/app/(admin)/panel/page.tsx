@@ -4,8 +4,8 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  FiPlus, FiDownload, FiUpload, FiLogOut, FiPackage,
-  FiTag, FiLayers, FiCheckCircle, FiAlertCircle, FiX,
+  FiPlus, FiDownload, FiUpload, FiLogOut,
+  FiCheckCircle, FiAlertCircle, FiX,
 } from "react-icons/fi";
 import { ProductTable } from "../../../components/admin/ProductTable";
 import { ProductModal } from "../../../components/admin/ProductModal";
@@ -23,14 +23,14 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white min-w-[280px] ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white min-w-[300px] ${
             t.type === "success" ? "bg-[#111]" : "bg-red-600"
           }`}
         >
-          {t.type === "success" ? <FiCheckCircle size={16} /> : <FiAlertCircle size={16} />}
+          {t.type === "success" ? <FiCheckCircle size={15} /> : <FiAlertCircle size={15} />}
           <span className="flex-1">{t.message}</span>
-          <button onClick={() => onRemove(t.id)} className="opacity-60 hover:opacity-100">
-            <FiX size={14} />
+          <button onClick={() => onRemove(t.id)} className="opacity-50 hover:opacity-100 transition-opacity">
+            <FiX size={13} />
           </button>
         </div>
       ))}
@@ -38,21 +38,52 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
   );
 }
 
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ icon: Icon, label, value, sub, color = "orange" }: {
-  icon: React.ElementType; label: string; value: string | number; sub?: string; color?: "orange" | "gray";
+// ── Stats editoriales ─────────────────────────────────────────────────────────
+function EditorialStats({ stats }: {
+  stats: { total: number; activos: number; marcas: number; categorias: number };
 }) {
+  const pct = stats.total > 0 ? Math.round((stats.activos / stats.total) * 100) : 0;
+
   return (
-    <div className="bg-white rounded-2xl px-5 py-4 flex items-center gap-4 border border-gray-100 shadow-sm">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-        color === "orange" ? "bg-[#DF8635]/10 text-[#DF8635]" : "bg-gray-100 text-gray-500"
-      }`}>
-        <Icon size={20} />
+    <div className="flex border border-[#E0DED8] rounded-lg overflow-hidden bg-white">
+      {/* Principal */}
+      <div className="flex-[1.3] px-8 py-6 border-r border-[#E0DED8]">
+        <div
+          className="font-medium text-[#111] leading-none tracking-tight"
+          style={{ fontSize: "clamp(36px, 4vw, 52px)", letterSpacing: "-0.03em" }}
+        >
+          {stats.total > 0 ? stats.total.toLocaleString("es-AR") : "—"}
+        </div>
+        <div className="text-[10px] uppercase tracking-[0.1em] text-[#aaa] mt-3">
+          Productos en catálogo
+        </div>
+        {stats.total > 0 && (
+          <div className="text-[11px] text-[#DF8635] mt-2 font-medium">
+            ↑ {pct}% activos
+          </div>
+        )}
       </div>
-      <div>
-        <div className="text-xl font-bold text-[#111]">{value}</div>
-        <div className="text-xs text-gray-400 font-medium">{label}</div>
-        {sub && <div className="text-xs text-gray-300 mt-0.5">{sub}</div>}
+
+      {/* Secundarias */}
+      <div className="flex-1 flex flex-col divide-y divide-[#E0DED8]">
+        <div className="flex items-center justify-between px-6 py-4 flex-1">
+          <span className="text-[9px] uppercase tracking-[0.08em] text-[#aaa]">Activos</span>
+          <span className="text-[17px] font-medium text-[#111]">
+            {stats.activos > 0 ? stats.activos.toLocaleString("es-AR") : "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-6 py-4 flex-1">
+          <span className="text-[9px] uppercase tracking-[0.08em] text-[#aaa]">Marcas</span>
+          <span className="text-[17px] font-medium text-[#111]">
+            {stats.marcas > 0 ? stats.marcas : "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-6 py-4 flex-1">
+          <span className="text-[9px] uppercase tracking-[0.08em] text-[#aaa]">Categorías</span>
+          <span className="text-[17px] font-medium text-[#111]">
+            {stats.categorias > 0 ? stats.categorias : "—"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -81,12 +112,18 @@ export default function PanelPage() {
     if (status === "unauthenticated") router.push("/auth/login");
   }, [status, router]);
 
-  // Cargar stats
   useEffect(() => {
-    fetch("/api/productos?skip=0&take=1")
+    fetch("/api/productos/stats")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.data) setStats((prev) => ({ ...prev, total: d.data.total }));
+        if (d?.success) {
+          setStats({
+            total: d.data.total,
+            activos: d.data.total,
+            marcas: d.data.marcas?.length ?? 0,
+            categorias: d.data.categorias?.length ?? 0,
+          });
+        }
       })
       .catch(() => {});
   }, [tableRefreshKey]);
@@ -99,8 +136,8 @@ export default function PanelPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F4F4F2]">
-        <div className="w-6 h-6 border-2 border-[#DF8635]/30 border-t-[#DF8635] rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-[#FAFAF8]">
+        <div className="w-5 h-5 border-[1.5px] border-[#111]/20 border-t-[#111] rounded-full animate-spin" />
       </div>
     );
   }
@@ -117,11 +154,11 @@ export default function PanelPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      if (!res.ok) throw new Error("Error al guardar");
+      if (!res.ok) throw new Error();
       setIsModalOpen(false);
       setSelectedProduct(null);
       setTableRefreshKey((v) => v + 1);
-      addToast("success", selectedProduct ? "Producto actualizado correctamente" : "Producto creado correctamente");
+      addToast("success", selectedProduct ? "Producto actualizado" : "Producto creado");
     } catch {
       addToast("error", "No se pudo guardar el producto");
     } finally {
@@ -155,7 +192,7 @@ export default function PanelPage() {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/productos/import/preview", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Error al analizar el archivo");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setPendingImportFile(file);
       setImportPreviewData(data.data);
@@ -180,7 +217,7 @@ export default function PanelPage() {
       setPendingImportFile(null);
       setImportPreviewData(null);
       setTableRefreshKey((v) => v + 1);
-      addToast("success", `${data.data.createdCount} creados, ${data.data.updatedCount} actualizados`);
+      addToast("success", `${data.data.createdCount} creados · ${data.data.updatedCount} actualizados`);
     } catch {
       addToast("error", "Error al importar el archivo");
     } finally {
@@ -191,102 +228,97 @@ export default function PanelPage() {
   const categorias = ["Pisos", "Maderas", "Decks", "Revestimientos", "Porcelanato", "Accesorios"];
 
   return (
-    <div className="min-h-screen bg-[#F4F4F2] flex flex-col">
+    <div className="min-h-screen bg-[#FAFAF8] flex flex-col">
 
       {/* ── Topbar ── */}
-      <header className="bg-[#111111] h-14 flex items-center px-6 shrink-0 sticky top-0 z-30">
-        <div className="flex items-center gap-3 flex-1">
-          <img src="/logo.svg" alt="Maxipiso" className="h-7 brightness-0 invert" />
-          <span className="text-white/20 text-lg font-light select-none">|</span>
-          <span className="text-white/60 text-sm">Panel de Administración</span>
+      <header className="bg-white border-b border-[#E0DED8] h-13 flex items-center px-6 shrink-0 sticky top-0 z-30" style={{ height: "52px" }}>
+        <div className="flex items-center gap-5 flex-1">
+          <img src="/logo.svg" alt="Maxipiso" className="h-6" />
+          <span className="text-[#E0DED8] text-lg select-none">|</span>
+          <nav className="flex items-center gap-1">
+            <span className="text-[11px] font-medium text-[#111] px-3 py-1.5 border-b-[1.5px] border-[#111]">
+              Productos
+            </span>
+          </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-white/40 text-xs hidden sm:block">{session.user?.email}</span>
+        <div className="flex items-center gap-5">
+          <span className="text-[11px] text-[#aaa] hidden sm:block">{session.user?.email}</span>
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
-            className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors"
+            className="flex items-center gap-1.5 text-[11px] text-[#888] hover:text-[#111] transition-colors uppercase tracking-[0.06em]"
           >
-            <FiLogOut size={15} />
+            <FiLogOut size={13} />
             Salir
           </button>
         </div>
       </header>
 
       {/* ── Content ── */}
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 lg:px-10 py-8 space-y-6">
 
-        {/* Encabezado de sección */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Header de sección + acciones */}
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#111]">Gestión de Productos</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Administrá el catálogo completo de Maxipiso
+            <h1 className="text-[22px] font-medium text-[#111] tracking-tight">Gestión de Productos</h1>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-[#aaa] mt-1">
+              Maxipiso Mayorista — Catálogo
             </p>
           </div>
-
-          {/* Acciones principales */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-800 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-white hover:border-[#bbb] hover:text-[#111] transition-all rounded"
             >
-              <FiDownload size={15} />
+              <FiDownload size={13} />
               Exportar
             </button>
-            <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-800 transition-all shadow-sm cursor-pointer">
-              <FiUpload size={15} />
+            <label className="flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-white hover:border-[#bbb] hover:text-[#111] transition-all rounded cursor-pointer">
+              <FiUpload size={13} />
               Importar
               <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
             </label>
             <button
               onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#DF8635] hover:bg-[#c97220] text-white text-sm font-semibold transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] transition-colors rounded"
             >
-              <FiPlus size={16} />
+              <FiPlus size={14} />
               Nuevo Producto
             </button>
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard icon={FiPackage} label="Total productos" value={stats.total || "—"} color="orange" />
-          <KpiCard icon={FiCheckCircle} label="Productos activos" value={stats.activos || "—"} color="gray" />
-          <KpiCard icon={FiTag} label="Marcas" value={stats.marcas || "—"} color="gray" />
-          <KpiCard icon={FiLayers} label="Categorías" value={categorias.length} color="gray" />
-        </div>
+        {/* Stats editoriales */}
+        <EditorialStats stats={stats} />
 
         {/* Gráfico de precios */}
         <PriceChart />
 
         {/* Filtros */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Buscar por SKU, nombre o marca..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#DF8635] focus:ring-2 focus:ring-[#DF8635]/10 transition-all"
-              />
-            </div>
-            <select
-              value={categoriaFilter}
-              onChange={(e) => setCategoriaFilter(e.target.value)}
-              className="sm:w-52 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#DF8635] focus:ring-2 focus:ring-[#DF8635]/10 bg-white text-gray-600 transition-all"
-            >
-              <option value="">Todas las categorías</option>
-              {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#ccc]" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar por SKU, nombre o marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-[12px] border border-[#E0DED8] bg-white rounded focus:outline-none focus:border-[#aaa] transition-colors text-[#111] placeholder:text-[#ccc]"
+            />
           </div>
+          <select
+            value={categoriaFilter}
+            onChange={(e) => setCategoriaFilter(e.target.value)}
+            className="sm:w-48 px-3 py-2 text-[12px] border border-[#E0DED8] bg-white rounded focus:outline-none focus:border-[#aaa] text-[#555] transition-colors"
+          >
+            <option value="">Todas las categorías</option>
+            {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
 
         {/* Tabla */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white border border-[#E0DED8] rounded overflow-hidden">
           <ProductTable
             refreshKey={tableRefreshKey}
             onEdit={(product) => { setSelectedProduct(product); setIsModalOpen(true); }}
@@ -323,7 +355,6 @@ export default function PanelPage() {
         onClose={() => { setIsImportPreviewOpen(false); setPendingImportFile(null); setImportPreviewData(null); }}
       />
 
-      {/* Toasts */}
       <ToastContainer toasts={toasts} onRemove={(id) => setToasts((p) => p.filter((t) => t.id !== id))} />
     </div>
   );
