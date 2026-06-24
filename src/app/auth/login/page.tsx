@@ -49,7 +49,7 @@ export default function LoginPage() {
       {/* ── Lado izquierdo — imagen de marca ── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <Image
-          src="/obras-construccion.jpg"
+          src="/flota.jpg"
           alt="Maxipiso"
           fill
           className="object-cover"
@@ -77,19 +77,6 @@ export default function LoginPage() {
               Más de 60 años liderando el mercado argentino con la mayor variedad de pisos, maderas y revestimientos.
             </p>
 
-            {/* Stats */}
-            <div className="flex gap-8 mt-8">
-              {[
-                { value: "+1300", label: "Clientes" },
-                { value: "60+", label: "Años" },
-                { value: "1500k", label: "m² de stock" },
-              ].map((s) => (
-                <div key={s.label}>
-                  <div className="text-2xl font-bold text-white">{s.value}</div>
-                  <div className="text-white/50 text-xs uppercase tracking-widest mt-0.5">{s.label}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
