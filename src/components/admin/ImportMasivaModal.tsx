@@ -307,7 +307,7 @@ export function ImportMasivaModal({ isOpen, onClose, onImportDone }: ImportMasiv
           <button
             onClick={onClose}
             disabled={step === "importing"}
-            className="h-9 px-5 text-[11px] font-medium text-[#555] border border-[#E0DED8] hover:border-[#bbb] hover:text-[#111] transition-all rounded-sm disabled:opacity-30"
+            className="h-9 px-5 text-[11px] font-medium text-[#888] hover:text-[#444] transition-colors rounded-sm disabled:opacity-30"
           >
             {step === "done" ? "Cerrar" : "Cancelar"}
           </button>
@@ -324,7 +324,7 @@ export function ImportMasivaModal({ isOpen, onClose, onImportDone }: ImportMasiv
             <button
               onClick={handleConfirmar}
               disabled={!preview || step !== "preview" || (totals?.create === 0 && totals?.update === 0)}
-              className="h-9 px-6 text-[11px] font-medium text-white bg-[#DF8635] hover:bg-[#c97220] disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-sm flex items-center gap-2"
+              className="h-9 px-6 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-sm flex items-center gap-2"
             >
               {step === "importing" && <div className="w-3.5 h-3.5 border-[1.5px] border-white/30 border-t-white rounded-full animate-spin" />}
               Importar productos

@@ -177,19 +177,19 @@ export default function ProductosPage() {
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-white hover:border-[#bbb] hover:text-[#111] transition-all rounded-sm"
+            className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#222] border border-[#555] bg-white hover:bg-[#F4F4F2] transition-all rounded-sm"
           >
             <FiDownload size={13} />
             Exportar
           </button>
-          <label className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-white hover:border-[#bbb] hover:text-[#111] transition-all rounded-sm cursor-pointer">
+          <label className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-[#F5F4F1] hover:border-[#bbb] hover:text-[#333] transition-all rounded-sm cursor-pointer">
             <FiUpload size={13} />
             Importar
             <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
           </label>
           <button
             onClick={() => { setSelectedProduct(null); setIsPanelOpen(true); }}
-            className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#DF8635] hover:bg-[#c97220] transition-colors rounded-sm"
+            className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
           >
             <FiPlus size={14} />
             Nuevo producto
@@ -234,7 +234,7 @@ export default function ProductosPage() {
         {(categoriaFilter || marcaFilter || estadoFilter !== "activo" || searchTerm) && (
           <button
             onClick={() => { setCategoriaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setSearchTerm(""); }}
-            className="flex items-center gap-1 h-8 px-3 text-[10px] uppercase tracking-[0.06em] text-[#aaa] hover:text-[#555] border border-[#E0DED8] rounded-sm transition-colors"
+            className="flex items-center gap-1 h-8 px-3 text-[10px] uppercase tracking-[0.06em] text-[#bbb] hover:text-[#666] transition-colors"
           >
             <FiX size={11} />
             Limpiar

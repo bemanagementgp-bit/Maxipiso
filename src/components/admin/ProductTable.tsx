@@ -207,7 +207,7 @@ export function ProductTable({
                       <button
                         onClick={() => onEdit(p)}
                         title="Editar"
-                        className="p-1.5 text-[#ccc] hover:text-[#DF8635] hover:bg-[#FFF5E8] rounded-sm transition-colors"
+                        className="p-1.5 text-[#bbb] hover:text-[#111] hover:bg-[#F0EEE8] rounded-sm transition-colors"
                       >
                         <FiEdit2 size={13} />
                       </button>

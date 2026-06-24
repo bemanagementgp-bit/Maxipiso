@@ -244,7 +244,7 @@ export function QuickEditPanel({ isOpen, product, isLoading = false, onClose, on
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 text-[11px] font-medium text-[#777] border border-[#E0DED8] hover:border-[#bbb] hover:text-[#111] rounded-sm transition-all"
+            className="flex-1 py-2 text-[11px] font-medium text-[#888] hover:text-[#444] transition-colors rounded-sm"
           >
             Cancelar
           </button>
