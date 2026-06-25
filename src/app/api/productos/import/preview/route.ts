@@ -10,37 +10,122 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_ROWS = 1000;
 
-function normalizeHeader(value: unknown) {
-  return String(value || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+// Normaliza un encabezado: minúsculas, sin tildes, sin espacios extra
+function norm(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
-function pickWorksheet(workbook: XLSX.WorkBook) {
-  const preferred = workbook.SheetNames.find((n) => normalizeHeader(n) === "productos extraidos");
+// Mapeo de columnas conocidas → campo del producto
+const KNOWN_FIELDS: Record<string, string> = {
+  // SKU
+  sku: "sku", codigo: "sku", "codigo/sku": "sku", "cod": "sku", item: "sku",
+  // Nombre
+  nombre: "nombre", producto: "nombre", "nombre de madera": "nombre",
+  "nombre del producto": "nombre", "nombre producto": "nombre",
+  // Marca / Tipo
+  marca: "marca", rubro: "marca", linea: "marca", "tipo de producto": "marca",
+  // Precio
+  precio: "precio", "precio unitario": "precio", valor: "precio", price: "precio",
+  // Imagen
+  imagen: "imagen", image: "imagen", foto: "imagen", img: "imagen",
+  // Descripción directa
+  descripcion: "descripcion", "descripcion del producto": "descripcion",
+  observaciones: "descripcion",
+  // Stock
+  stock: "stock",
+  // Unidad de medida
+  "unidad de medida": "unidadMedida", unidad: "unidadMedida", um: "unidadMedida",
+  // Moneda
+  moneda: "moneda", currency: "moneda",
+  // Categoría
+  categoria: "categoria", "categoria prod": "categoria",
+  subcategoria: "subcategoria",
+};
+
+// Columnas que van a specs (JSON) en lugar de campos directos
+const SPECS_FIELDS = new Set([
+  "medidas", "espesores disponibles", "espesores", "secado", "origen",
+  "ficha tecnica", "archivo instalacion", "instalacion",
+  "ac/caracteristicas", "caracteristicas", "caja/base", "caja", "base",
+  "texto extraido",
+]);
+
+function pickWorksheet(workbook: XLSX.WorkBook): XLSX.WorkSheet {
+  // Preferir hoja llamada "productos extraidos"
+  const preferred = workbook.SheetNames.find(
+    (n) => norm(n) === "productos extraidos"
+  );
   if (preferred) return workbook.Sheets[preferred];
+
+  // Elegir la primera hoja con datos y algún encabezado reconocible
   for (const name of workbook.SheetNames) {
     const ws = workbook.Sheets[name];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rows.length) continue;
-    const keys = Object.keys(rows[0]).map(normalizeHeader);
-    if (keys.includes("codigo/sku") || keys.includes("sku") || keys.includes("nombre")) return ws;
+    const keys = Object.keys(rows[0]).map(norm);
+    if (keys.some((k) => ["sku", "codigo", "nombre", "producto", "precio"].includes(k))) {
+      return ws;
+    }
   }
   return workbook.Sheets[workbook.SheetNames[0]];
 }
 
-function getField(row: Record<string, unknown>, aliases: string[]) {
-  for (const [key, value] of Object.entries(row)) {
-    if (aliases.includes(normalizeHeader(key))) return value;
-  }
-  return undefined;
-}
+// Parsea una fila de forma dinámica, mapeando lo que conoce
+function parseRow(row: Record<string, unknown>): {
+  sku: string; nombre: string; marca: string; precio: number;
+  imagen?: string; descripcion?: string; stock?: number;
+  unidadMedida?: string; moneda?: string; categoria?: string; subcategoria?: string;
+  specs?: string;
+  _unmapped: Record<string, string>;
+} {
+  const mapped: Record<string, unknown> = {};
+  const specsData: Record<string, string> = {};
+  const unmapped: Record<string, string> = {};
 
-function parseRow(row: Record<string, unknown>) {
-  const sku = String(getField(row, ["codigo/sku", "sku", "codigo"]) || "").trim();
-  const nombre = String(getField(row, ["producto", "nombre"]) || "").trim();
-  const marca = String(getField(row, ["marca", "categoria", "rubro"]) || "").trim();
-  const precioRaw = getField(row, ["precio", "precio unitario", "valor"]);
-  const precio = parseFloat(String(precioRaw || "0").replace(",", "."));
-  return { sku, nombre, marca, precio: isFinite(precio) ? precio : 0 };
+  for (const [rawKey, rawValue] of Object.entries(row)) {
+    const key = norm(rawKey);
+    const val = String(rawValue ?? "").trim();
+    if (!val) continue;
+
+    if (KNOWN_FIELDS[key]) {
+      const field = KNOWN_FIELDS[key];
+      if (!mapped[field]) mapped[field] = val; // first match wins
+    } else if (SPECS_FIELDS.has(key)) {
+      specsData[rawKey.trim()] = val;
+    } else if (key && val) {
+      unmapped[rawKey.trim()] = val;
+    }
+  }
+
+  // Combinar specs + unmapped en JSON
+  const allSpecs = { ...specsData, ...unmapped };
+  const specsJson = Object.keys(allSpecs).length > 0 ? JSON.stringify(allSpecs) : undefined;
+
+  const sku = String(mapped.sku ?? "").trim();
+  const nombre = String(mapped.nombre ?? "").trim();
+  const marca = String(mapped.marca ?? "").trim();
+  const precioRaw = String(mapped.precio ?? "0").replace(/[^\d.,]/g, "").replace(",", ".");
+  const precio = parseFloat(precioRaw);
+
+  return {
+    sku,
+    nombre,
+    marca,
+    precio: isFinite(precio) ? precio : 0,
+    imagen: String(mapped.imagen ?? "").trim() || undefined,
+    descripcion: String(mapped.descripcion ?? "").trim() || undefined,
+    stock: mapped.stock ? parseInt(String(mapped.stock)) || undefined : undefined,
+    unidadMedida: String(mapped.unidadMedida ?? "").trim() || undefined,
+    moneda: String(mapped.moneda ?? "").trim() || undefined,
+    categoria: String(mapped.categoria ?? "").trim() || undefined,
+    subcategoria: String(mapped.subcategoria ?? "").trim() || undefined,
+    specs: specsJson,
+    _unmapped: unmapped,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -53,7 +138,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0 || file.size > MAX_FILE_SIZE)
-    return NextResponse.json({ error: "Archivo inválido" }, { status: 400 });
+    return NextResponse.json({ error: "Archivo inválido o demasiado grande" }, { status: 400 });
 
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "buffer", cellHTML: false, cellFormula: false, bookVBA: false });
@@ -62,6 +147,14 @@ export async function POST(req: NextRequest) {
 
   if (rows.length > MAX_ROWS)
     return NextResponse.json({ error: `Demasiadas filas (máx ${MAX_ROWS})` }, { status: 400 });
+
+  // Detectar columnas detectadas en este archivo
+  const detectedColumns = rows.length > 0
+    ? Object.keys(rows[0]).map((k) => ({
+        original: k,
+        mapsTo: KNOWN_FIELDS[norm(k)] ?? (SPECS_FIELDS.has(norm(k)) ? "specs" : "ignorado"),
+      }))
+    : [];
 
   const toCreate: any[] = [];
   const toUpdate: any[] = [];
@@ -78,21 +171,24 @@ export async function POST(req: NextRequest) {
 
   for (const row of rows) {
     const p = parseRow(row);
-    if (!p.sku || !p.nombre || !p.marca || p.precio < 0 || p.precio > 99_999_999) {
-      toSkip.push({ ...p, motivo: "Campos requeridos faltantes o inválidos" });
+    if (!p.sku || !p.nombre || p.precio < 0 || p.precio > 99_999_999) {
+      toSkip.push({ sku: p.sku, nombre: p.nombre, motivo: !p.sku ? "Sin SKU" : !p.nombre ? "Sin nombre" : "Precio inválido" });
       continue;
     }
     if (duplicateSkus.has(p.sku)) {
       duplicates.push(p);
       continue;
     }
-    const existing = await prisma.product.findUnique({ where: { sku: p.sku }, select: { id: true, nombre: true, precio: true, marca: true } });
+    const existing = await prisma.product.findUnique({
+      where: { sku: p.sku },
+      select: { id: true, nombre: true, precio: true, marca: true },
+    });
     if (existing) {
-      const changes: string[] = [];
-      if (existing.nombre !== p.nombre) changes.push(`nombre: "${existing.nombre}" → "${p.nombre}"`);
-      if (existing.precio !== p.precio) changes.push(`precio: $${existing.precio} → $${p.precio}`);
-      if (existing.marca !== p.marca) changes.push(`marca: "${existing.marca}" → "${p.marca}"`);
-      toUpdate.push({ ...p, id: existing.id, cambios: changes });
+      const cambios: string[] = [];
+      if (existing.nombre !== p.nombre) cambios.push(`nombre: "${existing.nombre}" → "${p.nombre}"`);
+      if (existing.precio !== p.precio) cambios.push(`precio: $${existing.precio} → $${p.precio}`);
+      if (p.marca && existing.marca !== p.marca) cambios.push(`marca: "${existing.marca}" → "${p.marca}"`);
+      toUpdate.push({ ...p, id: existing.id, cambios });
     } else {
       toCreate.push(p);
     }
@@ -101,11 +197,17 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     data: {
+      detectedColumns,
       toCreate: toCreate.slice(0, 100),
       toUpdate: toUpdate.slice(0, 100),
       toSkip: toSkip.slice(0, 50),
       duplicates: duplicates.slice(0, 50),
-      totals: { create: toCreate.length, update: toUpdate.length, skip: toSkip.length, duplicates: duplicates.length },
+      totals: {
+        create: toCreate.length,
+        update: toUpdate.length,
+        skip: toSkip.length,
+        duplicates: duplicates.length,
+      },
     },
   });
 }

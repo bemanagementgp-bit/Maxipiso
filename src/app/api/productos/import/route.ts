@@ -8,252 +8,183 @@ import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_ROWS = 1000;
 
-function normalizeHeader(value: unknown) {
-  return String(value || "")
+function norm(value: unknown): string {
+  return String(value ?? "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .trim()
     .toLowerCase();
 }
 
-function pickWorksheet(workbook: XLSX.WorkBook) {
-  const preferredSheet = workbook.SheetNames.find(
-    (name) => normalizeHeader(name) === "productos extraidos"
-  );
+const KNOWN_FIELDS: Record<string, string> = {
+  sku: "sku", codigo: "sku", "codigo/sku": "sku", cod: "sku", item: "sku",
+  nombre: "nombre", producto: "nombre", "nombre de madera": "nombre",
+  "nombre del producto": "nombre", "nombre producto": "nombre",
+  marca: "marca", rubro: "marca", linea: "marca", "tipo de producto": "marca",
+  precio: "precio", "precio unitario": "precio", valor: "precio", price: "precio",
+  imagen: "imagen", image: "imagen", foto: "imagen", img: "imagen",
+  descripcion: "descripcion", "descripcion del producto": "descripcion", observaciones: "descripcion",
+  stock: "stock",
+  "unidad de medida": "unidadMedida", unidad: "unidadMedida", um: "unidadMedida",
+  moneda: "moneda", currency: "moneda",
+  categoria: "categoria", "categoria prod": "categoria",
+  subcategoria: "subcategoria",
+};
 
-  if (preferredSheet) {
-    return workbook.Sheets[preferredSheet];
+const SPECS_FIELDS = new Set([
+  "medidas", "espesores disponibles", "espesores", "secado", "origen",
+  "ficha tecnica", "archivo instalacion", "instalacion",
+  "ac/caracteristicas", "caracteristicas", "caja/base", "caja", "base",
+  "texto extraido",
+]);
+
+function pickWorksheet(workbook: XLSX.WorkBook): XLSX.WorkSheet {
+  const preferred = workbook.SheetNames.find((n) => norm(n) === "productos extraidos");
+  if (preferred) return workbook.Sheets[preferred];
+  for (const name of workbook.SheetNames) {
+    const ws = workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+    if (!rows.length) continue;
+    const keys = Object.keys(rows[0]).map(norm);
+    if (keys.some((k) => ["sku", "codigo", "nombre", "producto", "precio"].includes(k))) return ws;
   }
-
-  for (const sheetName of workbook.SheetNames) {
-    const worksheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
-      defval: "",
-    });
-
-    if (rows.length === 0) {
-      continue;
-    }
-
-    const firstRowKeys = Object.keys(rows[0]).map(normalizeHeader);
-    const hasProductHeaders =
-      firstRowKeys.includes("codigo/sku") ||
-      firstRowKeys.includes("sku") ||
-      firstRowKeys.includes("producto") ||
-      firstRowKeys.includes("nombre");
-
-    if (hasProductHeaders) {
-      return worksheet;
-    }
-  }
-
   return workbook.Sheets[workbook.SheetNames[0]];
 }
 
-function getField(row: Record<string, unknown>, aliases: string[]) {
-  for (const [key, value] of Object.entries(row)) {
-    if (aliases.includes(normalizeHeader(key))) {
-      return value;
+function parseRow(row: Record<string, unknown>) {
+  const mapped: Record<string, unknown> = {};
+  const specsData: Record<string, string> = {};
+  const unmapped: Record<string, string> = {};
+
+  for (const [rawKey, rawValue] of Object.entries(row)) {
+    const key = norm(rawKey);
+    const val = String(rawValue ?? "").trim();
+    if (!val) continue;
+    if (KNOWN_FIELDS[key]) {
+      if (!mapped[KNOWN_FIELDS[key]]) mapped[KNOWN_FIELDS[key]] = val;
+    } else if (SPECS_FIELDS.has(key)) {
+      specsData[rawKey.trim()] = val;
+    } else if (key) {
+      unmapped[rawKey.trim()] = val;
     }
   }
 
-  return undefined;
-}
+  const allSpecs = { ...specsData, ...unmapped };
+  const specsJson = Object.keys(allSpecs).length > 0 ? JSON.stringify(allSpecs) : undefined;
 
-function buildDescription(row: Record<string, unknown>) {
-  const parts = [
-    getField(row, ["medidas"]),
-    getField(row, ["ac/caracteristicas", "ac", "caracteristicas"]),
-    getField(row, ["caja/base", "caja", "base"]),
-    getField(row, ["observaciones"]),
-    getField(row, ["texto extraido"]),
-  ]
-    .map((value) => String(value || "").trim())
-    .filter(Boolean);
-
-  return parts.length > 0 ? parts.join(" | ") : undefined;
-}
-
-function parseProductRow(row: Record<string, unknown>) {
-  const sku = String(
-    getField(row, ["codigo/sku", "sku", "codigo", "codigo sku"]) || ""
-  ).trim();
-
-  const nombre = String(
-    getField(row, ["producto", "nombre", "nombre producto"]) || ""
-  ).trim();
-
-  const marca = String(
-    getField(row, ["marca", "categoria", "rubro", "linea"]) || ""
-  ).trim();
-
-  const precioRaw = getField(row, ["precio", "precio unitario", "valor"]);
-  const precio = Number.parseFloat(String(precioRaw || "0").replace(",", "."));
-
-  const imagen = String(getField(row, ["imagen", "image", "foto"]) || "").trim();
+  const sku = String(mapped.sku ?? "").trim();
+  const nombre = String(mapped.nombre ?? "").trim();
+  const marca = String(mapped.marca ?? "").trim();
+  const precioRaw = String(mapped.precio ?? "0").replace(/[^\d.,]/g, "").replace(",", ".");
+  const precio = parseFloat(precioRaw);
 
   return {
     sku,
     nombre,
     marca,
-    descripcion: buildDescription(row),
-    precio: Number.isFinite(precio) ? precio : 0,
-    imagen: imagen || undefined,
+    precio: isFinite(precio) ? precio : 0,
+    imagen: String(mapped.imagen ?? "").trim() || undefined,
+    descripcion: String(mapped.descripcion ?? "").trim() || undefined,
+    stock: mapped.stock ? parseInt(String(mapped.stock)) || undefined : undefined,
+    unidadMedida: String(mapped.unidadMedida ?? "").trim() || undefined,
+    moneda: String(mapped.moneda ?? "").trim() || undefined,
+    categoria: String(mapped.categoria ?? "").trim() || undefined,
+    subcategoria: String(mapped.subcategoria ?? "").trim() || undefined,
+    specs: specsJson,
   };
 }
 
-// POST: Importar productos desde Excel
 export async function POST(req: NextRequest) {
   const originErr = verifyOrigin(req);
   if (originErr) return originErr;
 
-  const rateErr = enforceRateLimit(req, {
-    key: "import",
-    limit: 3,
-    windowMs: 10 * 60 * 1000,
-  });
+  const rateErr = enforceRateLimit(req, { key: "import", limit: 5, windowMs: 10 * 60 * 1000 });
   if (rateErr) return rateErr;
 
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-    if (session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "No tienes permisos para importar productos" },
-        { status: 403 },
-      );
-    }
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-    const formData = await req.formData();
-    const file = formData.get("file");
+  const formData = await req.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0 || file.size > MAX_FILE_SIZE)
+    return NextResponse.json({ error: "Archivo inválido o demasiado grande" }, { status: 400 });
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Archivo no provisto" }, { status: 400 });
-    }
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "buffer", cellHTML: false, cellFormula: false, bookVBA: false });
+  const worksheet = pickWorksheet(workbook);
+  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
 
-    if (file.size === 0 || file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `Archivo excede el límite (${MAX_FILE_SIZE / 1024 / 1024} MB)` },
-        { status: 400 },
-      );
-    }
+  if (data.length > MAX_ROWS)
+    return NextResponse.json({ error: `Demasiadas filas (máx ${MAX_ROWS})` }, { status: 400 });
 
-    const buffer = await file.arrayBuffer();
-    // Opciones seguras: no permitir macros, no parsear estilos
-    const workbook = XLSX.read(buffer, {
-      type: "buffer",
-      cellHTML: false,
-      cellFormula: false,
-      bookVBA: false,
-    });
-    const worksheet = pickWorksheet(workbook);
-    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
-      defval: "",
-    });
+  let createdCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  const userId = session.user.id;
 
-    if (data.length > MAX_ROWS) {
-      return NextResponse.json(
-        { error: `Demasiadas filas (máximo ${MAX_ROWS})` },
-        { status: 400 },
-      );
+  // Dedup SKUs within file — first occurrence wins
+  const seenSkus = new Set<string>();
+
+  for (const row of data) {
+    const product = parseRow(row);
+
+    if (!product.sku || !product.nombre || product.sku.length > 100 ||
+      product.nombre.length > 255 || !isFinite(product.precio) ||
+      product.precio < 0 || product.precio > 99_999_999) {
+      skippedCount++;
+      continue;
     }
 
-    let createdCount = 0;
-    let updatedCount = 0;
-    let skippedCount = 0;
-    const errors: string[] = [];
-    const userId = session.user.id;
+    if (seenSkus.has(product.sku)) { skippedCount++; continue; }
+    seenSkus.add(product.sku);
 
-    for (const row of data) {
-      try {
-        const product = parseProductRow(row);
+    try {
+      const existing = await prisma.product.findUnique({ where: { sku: product.sku } });
 
-        // Validate required fields y bounds básicos
-        if (
-          !product.sku ||
-          !product.nombre ||
-          !product.marca ||
-          product.sku.length > 100 ||
-          product.nombre.length > 255 ||
-          product.marca.length > 255 ||
-          !Number.isFinite(product.precio) ||
-          product.precio < 0 ||
-          product.precio > 99_999_999
-        ) {
-          skippedCount++;
-          continue;
-        }
+      if (existing) {
+        await prisma.product.update({ where: { sku: product.sku }, data: product });
 
-        const existingProduct = await prisma.product.findUnique({
-          where: { sku: product.sku },
-        });
-
-        if (existingProduct) {
-          const updatedProduct = await prisma.product.update({
-            where: { sku: product.sku },
-            data: product,
-          });
-
-          for (const [key, value] of Object.entries(product)) {
-            const valorAnterior = (existingProduct as unknown as Record<string, unknown>)[key];
-            if (valorAnterior !== value && key !== "id") {
-              await prisma.changeLog.create({
-                data: {
-                  productId: existingProduct.id,
-                  usuarioId: userId,
-                  campo: key,
-                  valorAnterior: String(valorAnterior ?? ""),
-                  valorNuevo: String(value ?? ""),
-                  tipo: "UPDATE",
-                },
-              });
-            }
+        for (const [key, value] of Object.entries(product)) {
+          const prev = (existing as any)[key];
+          if (prev !== value && key !== "id" && value !== undefined) {
+            await prisma.changeLog.create({
+              data: {
+                productId: existing.id,
+                usuarioId: userId,
+                campo: key,
+                valorAnterior: String(prev ?? ""),
+                valorNuevo: String(value),
+                tipo: "UPDATE",
+              },
+            });
           }
-
-          updatedCount++;
-          void updatedProduct;
-        } else {
-          const newProduct = await prisma.product.create({ data: product });
-
-          await prisma.changeLog.create({
-            data: {
-              productId: newProduct.id,
-              usuarioId: userId,
-              campo: "PRODUCTO",
-              valorAnterior: null,
-              valorNuevo: JSON.stringify(newProduct),
-              tipo: "CREATE",
-            },
-          });
-
-          createdCount++;
         }
-      } catch {
-        // No exponer mensajes internos al cliente
-        errors.push("Error procesando una fila");
+        updatedCount++;
+      } else {
+        const created = await prisma.product.create({ data: product });
+        await prisma.changeLog.create({
+          data: {
+            productId: created.id,
+            usuarioId: userId,
+            campo: "PRODUCTO",
+            valorAnterior: null,
+            valorNuevo: JSON.stringify(created),
+            tipo: "CREATE",
+          },
+        });
+        createdCount++;
       }
+    } catch {
+      skippedCount++;
     }
-
-    return NextResponse.json({
-      success: true,
-      message: `Importación completada. ${createdCount} creados, ${updatedCount} actualizados, ${skippedCount} omitidos`,
-      data: {
-        createdCount,
-        updatedCount,
-        skippedCount,
-        errors: errors.length > 0 ? errors.slice(0, 20) : undefined,
-      },
-    });
-  } catch (error) {
-    console.error("[import] error:", error);
-    return NextResponse.json(
-      { error: "Error al importar Excel" },
-      { status: 500 },
-    );
   }
+
+  return NextResponse.json({
+    success: true,
+    message: `Importación completada: ${createdCount} creados, ${updatedCount} actualizados, ${skippedCount} omitidos`,
+    data: { createdCount, updatedCount, skippedCount },
+  });
 }
