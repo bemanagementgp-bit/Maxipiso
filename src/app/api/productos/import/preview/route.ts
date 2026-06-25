@@ -156,21 +156,32 @@ export async function POST(req: NextRequest) {
       }))
     : [];
 
+  // Parsear todas las filas primero
+  const parsed = rows.map(parseRow);
+
+  // Detectar duplicados dentro del archivo
+  const skusSeen = new Set<string>();
+  const duplicateSkus = new Set<string>();
+  for (const p of parsed) {
+    if (!p.sku) continue;
+    if (skusSeen.has(p.sku)) duplicateSkus.add(p.sku);
+    skusSeen.add(p.sku);
+  }
+
+  // UNA sola query para todos los SKUs válidos del archivo
+  const validSkus = [...skusSeen].filter((s) => !duplicateSkus.has(s));
+  const existingProducts = await prisma.product.findMany({
+    where: { sku: { in: validSkus } },
+    select: { id: true, sku: true, nombre: true, precio: true, marca: true },
+  });
+  const existingMap = new Map(existingProducts.map((p) => [p.sku, p]));
+
   const toCreate: any[] = [];
   const toUpdate: any[] = [];
   const toSkip: any[] = [];
   const duplicates: any[] = [];
 
-  const allSkus = rows.map((r) => parseRow(r).sku).filter(Boolean);
-  const skusSeen = new Set<string>();
-  const duplicateSkus = new Set<string>();
-  for (const sku of allSkus) {
-    if (skusSeen.has(sku)) duplicateSkus.add(sku);
-    skusSeen.add(sku);
-  }
-
-  for (const row of rows) {
-    const p = parseRow(row);
+  for (const p of parsed) {
     if (!p.sku || !p.nombre || p.precio < 0 || p.precio > 99_999_999) {
       toSkip.push({ sku: p.sku, nombre: p.nombre, motivo: !p.sku ? "Sin SKU" : !p.nombre ? "Sin nombre" : "Precio inválido" });
       continue;
@@ -179,10 +190,7 @@ export async function POST(req: NextRequest) {
       duplicates.push(p);
       continue;
     }
-    const existing = await prisma.product.findUnique({
-      where: { sku: p.sku },
-      select: { id: true, nombre: true, precio: true, marca: true },
-    });
+    const existing = existingMap.get(p.sku);
     if (existing) {
       const cambios: string[] = [];
       if (existing.nombre !== p.nombre) cambios.push(`nombre: "${existing.nombre}" → "${p.nombre}"`);

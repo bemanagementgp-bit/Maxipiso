@@ -125,58 +125,76 @@ export async function POST(req: NextRequest) {
   let skippedCount = 0;
   const userId = session.user.id;
 
-  // Dedup SKUs within file — first occurrence wins
+  // Parsear y deduplicar en memoria
+  const parsed = data.map(parseRow);
   const seenSkus = new Set<string>();
+  const validRows: ReturnType<typeof parseRow>[] = [];
 
-  for (const row of data) {
-    const product = parseRow(row);
-
-    if (!product.sku || !product.nombre || product.sku.length > 100 ||
-      product.nombre.length > 255 || !isFinite(product.precio) ||
-      product.precio < 0 || product.precio > 99_999_999) {
-      skippedCount++;
-      continue;
+  for (const p of parsed) {
+    if (!p.sku || !p.nombre || p.sku.length > 100 || p.nombre.length > 255 ||
+      !isFinite(p.precio) || p.precio < 0 || p.precio > 99_999_999) {
+      skippedCount++; continue;
     }
+    if (seenSkus.has(p.sku)) { skippedCount++; continue; }
+    seenSkus.add(p.sku);
+    validRows.push(p);
+  }
 
-    if (seenSkus.has(product.sku)) { skippedCount++; continue; }
-    seenSkus.add(product.sku);
+  // UNA query para saber qué SKUs ya existen
+  const existingProducts = await prisma.product.findMany({
+    where: { sku: { in: [...seenSkus] } },
+  });
+  const existingMap = new Map(existingProducts.map((p) => [p.sku, p]));
 
+  // Separar creaciones y actualizaciones
+  const toCreate = validRows.filter((p) => !existingMap.has(p.sku));
+  const toUpdate = validRows.filter((p) => existingMap.has(p.sku));
+
+  // Crear en lote con createMany (sin changelog individual — registramos una entrada por sesión)
+  if (toCreate.length > 0) {
+    await prisma.product.createMany({ data: toCreate, skipDuplicates: true });
+    // Recuperar los IDs creados para el changelog
+    const created = await prisma.product.findMany({
+      where: { sku: { in: toCreate.map((p) => p.sku) } },
+      select: { id: true, sku: true },
+    });
+    const skuToId = new Map(created.map((p) => [p.sku, p.id]));
+    await prisma.changeLog.createMany({
+      data: toCreate.map((p) => ({
+        productId: skuToId.get(p.sku)!,
+        usuarioId: userId,
+        campo: "PRODUCTO",
+        valorAnterior: null,
+        valorNuevo: p.nombre,
+        tipo: "CREATE" as const,
+      })).filter((e) => e.productId),
+    });
+    createdCount = toCreate.length;
+  }
+
+  // Actualizar uno a uno (necesario para changelog de campos)
+  for (const p of toUpdate) {
+    const existing = existingMap.get(p.sku)!;
     try {
-      const existing = await prisma.product.findUnique({ where: { sku: product.sku } });
-
-      if (existing) {
-        await prisma.product.update({ where: { sku: product.sku }, data: product });
-
-        for (const [key, value] of Object.entries(product)) {
-          const prev = (existing as any)[key];
-          if (prev !== value && key !== "id" && value !== undefined) {
-            await prisma.changeLog.create({
-              data: {
-                productId: existing.id,
-                usuarioId: userId,
-                campo: key,
-                valorAnterior: String(prev ?? ""),
-                valorNuevo: String(value),
-                tipo: "UPDATE",
-              },
-            });
-          }
-        }
-        updatedCount++;
-      } else {
-        const created = await prisma.product.create({ data: product });
-        await prisma.changeLog.create({
-          data: {
-            productId: created.id,
+      await prisma.product.update({ where: { sku: p.sku }, data: p });
+      // Solo registrar si hubo cambios reales
+      const changedFields = Object.entries(p).filter(([key, value]) => {
+        if (key === "specs") return false; // skip specs diff
+        return (existing as any)[key] !== value && value !== undefined;
+      });
+      if (changedFields.length > 0) {
+        await prisma.changeLog.createMany({
+          data: changedFields.map(([campo, valorNuevo]) => ({
+            productId: existing.id,
             usuarioId: userId,
-            campo: "PRODUCTO",
-            valorAnterior: null,
-            valorNuevo: JSON.stringify(created),
-            tipo: "CREATE",
-          },
+            campo,
+            valorAnterior: String((existing as any)[campo] ?? ""),
+            valorNuevo: String(valorNuevo),
+            tipo: "UPDATE" as const,
+          })),
         });
-        createdCount++;
       }
+      updatedCount++;
     } catch {
       skippedCount++;
     }
