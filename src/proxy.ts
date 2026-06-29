@@ -1,9 +1,10 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export async function middleware(request: Request) {
-  const token = await getToken({ req: request as never });
-  const { pathname } = new URL(request.url);
+export async function proxy(request: NextRequest) {
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const { pathname } = request.nextUrl;
 
   const isAdmin = token?.role === "ADMIN";
   const isAuthenticated = !!token;
@@ -32,7 +33,7 @@ export async function middleware(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Resto de /api/productos requiere sesión válida (rol check fino en handlers)
+  // Resto de /api/productos requiere sesión válida
   if (pathname.startsWith("/api/productos") && !isAuthenticated) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
