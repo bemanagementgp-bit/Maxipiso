@@ -10,121 +10,103 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_ROWS = 1000;
 
-// Normaliza un encabezado: minúsculas, sin tildes, sin espacios extra
 function norm(value: unknown): string {
   return String(value ?? "")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 }
 
-// Mapeo de columnas conocidas → campo del producto
-const KNOWN_FIELDS: Record<string, string> = {
-  // SKU
-  sku: "sku", codigo: "sku", "codigo/sku": "sku", "cod": "sku", item: "sku",
-  // Nombre
-  nombre: "nombre", producto: "nombre", "nombre de madera": "nombre",
-  "nombre del producto": "nombre", "nombre producto": "nombre",
-  // Marca / Tipo
-  marca: "marca", rubro: "marca", linea: "marca", "tipo de producto": "marca",
-  // Precio
-  precio: "precio", "precio unitario": "precio", valor: "precio", price: "precio",
-  // Imagen
-  imagen: "imagen", image: "imagen", foto: "imagen", img: "imagen",
-  // Descripción directa
-  descripcion: "descripcion", "descripcion del producto": "descripcion",
-  observaciones: "descripcion",
-  // Stock
+const FIELD_MAP: Record<string, string> = {
+  sku: "sku",
+  nombre: "nombre",
+  "nombre de madera": "nombre",
+  "nombre del producto": "nombre",
+  especie: "nombre",
+  marca: "marca",
+  "precio x m2": "precio",
+  "precio por m2": "precio",
+  precio: "precio",
+  imagen: "imagen",
+  imagenes: "imagen",
+  descripcion: "descripcion",
   stock: "stock",
-  // Unidad de medida
-  "unidad de medida": "unidadMedida", unidad: "unidadMedida", um: "unidadMedida",
-  // Moneda
-  moneda: "moneda", currency: "moneda",
-  // Categoría
-  categoria: "categoria", "categoria prod": "categoria",
+  "unidad de medida": "unidadMedida",
+  moneda: "moneda",
+  "categoria principal": "categoria",
+  categoria: "categoria",
+  "categoria secundaria": "subcategoria",
   subcategoria: "subcategoria",
 };
 
-// Columnas que van a specs (JSON) en lugar de campos directos
-const SPECS_FIELDS = new Set([
-  "medidas", "espesores disponibles", "espesores", "secado", "origen",
-  "ficha tecnica", "archivo instalacion", "instalacion",
-  "ac/caracteristicas", "caracteristicas", "caja/base", "caja", "base",
-  "texto extraido",
+const SKIP_COLS = new Set([
+  "__empty",
+  "moneda_1", "moneda_2", "moneda1", "moneda2",
 ]);
 
-function pickWorksheet(workbook: XLSX.WorkBook): XLSX.WorkSheet {
-  // Preferir hoja llamada "productos extraidos"
-  const preferred = workbook.SheetNames.find(
-    (n) => norm(n) === "productos extraidos"
-  );
-  if (preferred) return workbook.Sheets[preferred];
-
-  // Elegir la primera hoja con datos y algún encabezado reconocible
+function pickWorksheets(workbook: XLSX.WorkBook): { ws: XLSX.WorkSheet; sheetName: string }[] {
+  const valid: { ws: XLSX.WorkSheet; sheetName: string }[] = [];
   for (const name of workbook.SheetNames) {
     const ws = workbook.Sheets[name];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rows.length) continue;
     const keys = Object.keys(rows[0]).map(norm);
-    if (keys.some((k) => ["sku", "codigo", "nombre", "producto", "precio"].includes(k))) {
-      return ws;
-    }
+    const hasSku = keys.some((k) => k === "sku");
+    const hasName = keys.some((k) => ["nombre", "nombre de madera", "especie"].includes(k));
+    if (hasSku && hasName) valid.push({ ws, sheetName: name });
   }
-  return workbook.Sheets[workbook.SheetNames[0]];
+  if (valid.length > 0) return valid;
+  const name = workbook.SheetNames[0];
+  return [{ ws: workbook.Sheets[name], sheetName: name }];
 }
 
-// Parsea una fila de forma dinámica, mapeando lo que conoce
 function parseRow(row: Record<string, unknown>): {
-  sku: string; nombre: string; marca: string; precio: number;
+  sku: string; nombre: string; marca?: string; precio: number;
   imagen?: string; descripcion?: string; stock?: number;
   unidadMedida?: string; moneda?: string; categoria?: string; subcategoria?: string;
   specs?: string;
-  _unmapped: Record<string, string>;
+  _mapped: string[];
 } {
-  const mapped: Record<string, unknown> = {};
-  const specsData: Record<string, string> = {};
-  const unmapped: Record<string, string> = {};
+  const mapped: Record<string, string> = {};
+  const specs: Record<string, string> = {};
+  const mappedCols: string[] = [];
 
   for (const [rawKey, rawValue] of Object.entries(row)) {
     const key = norm(rawKey);
     const val = String(rawValue ?? "").trim();
-    if (!val) continue;
+    if (SKIP_COLS.has(key) || !key || !val) continue;
 
-    if (KNOWN_FIELDS[key]) {
-      const field = KNOWN_FIELDS[key];
-      if (!mapped[field]) mapped[field] = val; // first match wins
-    } else if (SPECS_FIELDS.has(key)) {
-      specsData[rawKey.trim()] = val;
-    } else if (key && val) {
-      unmapped[rawKey.trim()] = val;
+    if (FIELD_MAP[key]) {
+      if (!mapped[FIELD_MAP[key]]) {
+        mapped[FIELD_MAP[key]] = val;
+        mappedCols.push(`${rawKey.trim()} → ${FIELD_MAP[key]}`);
+      }
+    } else {
+      specs[rawKey.trim()] = val;
     }
   }
 
-  // Combinar specs + unmapped en JSON
-  const allSpecs = { ...specsData, ...unmapped };
-  const specsJson = Object.keys(allSpecs).length > 0 ? JSON.stringify(allSpecs) : undefined;
-
-  const sku = String(mapped.sku ?? "").trim();
-  const nombre = String(mapped.nombre ?? "").trim();
-  const marca = String(mapped.marca ?? "").trim();
-  const precioRaw = String(mapped.precio ?? "0").replace(/[^\d.,]/g, "").replace(",", ".");
+  const sku = (mapped.sku ?? "").replace(/\.0$/, "").trim();
+  const nombre = (mapped.nombre ?? "").trim();
+  const precioRaw = (mapped.precio ?? "0").replace(/[^\d.,]/g, "").replace(",", ".");
   const precio = parseFloat(precioRaw);
 
   return {
     sku,
     nombre,
-    marca,
-    precio: isFinite(precio) ? precio : 0,
-    imagen: String(mapped.imagen ?? "").trim() || undefined,
-    descripcion: String(mapped.descripcion ?? "").trim() || undefined,
-    stock: mapped.stock ? parseInt(String(mapped.stock)) || undefined : undefined,
-    unidadMedida: String(mapped.unidadMedida ?? "").trim() || undefined,
-    moneda: String(mapped.moneda ?? "").trim() || undefined,
-    categoria: String(mapped.categoria ?? "").trim() || undefined,
-    subcategoria: String(mapped.subcategoria ?? "").trim() || undefined,
-    specs: specsJson,
-    _unmapped: unmapped,
+    marca: mapped.marca?.trim() || undefined,
+    precio: isFinite(precio) && precio >= 0 ? precio : 0,
+    imagen: mapped.imagen?.trim() || undefined,
+    descripcion: mapped.descripcion?.trim() || undefined,
+    stock: mapped.stock ? Math.round(parseFloat(mapped.stock)) || undefined : undefined,
+    unidadMedida: mapped.unidadMedida?.trim() || undefined,
+    moneda: mapped.moneda?.trim() || undefined,
+    categoria: mapped.categoria?.trim() || undefined,
+    subcategoria: mapped.subcategoria?.trim() || undefined,
+    specs: Object.keys(specs).length > 0 ? JSON.stringify(specs) : undefined,
+    _mapped: mappedCols,
   };
 }
 
@@ -142,24 +124,29 @@ export async function POST(req: NextRequest) {
 
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "buffer", cellHTML: false, cellFormula: false, bookVBA: false });
-  const worksheet = pickWorksheet(workbook);
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+  const sheets = pickWorksheets(workbook);
+  const sheetNames = sheets.map((s) => s.sheetName);
+
+  const rows: Record<string, unknown>[] = [];
+  for (const { ws } of sheets) {
+    rows.push(...XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" }));
+  }
 
   if (rows.length > MAX_ROWS)
     return NextResponse.json({ error: `Demasiadas filas (máx ${MAX_ROWS})` }, { status: 400 });
 
-  // Detectar columnas detectadas en este archivo
-  const detectedColumns = rows.length > 0
-    ? Object.keys(rows[0]).map((k) => ({
-        original: k,
-        mapsTo: KNOWN_FIELDS[norm(k)] ?? (SPECS_FIELDS.has(norm(k)) ? "specs" : "ignorado"),
-      }))
+  // Columnas detectadas en la primera hoja (representativa)
+  const firstSheetRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheets[0].ws, { defval: "" });
+  const detectedColumns = firstSheetRows.length > 0
+    ? Object.keys(firstSheetRows[0]).map((k) => {
+        const n = norm(k);
+        if (SKIP_COLS.has(n)) return { original: k, mapsTo: "ignorado" };
+        return { original: k, mapsTo: FIELD_MAP[n] ?? "specs" };
+      })
     : [];
 
-  // Parsear todas las filas primero
   const parsed = rows.map(parseRow);
 
-  // Detectar duplicados dentro del archivo
   const skusSeen = new Set<string>();
   const duplicateSkus = new Set<string>();
   for (const p of parsed) {
@@ -168,7 +155,6 @@ export async function POST(req: NextRequest) {
     skusSeen.add(p.sku);
   }
 
-  // UNA sola query para todos los SKUs válidos del archivo
   const validSkus = [...skusSeen].filter((s) => !duplicateSkus.has(s));
   const existingProducts = await prisma.product.findMany({
     where: { sku: { in: validSkus } },
@@ -186,10 +172,7 @@ export async function POST(req: NextRequest) {
       toSkip.push({ sku: p.sku, nombre: p.nombre, motivo: !p.sku ? "Sin SKU" : !p.nombre ? "Sin nombre" : "Precio inválido" });
       continue;
     }
-    if (duplicateSkus.has(p.sku)) {
-      duplicates.push(p);
-      continue;
-    }
+    if (duplicateSkus.has(p.sku)) { duplicates.push(p); continue; }
     const existing = existingMap.get(p.sku);
     if (existing) {
       const cambios: string[] = [];
@@ -205,6 +188,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     data: {
+      sheetNames,
       detectedColumns,
       toCreate: toCreate.slice(0, 100),
       toUpdate: toUpdate.slice(0, 100),
