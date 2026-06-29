@@ -5,21 +5,23 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const product = await prisma.product.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+
+  const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
   const updated = await prisma.product.update({
-    where: { id: params.id },
+    where: { id },
     data: { isActive: !product.isActive },
   });
 
   await prisma.changeLog.create({
     data: {
-      productId: params.id,
+      productId: id,
       usuarioId: session.user.id,
       campo: "isActive",
       valorAnterior: String(product.isActive),
