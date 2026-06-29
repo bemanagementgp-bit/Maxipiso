@@ -3,7 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeText, verifyOrigin } from "@/lib/security";
-import { hashIp, normalizePhone, upsertLeadAndInteraction } from "@/lib/crm";
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+function hashIp(ip: string): string {
+  let h = 0;
+  for (let i = 0; i < ip.length; i++) { h = (Math.imul(31, h) + ip.charCodeAt(i)) | 0; }
+  return Math.abs(h).toString(16);
+}
 
 export const runtime = "nodejs";
 
@@ -241,27 +250,7 @@ export async function POST(req: NextRequest) {
     // Si ya tenemos teléfono + nombre, persistimos el lead silenciosamente.
     // El formulario previo al WhatsApp sigue mostrándose como confirmación,
     // pero el dato ya queda en el CRM.
-    if (
-      process.env.CRM_DATABASE_URL &&
-      leadExtracted.telefono &&
-      leadExtracted.nombre &&
-      normalizePhone(leadExtracted.telefono).length >= 8
-    ) {
-      const lastUserMsg = [...safeMessages].reverse().find((m) => m.role === "user");
-      try {
-        await upsertLeadAndInteraction({
-          nombre: leadExtracted.nombre,
-          telefono: leadExtracted.telefono,
-          email: leadExtracted.email,
-          urlOrigen: sanitizeText(req.headers.get("referer") ?? "", 512) || null,
-          mensajeInicial: lastUserMsg?.content ?? null,
-          userAgent: sanitizeText(req.headers.get("user-agent") ?? "", 255) || null,
-          ipHash: hashIp(getClientIp(req)),
-        });
-      } catch (err) {
-        console.error("[chat] upsert lead fail:", err instanceof Error ? err.message : err);
-      }
-    }
+    // CRM deshabilitado — integración removida
 
     return NextResponse.json({
       reply,
