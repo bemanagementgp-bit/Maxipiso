@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma generate --schema=prisma/crm/schema.prisma && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "postinstall": "prisma generate && prisma generate --schema=prisma/crm/schema.prisma"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
