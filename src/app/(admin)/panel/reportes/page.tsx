@@ -11,8 +11,9 @@ import { FiSearch, FiTrendingUp, FiTrendingDown, FiMinus } from "react-icons/fi"
 function fmt(v: number) {
   return "$" + v.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "2-digit" });
+function fmtDate(iso: string | number | undefined) {
+  if (!iso) return "";
+  return new Date(String(iso)).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "2-digit" });
 }
 function pctColor(delta: number) {
   if (delta > 0) return "text-emerald-600";
