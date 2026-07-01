@@ -25,6 +25,8 @@ export interface SheetSchema {
   id: string;
   label: string;
   defaultCategoria: string;
+  /** Si se define, sobreescribe subcategoria con este valor fijo (ignorando la columna) */
+  fixedSubcategoria?: string;
   /** Columnas normalizadas que identifican unívocamente este schema */
   signatureColumns: string[];
   /** col normalizada → campo del producto */
@@ -36,20 +38,19 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
   {
     id: "pisos-flotantes",
     label: "Pisos Flotantes",
-    defaultCategoria: "Pisos Flotantes",
+    defaultCategoria: "Pisos",
+    fixedSubcategoria: "Pisos Flotantes",
     signatureColumns: ["abrasion", "tablas x caja", "cajas por pallet"],
     fieldMap: {
-      sku:                  "sku",
-      nombre:               "nombre",
-      marca:                "marca",
-      "precio x m2":        "precio",
-      moneda:               "moneda",
-      stock:                "stock",
-      imagenes:             "imagen",
-      imagen:               "imagen",
-      descripcion:          "descripcion",
-      "categoria principal":"categoria",
-      "categoria secundaria":"subcategoria",
+      sku:           "sku",
+      nombre:        "nombre",
+      marca:         "marca",
+      "precio x m2": "precio",
+      moneda:        "moneda",
+      stock:         "stock",
+      imagenes:      "imagen",
+      imagen:        "imagen",
+      descripcion:   "descripcion",
     },
   },
 
@@ -103,20 +104,19 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
   {
     id: "pisos-vinilicos",
     label: "Pisos Vinílicos",
-    defaultCategoria: "Pisos Vinílicos",
+    defaultCategoria: "Pisos",
+    fixedSubcategoria: "Pisos Vinílicos",
     signatureColumns: ["capa de uso", "espesor total", "cajas x pallet"],
     fieldMap: {
-      sku:                  "sku",
-      nombre:               "nombre",
-      marca:                "marca",
-      "precio x m2":        "precio",
-      moneda:               "moneda",
-      stock:                "stock",
-      imagenes:             "imagen",
-      imagen:               "imagen",
-      descripcion:          "descripcion",
-      "categoria principal":"categoria",
-      "categoria secundaria":"subcategoria",
+      sku:           "sku",
+      nombre:        "nombre",
+      marca:         "marca",
+      "precio x m2": "precio",
+      moneda:        "moneda",
+      stock:         "stock",
+      imagenes:      "imagen",
+      imagen:        "imagen",
+      descripcion:   "descripcion",
     },
   },
 
@@ -125,20 +125,19 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
   {
     id: "pisos-madera",
     label: "Pisos de Madera e Ingeniería",
-    defaultCategoria: "Pisos de Madera",
+    defaultCategoria: "Pisos",
+    fixedSubcategoria: "Pisos de Madera e Ingeniería",
     signatureColumns: ["especie", "espesor lamina", "subtipo"],
     fieldMap: {
-      sku:                  "sku",
-      especie:              "nombre",   // "Especie" = nombre del producto
-      marca:                "marca",
-      "precio x m2":        "precio",
-      moneda:               "moneda",
-      stock:                "stock",
-      imagenes:             "imagen",
-      imagen:               "imagen",
-      descripcion:          "descripcion",
-      "categoria principal":"categoria",
-      "categoria secundaria":"subcategoria",
+      sku:           "sku",
+      especie:       "nombre",
+      marca:         "marca",
+      "precio x m2": "precio",
+      moneda:        "moneda",
+      stock:         "stock",
+      imagenes:      "imagen",
+      imagen:        "imagen",
+      descripcion:   "descripcion",
     },
   },
 
@@ -283,7 +282,7 @@ export function parseRowWithSchema(
     unidadMedida: mapped.unidadMedida?.trim() || undefined,
     moneda: mapped.moneda?.trim() || undefined,
     categoria: mapped.categoria?.trim() || schema.defaultCategoria,
-    subcategoria: mapped.subcategoria?.trim() || undefined,
+    subcategoria: schema.fixedSubcategoria ?? mapped.subcategoria?.trim() ?? undefined,
     specs: Object.keys(specs).length > 0 ? JSON.stringify(specs) : undefined,
   };
 }
