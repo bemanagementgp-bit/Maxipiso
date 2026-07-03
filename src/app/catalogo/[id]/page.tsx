@@ -104,8 +104,6 @@ export default async function ProductPage({
     unidadMedida: (raw.unidadMedida as string) ?? null,
     moneda:       (raw.moneda as string) ?? null,
   };
-    moneda: raw.moneda,
-  };
 
   const specEntries = Object.entries(specs);
   const consultHref = buildWA(`Hola, quiero consultar precio y disponibilidad de ${product.nombre} (SKU: ${product.sku}). Me pueden asesorar?`);
