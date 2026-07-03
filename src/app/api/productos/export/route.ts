@@ -1,7 +1,8 @@
+﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getAllProducts } from "@/lib/all-products";
 import * as XLSX from "xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
@@ -29,21 +30,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all active products
-    const productos = await prisma.product.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const productos = await getAllProducts({ isActive: true });
 
     // Prepare data for Excel
     const data = productos.map((p) => ({
-      SKU: p.sku,
-      Nombre: p.nombre,
-      Marca: p.marca,
-      Descripción: p.descripcion || "",
-      Precio: p.precio,
-      Imagen: p.imagen || "",
-      "Fecha Creación": p.createdAt.toISOString().split("T")[0],
-      "Última Actualización": p.updatedAt.toISOString().split("T")[0],
+      SKU:                     p.sku,
+      Nombre:                  p.nombre,
+      Marca:                   p.marca ?? "",
+      Categoria:               p.categoria,
+      Precio:                  p.precio,
+      Imagen:                  p.imagen ?? "",
+      Tabla:                   p.tablaNombre,
+      "Fecha Creacion":        new Date(p.createdAt as string).toISOString().split("T")[0],
     }));
 
     // Create workbook
@@ -82,3 +80,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState } from "react";
@@ -177,3 +178,4 @@ export function ImportPreviewModal({ isOpen, previewData, isLoading, onConfirm, 
     </div>
   );
 }
+

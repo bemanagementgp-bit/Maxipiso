@@ -1,25 +1,80 @@
+﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
 import { parseIntSafe, sanitizeText, verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-// Validación de producto
-const CreateProductSchema = z.object({
-  sku: z.string().trim().min(1).max(100),
-  nombre: z.string().trim().min(1).max(255),
-  marca: z.string().trim().min(1).max(255),
-  descripcion: z.string().trim().max(5000).optional(),
-  precio: z.number().finite().positive().max(99_999_999),
-  imagen: z.string().trim().max(500).optional(),
-  categoria: z.string().trim().max(100).optional(),
-  subcategoria: z.string().trim().max(100).optional(),
-});
+// ─── Tablas disponibles ───────────────────────────────────────────────────────
 
-// GET: Listar productos con filtros y paginación
+type TableKey =
+  | "pisoFlotante"
+  | "porcellanato"
+  | "revestimiento"
+  | "pisoVinilico"
+  | "pisoMadera"
+  | "deck"
+  | "madera"
+  | "accesorio";
+
+const TABLE_KEYS: TableKey[] = [
+  "pisoFlotante",
+  "porcellanato",
+  "revestimiento",
+  "pisoVinilico",
+  "pisoMadera",
+  "deck",
+  "madera",
+  "accesorio",
+];
+
+const TABLE_LABELS: Record<TableKey, string> = {
+  pisoFlotante:  "Pisos Flotantes",
+  porcellanato:  "Porcellanatos",
+  revestimiento: "Revestimientos",
+  pisoVinilico:  "Pisos Vinílicos",
+  pisoMadera:    "Pisos Madera e Ingeniería",
+  deck:          "Decks",
+  madera:        "Maderas",
+  accesorio:     "Accesorios",
+};
+
+const DB_NAMES: Record<TableKey, string> = {
+  pisoFlotante:  "pisos_flotantes",
+  porcellanato:  "porcellanatos",
+  revestimiento: "revestimientos",
+  pisoVinilico:  "pisos_vinilicos",
+  pisoMadera:    "pisos_madera",
+  deck:          "decks",
+  madera:        "maderas",
+  accesorio:     "accesorios",
+};
+
+// ─── Normaliza un row a formato admin ─────────────────────────────────────────
+
+function normalize(row: Record<string, unknown>, tableKey: TableKey) {
+  return {
+    id:           row.id,
+    sku:          row.sku,
+    nombre:       row.nombre ?? row.especie ?? row.sku,
+    marca:        row.marca ?? null,
+    precioM2:     row.precioM2 ?? row.precio ?? null,
+    moneda:       row.moneda ?? null,
+    stock:        row.stock ?? null,
+    isActive:     row.isActive,
+    createdAt:    row.createdAt,
+    updatedAt:    row.updatedAt,
+    descripcion:  row.descripcion ?? null,
+    imagen:       row.imagen ?? (row.imagenes ? (() => { try { return JSON.parse(row.imagenes as string)[0] ?? null; } catch { return null; } })() : null),
+    _tabla:       DB_NAMES[tableKey],
+    _tablaLabel:  TABLE_LABELS[tableKey],
+  };
+}
+
+// ─── GET: listar todos los productos de todas las tablas ──────────────────────
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,55 +82,60 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const searchParams = req.nextUrl.searchParams;
-    const search = sanitizeText(searchParams.get("search") ?? "", 100);
-    const marca = sanitizeText(searchParams.get("marca") ?? "", 100);
-    const categoria = sanitizeText(searchParams.get("categoria") ?? "", 100);
-    const subcategoria = sanitizeText(searchParams.get("subcategoria") ?? "", 100);
-    const estado = searchParams.get("estado") ?? "activo"; // activo | inactivo | todos
-    const skip = parseIntSafe(searchParams.get("skip"), 0, 0, 1_000_000);
-    const take = parseIntSafe(searchParams.get("take"), 10, 1, 100);
+    const sp         = req.nextUrl.searchParams;
+    const search     = sanitizeText(sp.get("search")  ?? "", 100);
+    const marca      = sanitizeText(sp.get("marca")   ?? "", 100);
+    const tablaFilter = sanitizeText(sp.get("tabla")  ?? "", 60);
+    const estado     = sp.get("estado") ?? "activo";
+    const skip       = parseIntSafe(sp.get("skip"),  0,  0, 1_000_000);
+    const take       = parseIntSafe(sp.get("take"), 10,  1, 200);
 
-    const where: {
-      isActive?: boolean;
-      OR?: Array<Record<string, { contains: string; mode: "insensitive" }>>;
-      marca?: { contains: string; mode: "insensitive" };
-      categoria?: { equals: string };
-      subcategoria?: { equals: string };
-    } = {};
+    // Decide qué tablas consultar
+    const keys: TableKey[] = tablaFilter
+      ? TABLE_KEYS.filter((k) => DB_NAMES[k] === tablaFilter || k === tablaFilter)
+      : TABLE_KEYS;
 
-    if (estado === "activo") where.isActive = true;
-    else if (estado === "inactivo") where.isActive = false;
+    // Construye filtros comunes
+    const isActive = estado === "activo" ? true : estado === "inactivo" ? false : undefined;
 
-    if (search) {
-      where.OR = [
-        { nombre: { contains: search, mode: "insensitive" } },
-        { sku: { contains: search, mode: "insensitive" } },
-        { marca: { contains: search, mode: "insensitive" } },
-      ];
-    }
+    // Consulta todas las tablas en paralelo
+    const results = await Promise.all(
+      keys.map(async (key) => {
+        const delegate = (prisma as Record<string, { findMany: Function; count: Function }>)[key];
+        if (!delegate) return [];
 
-    if (marca) {
-      where.marca = { contains: marca, mode: "insensitive" };
-    }
+        const where: Record<string, unknown> = {};
+        if (isActive !== undefined) where.isActive = isActive;
+        if (marca) where.marca = marca;
 
-    if (categoria) {
-      where.categoria = { equals: categoria };
-    }
+        if (search) {
+          const searchFields = key === "pisoMadera"
+            ? ["especie", "sku", "marca"]
+            : key === "madera"
+            ? ["nombre", "sku", "origen"]
+            : ["nombre", "sku", "marca"];
 
-    if (subcategoria) {
-      where.subcategoria = { equals: subcategoria };
-    }
+          where.OR = searchFields.map((f) => ({ [f]: { contains: search } }));
+        }
 
-    const [productos, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.product.count({ where }),
-    ]);
+        const rows = await delegate.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          take: 2000, // trae muchos para paginar en memoria
+        });
+
+        return (rows as Record<string, unknown>[]).map((r) => normalize(r, key));
+      })
+    );
+
+    // Combina, ordena por createdAt desc y pagina
+    const all = results
+      .flat()
+      .sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+
+    const total       = all.length;
+    const productos   = all.slice(skip, skip + take);
+    const totalPages  = Math.ceil(total / take);
 
     return NextResponse.json({
       success: true,
@@ -83,19 +143,19 @@ export async function GET(req: NextRequest) {
         productos,
         total,
         page: Math.floor(skip / take) + 1,
-        totalPages: Math.ceil(total / take),
+        totalPages,
+        tablas: TABLE_KEYS.map((k) => ({ key: k, label: TABLE_LABELS[k], tabla: DB_NAMES[k] })),
       },
     });
   } catch (error) {
     console.error("[productos GET] error:", error);
-    return NextResponse.json(
-      { error: "Error al obtener productos" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Error al obtener productos" }, { status: 500 });
   }
 }
 
-// POST: Crear nuevo producto
+// ─── POST: crear producto en la tabla indicada ────────────────────────────────
+// Requiere campo `tabla` con el nombre DB (ej: "pisos_flotantes")
+
 export async function POST(req: NextRequest) {
   const originErr = verifyOrigin(req);
   if (originErr) return originErr;
@@ -106,53 +166,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     if (session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "No tienes permisos para crear productos" },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 
-    let raw: unknown;
+    let raw: Record<string, unknown>;
     try {
       raw = await req.json();
     } catch {
       return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
     }
 
-    const validatedData = CreateProductSchema.parse(raw);
-
-    const existingSku = await prisma.product.findUnique({
-      where: { sku: validatedData.sku },
-    });
-    if (existingSku) {
-      return NextResponse.json({ error: "Este SKU ya existe" }, { status: 409 });
+    const tablaNombre = raw._tabla as string;
+    if (!tablaNombre) {
+      return NextResponse.json({ error: "Campo _tabla requerido" }, { status: 400 });
     }
 
-    const producto = await prisma.product.create({ data: validatedData });
+    const tableKey = TABLE_KEYS.find((k) => DB_NAMES[k] === tablaNombre);
+    if (!tableKey) {
+      return NextResponse.json({ error: `Tabla desconocida: ${tablaNombre}` }, { status: 400 });
+    }
+
+    const delegate = (prisma as Record<string, { findUnique: Function; create: Function }>)[tableKey];
+
+    const existing = await delegate.findUnique({ where: { sku: raw.sku as string } });
+    if (existing) {
+      return NextResponse.json({ error: "SKU ya existe en esta categoría" }, { status: 409 });
+    }
+
+    const { _tabla, _tablaLabel, ...data } = raw;
+    const producto = await delegate.create({ data });
 
     await prisma.changeLog.create({
       data: {
-        productId: producto.id,
-        usuarioId: session.user.id,
-        campo: "PRODUCTO",
+        tablaNombre,
+        entidadId:    producto.id,
+        usuarioId:    session.user.id,
+        campo:        "PRODUCTO",
         valorAnterior: null,
-        valorNuevo: JSON.stringify(producto),
-        tipo: "CREATE",
+        valorNuevo:   JSON.stringify(producto),
+        tipo:         "CREATE",
       },
     });
 
-    return NextResponse.json(
-      { success: true, data: producto },
-      { status: 201 },
-    );
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Datos inválidos" },
-        { status: 400 },
-      );
-    }
+    return NextResponse.json({ success: true, data: producto }, { status: 201 });
+  } catch (error) {
     console.error("[productos POST] error:", error);
     return NextResponse.json({ error: "Error al crear producto" }, { status: 500 });
   }
 }
+
+

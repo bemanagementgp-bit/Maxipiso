@@ -414,7 +414,7 @@ function LeadHandoff({
       setError("Ingresá tu nombre.");
       return;
     }
-    if (telTrim.replace(/\D+/g, "").length < 8) {
+    if (telTrim.replace(/\D+/g, "").length < 7) {
       setError("Ingresá un WhatsApp válido.");
       return;
     }
@@ -430,24 +430,6 @@ function LeadHandoff({
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/crm/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: nombreTrim,
-          telefono: telTrim,
-          email: emailTrim,
-          url_origen: window.location.href,
-          mensaje_inicial: mensajeInicial,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "No pudimos registrar tus datos. Intentá de nuevo.");
-        return;
-      }
-
       saveLeadCache({
         nombre: nombreTrim,
         telefono: telTrim,

@@ -214,13 +214,31 @@ export async function POST(req: NextRequest) {
       content: sanitizeText(m.content, 2000),
     }));
 
+  const chatParams = {
+    max_tokens: 400,
+    response_format: { type: "json_object" as const },
+    messages: [{ role: "system" as const, content: SYSTEM }, ...safeMessages],
+  };
+
   try {
-    const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 400,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: SYSTEM }, ...safeMessages],
-    });
+    // Intenta primero con el modelo de mayor calidad; si está rate-limited (429)
+    // cae automáticamente al modelo rápido con límite de TPM más alto.
+    let response;
+    try {
+      response = await client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        ...chatParams,
+      });
+    } catch (primaryErr) {
+      if (primaryErr instanceof Groq.APIError && primaryErr.status === 429) {
+        response = await client.chat.completions.create({
+          model: "llama-3.1-8b-instant",
+          ...chatParams,
+        });
+      } else {
+        throw primaryErr;
+      }
+    }
 
     const rawReply = response.choices[0]?.message?.content ?? "{}";
     let parsedReply: {
@@ -260,9 +278,30 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[chat] error:", err instanceof Error ? err.message : err);
+    if (err instanceof Groq.APIError) {
+      if (err.status === 401 || err.status === 403) {
+        console.error("[chat] API key inválida o sin permisos — reiniciá el servidor.");
+        return NextResponse.json(
+          { error: "Servicio no disponible. Intentá más tarde." },
+          { status: 503 },
+        );
+      }
+      if (err.status === 429) {
+        return NextResponse.json(
+          { error: "Demasiadas consultas. Intentá de nuevo en un momento." },
+          { status: 429 },
+        );
+      }
+      if (err.status === 503 || err.status === 504) {
+        return NextResponse.json(
+          { error: "Servicio temporalmente no disponible. Intentá de nuevo." },
+          { status: 503 },
+        );
+      }
+    }
     return NextResponse.json(
       { error: "Error al procesar tu consulta" },
-      { status: 502 },
+      { status: 500 },
     );
   }
 }

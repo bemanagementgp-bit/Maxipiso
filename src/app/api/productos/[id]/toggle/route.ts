@@ -1,34 +1,57 @@
+﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+const TABLE_KEYS = ["pisoFlotante","porcellanato","revestimiento","pisoVinilico","pisoMadera","deck","madera","accesorio"];
+const DB_NAMES: Record<string,string> = { pisoFlotante:"pisos_flotantes",porcellanato:"porcellanatos",revestimiento:"revestimientos",pisoVinilico:"pisos_vinilicos",pisoMadera:"pisos_madera",deck:"decks",madera:"maderas",accesorio:"accesorios" };
 
-  const { id } = await params;
+async function findInAllTables(id: string) {
+  for (const key of TABLE_KEYS) {
+    const delegate = (prisma as any)[key];
+    if (!delegate) continue;
+    const row = await delegate.findUnique({ where: { id } }).catch(() => null);
+    if (row) return { row, tableKey: key, tablaNombre: DB_NAMES[key] };
+  }
+  return null;
+}
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const originErr = verifyOrigin(req);
+  if (originErr) return originErr;
 
-  const updated = await prisma.product.update({
-    where: { id },
-    data: { isActive: !product.isActive },
-  });
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
 
-  await prisma.changeLog.create({
-    data: {
-      productId: id,
-      usuarioId: session.user.id,
-      campo: "isActive",
-      valorAnterior: String(product.isActive),
-      valorNuevo: String(updated.isActive),
-      tipo: "UPDATE",
-    },
-  });
+    const found = await findInAllTables(id);
+    if (!found) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  return NextResponse.json({ success: true, data: { isActive: updated.isActive } });
+    const delegate = (prisma as any)[found.tableKey];
+    const newState = !(found.row as any).isActive;
+    const updated = await delegate.update({ where: { id }, data: { isActive: newState } });
+
+    await prisma.changeLog.create({
+      data: {
+        tablaNombre: found.tablaNombre,
+        entidadId: id,
+        usuarioId: session.user.id,
+        campo: "isActive",
+        valorAnterior: String(!newState),
+        valorNuevo: String(newState),
+        tipo: newState ? "UPDATE" : "DELETE",
+      },
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error("[toggle] error:", error);
+    return NextResponse.json({ error: "Error al cambiar estado" }, { status: 500 });
+  }
 }

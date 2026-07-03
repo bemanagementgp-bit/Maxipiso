@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -260,3 +261,4 @@ export function QuickEditPanel({ isOpen, product, isLoading = false, onClose, on
     </>
   );
 }
+

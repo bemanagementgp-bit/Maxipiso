@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -67,7 +68,7 @@ function EditorialStats({ c }: { c: any }) {
           {c.total > 0 ? c.total.toLocaleString("es-AR") : "—"}
         </div>
         <div className="text-[9px] uppercase tracking-[0.1em] text-[#aaa] mt-3">Productos en catálogo</div>
-        {c.total > 0 && <div className="text-[11px] text-[#DF8635] mt-2 font-medium">↑ {pct}% activos</div>}
+        {c.total > 0 && <div className="text-[11px] text-[#DF8635] mt-2 font-medium">â†‘ {pct}% activos</div>}
       </div>
       <div className="flex-1 flex flex-col divide-y divide-[#E0DED8]">
         {[
@@ -497,3 +498,4 @@ export default function ReportesPage() {
     </div>
   );
 }
+

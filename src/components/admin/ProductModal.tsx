@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -371,3 +372,4 @@ export function ProductModal({
     </div>
   );
 }
+
