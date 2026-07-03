@@ -49,10 +49,10 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 const lineas = [
   { label: "Pisos",          href: "https://maxipiso.com.ar/collections/pisos",                  img: "/pisos.png",         Icon: FiGrid },
   { label: "Maderas",        href: "https://maxipiso.com.ar/collections/madera",                 img: "/maderas-categorias.png", Icon: FiLayers },
-  { label: "Deck WPC",       href: "https://maxipiso.com.ar/collections/deck-exterior",          img: "/deck.png",          Icon: FiSun },
+  { label: "Deck WPC",       href: "https://maxipiso.com.ar/collections/deck-exterior",          img: "/deck.jpg",          Icon: FiSun },
   { label: "Revestimientos", href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiLayout },
   { label: "Accesorios",     href: "https://maxipiso.com.ar/collections/accesorios",             img: "/accesorios.png",    Icon: FiTool },
-  { label: "Otros",          href: "https://maxipiso.com.ar/collections/all",                    img: "/adhesivos.png",     Icon: FiShoppingBag },
+  { label: "Otros",          href: "https://maxipiso.com.ar/collections/all",                    img: "/adhesivos.jpg",     Icon: FiShoppingBag },
 ];
 
 const stats = [
