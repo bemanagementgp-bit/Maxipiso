@@ -320,61 +320,7 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-      {/* Timeline */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span className="text-[#DF8635] text-sm font-semibold uppercase tracking-widest">
-              Trayectoria
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mt-3">
-              Una historia de crecimiento
-            </h2>
-          </div>
-
-          {/* Vertical — mobile */}
-          <div className="lg:hidden max-w-xl mx-auto">
-            <div className="relative">
-              <div className="absolute left-[60px] top-0 bottom-0 w-px bg-[#DF8635]/20" />
-              <div className="space-y-8">
-                {hitos.map((h, i) => (
-                  <div key={i} className="flex gap-8 items-start">
-                    <div className="w-[60px] shrink-0 text-right">
-                      <span className="text-[#DF8635] font-bold text-sm">{h.año}</span>
-                    </div>
-                    <div className="relative pl-8">
-                      <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-[#DF8635] ring-4 ring-gray-50" />
-                      <p className="text-gray-700 text-sm leading-relaxed">{h.hecho}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Horizontal — desktop */}
-          <div className="hidden lg:block overflow-x-auto pb-4">
-            <div className="relative min-w-[900px]">
-              {/* Línea horizontal */}
-              <div className="absolute top-[52px] left-0 right-0 h-px bg-[#DF8635]/30" />
-              <div className="flex">
-                {hitos.map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center px-3 group">
-                    {/* Año */}
-                    <span className="text-[#DF8635] font-bold text-sm mb-3 block">{h.año}</span>
-                    {/* Punto */}
-                    <div className="w-4 h-4 rounded-full bg-[#DF8635] ring-4 ring-gray-50 z-10 shrink-0 group-hover:scale-125 transition-transform duration-200" />
-                    {/* Texto */}
-                    <p className="text-gray-600 text-xs text-center leading-relaxed mt-4">{h.hecho}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
+    
       {/* CTA */}
       <section className="bg-[#111111] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
