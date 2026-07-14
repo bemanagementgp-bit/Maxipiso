@@ -66,7 +66,6 @@ const CATALOG_ITEMS = [
 const STATIC_LINKS = [
   { href: "/empresa", label: "Empresa" },
   { href: "/novedades", label: "Novedades" },
-  { href: "/catalogo", label: "Catálogo" },
 ];
 
 // ─── MegaMenu ────────────────────────────────────────────────────────────────
@@ -225,25 +224,7 @@ export default function Header() {
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4">
           <nav className="flex flex-col gap-1 pt-3">
-          <a
-            href="/catalogo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#111111] font-medium py-2.5 hover:text-[#DF8635] transition-colors"
-            onClick={() => setMenuOpen(false)}
-          >
-            Catálogo
-          </a>
-            {STATIC_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[#111111] font-medium py-2.5 hover:text-[#DF8635] transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
+
 
             <a
               href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"

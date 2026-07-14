@@ -14,6 +14,7 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://cdnjs.cloudflare.com https://maxipiso.com.ar https://cdn.shopify.com https://images.unsplash.com",
+  "media-src 'self' https://res.cloudinary.com",
   "font-src 'self' data:",
   "connect-src 'self' https://*.tile.openstreetmap.org",
   "object-src 'none'",
