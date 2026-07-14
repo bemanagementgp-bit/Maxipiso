@@ -3,13 +3,13 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiBox, FiUploadCloud, FiBarChart2 } from "react-icons/fi";
 import Link from "next/link";
 
 const NAV = [
-  { href: "/panel", label: "Productos" },
-  { href: "/panel/importacion", label: "Importación" },
-  { href: "/panel/reportes", label: "Reportes" },
+  { href: "/panel", label: "Productos", icon: FiBox },
+  { href: "/panel/importacion", label: "Importación", icon: FiUploadCloud },
+  { href: "/panel/reportes", label: "Reportes", icon: FiBarChart2 },
 ];
 
 type Theme = "warm" | "gray" | "dark";
@@ -100,60 +100,73 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const headerBorder = theme === "dark" ? "#1E1E1E" : theme === "gray" ? "#333333" : "#E0DED8";
   const headerText = theme === "dark" || theme === "gray" ? "#EEEEEE" : "#111111";
   const headerSubText = theme === "dark" || theme === "gray" ? "#666666" : "#aaaaaa";
-  const activeNavBorder = theme === "dark" || theme === "gray" ? "#EEEEEE" : "#111111";
   const pageBg = theme === "dark" ? "#111111" : theme === "gray" ? "#E4E4E4" : "#FAFAF8";
+  const sidebarBg = theme === "dark" ? "#0A0A0A" : theme === "gray" ? "#1A1A1A" : "#111111";
 
   return (
     <div
       data-theme={theme}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex"
       style={{ backgroundColor: pageBg }}
     >
-      <header
-        className="flex items-center px-6 lg:px-10 shrink-0 sticky top-0 z-30"
-        style={{ height: "52px", backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}` }}
+      {/* Sidebar */}
+      <aside
+        className="w-[200px] shrink-0 flex flex-col sticky top-0 h-screen"
+        style={{ backgroundColor: sidebarBg }}
       >
-        <div className="flex items-center gap-6 flex-1">
-          <img src="/logo.svg" alt="Maxipiso" className="h-6 shrink-0" style={{ filter: theme !== "warm" ? "brightness(0) invert(1)" : "none" }} />
-          <span style={{ color: headerBorder }} className="select-none shrink-0">|</span>
-          <nav className="flex items-center gap-0.5">
-            {NAV.map(({ href, label }) => {
-              const active = pathname === href || (href !== "/panel" && pathname.startsWith(href));
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className="h-[52px] flex items-center px-4 text-[11px] font-medium transition-colors border-b-[2px]"
-                  style={{
-                    color: active ? headerText : headerSubText,
-                    borderBottomColor: active ? activeNavBorder : "transparent",
-                  }}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+        <div className="flex items-center px-5 h-[52px] shrink-0 border-b border-white/5">
+          <span className="text-[18px] font-bold tracking-tight shrink-0"><span style={{ color: "#ffffff" }}>MAXI</span><span style={{ color: "#DF8635" }}>PISO</span></span>
         </div>
-        <div className="flex items-center gap-4">
-          <ThemeSwitcher current={theme} onChange={handleThemeChange} />
-          <span className="text-[11px] hidden sm:block" style={{ color: headerSubText }}>
-            {session.user?.email}
-          </span>
+
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
+          {NAV.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || (href !== "/panel" && pathname.startsWith(href));
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-md text-[12px] font-medium transition-all duration-150"
+                style={{
+                  color: active ? "#ffffff" : "rgba(255,255,255,0.4)",
+                  backgroundColor: active ? "rgba(255,255,255,0.08)" : "transparent",
+                }}
+              >
+                <Icon size={15} style={{ opacity: active ? 1 : 0.5 }} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <div className="px-3 mb-3">
+            <p className="text-[10px] text-white/30 truncate">{session.user?.email}</p>
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
-            className="flex items-center gap-1.5 text-[11px] transition-colors"
-            style={{ color: headerSubText }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-white/40 hover:text-white/70 transition-colors rounded-md hover:bg-white/5"
           >
             <FiLogOut size={13} />
-            Salir
+            Cerrar sesión
           </button>
         </div>
-      </header>
+      </aside>
 
-      <main className="flex-1">
-        {children}
-      </main>
+      {/* Main area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header
+          className="flex items-center justify-end px-6 lg:px-10 shrink-0 sticky top-0 z-30"
+          style={{ height: "52px", backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}` }}
+        >
+          <div className="flex items-center gap-4">
+            <ThemeSwitcher current={theme} onChange={handleThemeChange} />
+          </div>
+        </header>
+
+        <main className="flex-1">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

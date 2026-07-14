@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { FiPackage } from "react-icons/fi";
+import SafeImage from "./SafeImage";
 
 type ProductGalleryProps = {
   productName: string;
@@ -29,7 +29,7 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
                 activeIndex === index ? "border-[#111111]" : "border-gray-200"
               }`}
             >
-              <Image src={src} alt={`${productName} miniatura ${index + 1}`} fill className="object-cover" sizes="72px" />
+              <SafeImage src={src} alt={`${productName} miniatura ${index + 1}`} fill className="object-cover" iconSize={20} />
             </button>
           ))}
         </div>
@@ -37,13 +37,12 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
 
       <div className={`order-1 ${hasThumbs ? "md:order-2" : "md:col-span-2"} relative rounded-[5px] overflow-hidden bg-[#F7F4EF] aspect-[4/4.7] md:aspect-auto md:h-[690px]`}>
         {activeImage ? (
-          <Image
+          <SafeImage
             src={activeImage}
             alt={productName}
             fill
-            priority
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, 60vw"
+            iconSize={72}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-gray-300">

@@ -183,8 +183,8 @@ export function enrichCatalogProduct(product: CatalogDbProduct): CatalogPublicPr
   const galeria = Array.from(
     new Set(
       [
-        product.imagen,
         ...(product.imagenes?.map((image) => image.url) ?? []),
+        product.imagen,
         metadata?.imagen,
       ].filter(Boolean) as string[],
     ),

@@ -2,75 +2,87 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { DB_NAMES, normalizeAdminRow, TABLE_LABELS, type TableKey, TABLE_KEYS } from "@/lib/all-products";
+import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
 import { parseIntSafe, sanitizeText, verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-// ─── Tablas disponibles ───────────────────────────────────────────────────────
+const SYSTEM_FIELDS = new Set([
+  "id",
+  "createdAt",
+  "updatedAt",
+  "_tabla",
+  "_tablaLabel",
+]);
 
-type TableKey =
-  | "pisoFlotante"
-  | "porcellanato"
-  | "revestimiento"
-  | "pisoVinilico"
-  | "pisoMadera"
-  | "deck"
-  | "madera"
-  | "accesorio";
+const JSON_STRING_FIELDS = new Set(["metadatos", "imagenes"]);
 
-const TABLE_KEYS: TableKey[] = [
-  "pisoFlotante",
-  "porcellanato",
-  "revestimiento",
-  "pisoVinilico",
-  "pisoMadera",
-  "deck",
-  "madera",
-  "accesorio",
-];
+function sanitizeProductData(tablaNombre: string, raw: Record<string, unknown>) {
+  const config = getCategoryConfig(tablaNombre);
+  if (!config) {
+    throw new Error(`Tabla desconocida: ${tablaNombre}`);
+  }
 
-const TABLE_LABELS: Record<TableKey, string> = {
-  pisoFlotante:  "Pisos Flotantes",
-  porcellanato:  "Porcellanatos",
-  revestimiento: "Revestimientos",
-  pisoVinilico:  "Pisos Vinílicos",
-  pisoMadera:    "Pisos Madera e Ingeniería",
-  deck:          "Decks",
-  madera:        "Maderas",
-  accesorio:     "Accesorios",
-};
+  const numberFields = new Set(
+    config.fields.filter((field) => field.type === "number").map((field) => field.key),
+  );
+  const allowedFields = new Set(config.fields.map((field) => field.key));
+  allowedFields.add("metadatos");
+  allowedFields.add("imagenes");
 
-const DB_NAMES: Record<TableKey, string> = {
-  pisoFlotante:  "pisos_flotantes",
-  porcellanato:  "porcellanatos",
-  revestimiento: "revestimientos",
-  pisoVinilico:  "pisos_vinilicos",
-  pisoMadera:    "pisos_madera",
-  deck:          "decks",
-  madera:        "maderas",
-  accesorio:     "accesorios",
-};
+  const data: Record<string, unknown> = {};
 
-// ─── Normaliza un row a formato admin ─────────────────────────────────────────
+  for (const [key, value] of Object.entries(raw)) {
+    if (SYSTEM_FIELDS.has(key) || !allowedFields.has(key)) continue;
+    if (value === undefined) continue;
 
-function normalize(row: Record<string, unknown>, tableKey: TableKey) {
-  return {
-    id:           row.id,
-    sku:          row.sku,
-    nombre:       row.nombre ?? row.especie ?? row.sku,
-    marca:        row.marca ?? null,
-    precioM2:     row.precioM2 ?? row.precio ?? null,
-    moneda:       row.moneda ?? null,
-    stock:        row.stock ?? null,
-    isActive:     row.isActive,
-    createdAt:    row.createdAt,
-    updatedAt:    row.updatedAt,
-    descripcion:  row.descripcion ?? null,
-    imagen:       row.imagen ?? (row.imagenes ? (() => { try { return JSON.parse(row.imagenes as string)[0] ?? null; } catch { return null; } })() : null),
-    _tabla:       DB_NAMES[tableKey],
-    _tablaLabel:  TABLE_LABELS[tableKey],
-  };
+    if (numberFields.has(key)) {
+      if (value === null || value === "") {
+        data[key] = null;
+        continue;
+      }
+
+      const parsed = typeof value === "number" ? value : Number(value);
+      if (!Number.isFinite(parsed)) continue;
+      data[key] = parsed;
+      continue;
+    }
+
+    if (key === "isActive") {
+      data[key] = value === true || value === "true";
+      continue;
+    }
+
+    if (JSON_STRING_FIELDS.has(key)) {
+      if (typeof value === "string" && value.trim()) {
+        data[key] = value;
+      }
+      continue;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      data[key] = trimmed === "" ? null : trimmed;
+      continue;
+    }
+
+    if (value === null) {
+      data[key] = null;
+    }
+  }
+
+  const requiredFields = config.fields.filter((field) => field.required).map((field) => field.key);
+
+  return { config, data, requiredFields };
+}
+
+function missingRequiredFields(requiredFields: string[], data: Record<string, unknown>) {
+  return requiredFields.filter((field) => {
+    const value = data[field];
+    return value === undefined || value === null || value === "";
+  });
 }
 
 // ─── GET: listar todos los productos de todas las tablas ──────────────────────
@@ -124,7 +136,12 @@ export async function GET(req: NextRequest) {
           take: 2000, // trae muchos para paginar en memoria
         });
 
-        return (rows as Record<string, unknown>[]).map((r) => normalize(r, key));
+        return (rows as Record<string, unknown>[]).map((r) => {
+          if (tablaFilter) {
+            return { ...(r as any), _tabla: DB_NAMES[key], _tablaLabel: TABLE_LABELS[key] };
+          }
+          return normalizeAdminRow(r, key);
+        });
       })
     );
 
@@ -193,7 +210,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "SKU ya existe en esta categoría" }, { status: 409 });
     }
 
-    const { _tabla, _tablaLabel, ...data } = raw;
+    // Campos genéricos del formulario → campos específicos de cada tabla
+    const PRICE_FIELD: Record<string, string> = {
+      pisos_flotantes: "precioM2",
+      porcellanatos:   "precioM2",
+      revestimientos:  "precioM2",
+      pisos_vinilicos: "precioM2",
+      pisos_madera:    "precioM2",
+      decks:           "precioM2",
+      maderas:         "precio",
+      accesorios:      "precioM2",
+    };
+
+    const { config, data, requiredFields } = sanitizeProductData(tablaNombre, raw);
+
+    if (raw.precio !== undefined && data[PRICE_FIELD[tablaNombre] ?? "precioM2"] === undefined) {
+      const priceField = PRICE_FIELD[tablaNombre] ?? "precioM2";
+      const parsed = typeof raw.precio === "number" ? raw.precio : Number(raw.precio);
+      if (Number.isFinite(parsed)) {
+        data[priceField] = parsed;
+      }
+    }
+
+    if (data.isActive === undefined) {
+      data.isActive = true;
+    }
+
+    const missing = missingRequiredFields(requiredFields, data);
+    if (missing.length > 0) {
+      const labels = config.fields
+        .filter((field) => missing.includes(field.key))
+        .map((field) => field.label);
+      return NextResponse.json({ error: `Faltan campos requeridos: ${labels.join(", ")}` }, { status: 400 });
+    }
+
     const producto = await delegate.create({ data });
 
     await prisma.changeLog.create({

@@ -50,7 +50,7 @@ export function HistorialModal({
       }
 
       const data = await res.json();
-      setHistorial(data.data.historial);
+      setHistorial(data?.data?.logs ?? []);
       setError("");
     } catch (err: any) {
       setError(err.message);

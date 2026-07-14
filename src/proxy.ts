@@ -33,8 +33,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Resto de /api/productos requiere sesión válida
-  if (pathname.startsWith("/api/productos") && !isAuthenticated) {
+  // Resto de /api/productos y /api/reportes requiere sesión válida
+  if (
+    (pathname.startsWith("/api/productos") || pathname.startsWith("/api/reportes")) &&
+    !isAuthenticated
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,6 +49,7 @@ export const config = {
     "/panel/:path*",
     "/api/productos/:path*",
     "/api/upload/:path*",
+    "/api/reportes/:path*",
     "/api/auth/password",
     "/api/auth/2fa/:path*",
   ],

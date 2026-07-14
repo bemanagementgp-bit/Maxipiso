@@ -23,6 +23,21 @@ import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
 
+function parseImagenes(val: string | null | undefined): string[] {
+  if (!val) return [];
+  const trimmed = val.trim();
+  let parts: string[];
+  if (trimmed.startsWith("[")) {
+    try { parts = JSON.parse(trimmed); } catch { parts = []; }
+  } else {
+    parts = trimmed.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+  }
+  return parts.map((s) => {
+    if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")) return s;
+    return `/${s}`;
+  });
+}
+
 // Mapa de labels de spec → icono
 const SPEC_ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   "Origen":                FiMapPin,
@@ -72,17 +87,15 @@ export default async function ProductPage({
   const { id } = await params;
 
   const found = await findProductById(id);
-  if (!found) notFound();
+  if (!found || !found.normalized.isActive) notFound();
 
   const { raw, normalized, tableKey } = found;
 
-  // Build gallery from imagenes JSON array or single imagen field
-  const imagenesArr: string[] = (() => {
-    try { return JSON.parse((raw.imagenes as string) ?? "[]"); } catch { return []; }
-  })();
+  // Build gallery from imagenes JSON array, semicolon/comma list, or single imagen field
+  const imagenesArr: string[] = parseImagenes(raw.imagenes as string | null);
   const galeria: string[] = imagenesArr.length > 0
     ? imagenesArr
-    : raw.imagen ? [raw.imagen as string] : [];
+    : [];
 
   // Build specs from row fields
   const specs = buildSpecsFromRow(raw);
@@ -94,7 +107,7 @@ export default async function ProductPage({
     marca:        normalized.marca ?? "",
     descripcion:  (raw.descripcion as string) ?? "",
     precio:       normalized.precio,
-    imagen:       normalized.imagen,
+    imagen:       normalized.imagen ?? imagenesArr[0] ?? null,
     categoria:    normalized.categoria,
     subcategoria: (raw.categoriaSecundaria ?? raw.subcategoria ?? null) as string | null,
     imagenes:     imagenesArr.map((url) => ({ url })),
@@ -129,8 +142,8 @@ export default async function ProductPage({
   const associatedRaw = assocArrays.flat();
 
   function rowToPublic(row: Record<string, unknown>, tk: string): CatalogPublicProduct {
-    const imgs: string[] = (() => { try { return JSON.parse((row.imagenes as string) ?? "[]"); } catch { return []; } })();
-    const galeria = imgs.length > 0 ? imgs : row.imagen ? [row.imagen as string] : [];
+    const imgs: string[] = parseImagenes(row.imagenes as string | null);
+    const galeria = imgs.length > 0 ? imgs : [];
     return {
       id:          row.id as string,
       sku:         row.sku as string,
@@ -138,7 +151,7 @@ export default async function ProductPage({
       marca:       (row.marca as string) ?? "",
       descripcion: (row.descripcion as string) ?? "",
       precio:      (row.precioM2 ?? row.precioCaja ?? row.precioTabla ?? row.precio ?? 0) as number,
-      imagen:      (row.imagen as string) ?? (imgs[0] ?? null),
+      imagen:      imgs[0] ?? null,
       categoria:   (row.categoriaPrincipal as string) ?? "",
       subcategoria: (row.categoriaSecundaria as string) ?? null,
       imagenes:    imgs.map((url) => ({ url })),
@@ -162,7 +175,7 @@ export default async function ProductPage({
           <nav className="flex items-center gap-1.5 text-xs text-gray-400">
             <Link href="/" className="hover:text-[#111111] transition-colors">Inicio</Link>
             <FiChevronRight size={12} />
-            <a href="https://maxipiso.com.ar/collections/" target="_blank" rel="noopener noreferrer" className="hover:text-[#111111] transition-colors">Catálogo</a>
+            <Link href="/catalogo" className="hover:text-[#111111] transition-colors">Catálogo</Link>
             {product.categoria && (
               <>
                 <FiChevronRight size={12} />
@@ -239,17 +252,17 @@ export default async function ProductPage({
 
             {/* Specs */}
             {specEntries.length > 0 && (
-              <div className="divide-y divide-gray-100 mb-0">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-0">
                 {specEntries.map(([label, value]) => {
                   const Icon = getSpecIcon(label);
                   return (
-                    <div key={label} className="flex items-start gap-3 py-3">
+                    <div key={label} className="flex items-start gap-3 py-3 border-b border-gray-100">
                       <div className="mt-0.5 shrink-0 text-gray-400">
                         <Icon size={16} />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold text-[#111111] leading-tight">{label}</p>
-                        <p className="text-[12px] text-gray-500 leading-tight mt-0.5">{value}</p>
+                        <p className="text-[13px] font-bold text-[#111111] leading-tight">{label}</p>
+                        <p className="text-[14px] text-gray-500 leading-tight mt-0.5">{value}</p>
                       </div>
                     </div>
                   );
@@ -317,8 +330,8 @@ export default async function ProductPage({
 
         {/* Carruseles */}
         <div className="mt-12 space-y-2">
-          <ProductCarousel title="Productos Similares"         href="https://maxipiso.com.ar/collections/" products={related} />
-          <ProductCarousel title="Productos Asociados"         href="https://maxipiso.com.ar/collections/" products={associated} />
+          <ProductCarousel title="Productos Similares"         href="/catalogo" products={related} />
+          <ProductCarousel title="Productos Asociados"         href="/catalogo" products={associated} />
         </div>
       </div>
     </div>

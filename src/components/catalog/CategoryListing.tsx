@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { FiPackage, FiSearch, FiFilter } from "react-icons/fi";
+import SafeImage from "./SafeImage";
 
 // ─── Types genéricos para listado ────────────────────────────────────────────
 
@@ -31,13 +31,24 @@ export type CatalogItem = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function normalizeImageUrl(src: string): string {
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
 function firstImage(item: CatalogItem): string | null {
-  if (item.imagen) return item.imagen;
   if (item.imagenes) {
-    try {
-      const arr = JSON.parse(item.imagenes as string);
-      if (Array.isArray(arr) && arr[0]) return arr[0];
-    } catch { /* ignore */ }
+    const raw = item.imagenes as string;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr) && arr[0]) return normalizeImageUrl(arr[0]);
+      } catch { /* ignore */ }
+    } else {
+      const first = trimmed.split(/[;,]/)[0]?.trim();
+      if (first) return normalizeImageUrl(first);
+    }
   }
   return null;
 }
@@ -81,22 +92,15 @@ export function ProductCard({
     <article className="group bg-white rounded-2xl border border-gray-100 hover:border-[#DF8635]/40 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
       {/* Imagen */}
       <Link
-        href={`/catalogo/${categorySlug}/${item.id}`}
+        href={`/catalogo/${item.id}`}
         className="relative aspect-[4/3] bg-gray-50 overflow-hidden block shrink-0"
       >
-        {img ? (
-          <Image
-            src={img}
-            alt={name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-200">
-            <FiPackage size={44} />
-          </div>
-        )}
+        <SafeImage
+          src={img ?? ""}
+          alt={name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
         {/* SKU badge */}
         <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
           {item.sku}
@@ -112,7 +116,7 @@ export function ProductCard({
         )}
 
         <Link
-          href={`/catalogo/${categorySlug}/${item.id}`}
+          href={`/catalogo/${item.id}`}
           className="font-bold text-[#111111] text-sm leading-snug hover:text-[#DF8635] transition-colors line-clamp-2"
         >
           {name}
@@ -156,7 +160,7 @@ export function ProductCard({
         {/* Botones */}
         <div className="grid grid-cols-2 gap-2 mt-2">
           <Link
-            href={`/catalogo/${categorySlug}/${item.id}`}
+            href={`/catalogo/${item.id}`}
             className="text-center border border-gray-200 text-[#111111] text-xs font-semibold py-2.5 rounded-xl hover:border-[#DF8635] transition-colors"
           >
             Ver detalle

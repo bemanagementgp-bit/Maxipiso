@@ -10,7 +10,6 @@ import { ProductTable } from "../../../components/admin/ProductTable";
 import { QuickEditPanel } from "../../../components/admin/QuickEditPanel";
 import { HistorialModal } from "../../../components/admin/HistorialModal";
 import { ImportPreviewModal } from "../../../components/admin/ImportPreviewModal";
-import { Product } from "../../../types";
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -70,7 +69,8 @@ const TABLAS = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProductosPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
+  const [isNewProduct, setIsNewProduct] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
   const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
@@ -95,8 +95,8 @@ export default function ProductosPage() {
   const handleSaveProduct = async (formData: any) => {
     setIsLoading(true);
     try {
-      const method = selectedProduct ? "PUT" : "POST";
-      const url = selectedProduct ? `/api/productos/${selectedProduct.id}` : "/api/productos";
+      const method = editProductId ? "PUT" : "POST";
+      const url = editProductId ? `/api/productos/${editProductId}` : "/api/productos";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -104,9 +104,9 @@ export default function ProductosPage() {
       });
       if (!res.ok) throw new Error();
       setIsPanelOpen(false);
-      setSelectedProduct(null);
+      setEditProductId(null);
       setTableRefreshKey((v) => v + 1);
-      addToast("success", selectedProduct ? "Producto actualizado" : "Producto creado");
+      addToast("success", editProductId ? "Producto actualizado" : "Producto creado");
 
     } catch {
       addToast("error", "No se pudo guardar el producto");
@@ -199,7 +199,7 @@ export default function ProductosPage() {
             <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
           </label>
           <button
-            onClick={() => { setSelectedProduct(null); setIsPanelOpen(true); }}
+            onClick={() => { setEditProductId(null); setIsNewProduct(true); setIsPanelOpen(true); }}
             className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
           >
             <FiPlus size={14} />
@@ -257,7 +257,7 @@ export default function ProductosPage() {
       <div className="bg-white border border-[#E0DED8] overflow-hidden">
         <ProductTable
           refreshKey={tableRefreshKey}
-          onEdit={(product) => { setSelectedProduct(product); setIsPanelOpen(true); }}
+          onEdit={(product) => { setEditProductId(product.id); setIsNewProduct(false); setIsPanelOpen(true); }}
           onDelete={() => {
             setTableRefreshKey((v) => v + 1);
             addToast("success", "Producto eliminado");
@@ -273,9 +273,10 @@ export default function ProductosPage() {
       {/* Panel deslizable */}
       <QuickEditPanel
         isOpen={isPanelOpen}
-        product={selectedProduct}
+        productId={editProductId}
+        isNew={isNewProduct}
         isLoading={isLoading}
-        onClose={() => { setIsPanelOpen(false); setSelectedProduct(null); }}
+        onClose={() => { setIsPanelOpen(false); setEditProductId(null); }}
         onSave={handleSaveProduct}
       />
 

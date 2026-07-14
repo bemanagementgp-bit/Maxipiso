@@ -96,12 +96,12 @@ const pasos = [
 ];
 
 const lineas = [
-  { label: "Pisos Flotantes", href: "https://maxipiso.com.ar/collections/pisos-flotantes" },
-  { label: "Pisos de Madera", href: "https://maxipiso.com.ar/collections/pisos-de-madera" },
-  { label: "Porcelanato", href: "https://maxipiso.com.ar/collections/porcelanato" },
-  { label: "Revestimientos", href: "https://maxipiso.com.ar/collections/revestimiento-de-pared" },
-  { label: "Deck WPC", href: "https://maxipiso.com.ar/collections/deck-wpc" },
-  { label: "Pisos Vinílicos", href: "https://maxipiso.com.ar/collections/pisos-vinilicos" },
+  { label: "Pisos Flotantes", href: "/catalogo/pisos" },
+  { label: "Pisos de Madera", href: "/catalogo/pisos" },
+  { label: "Porcelanato", href: "/catalogo/pisos" },
+  { label: "Revestimientos", href: "/catalogo/revestimientos" },
+  { label: "Deck WPC", href: "/catalogo/decks" },
+  { label: "Pisos Vinílicos", href: "/catalogo/pisos" },
 ];
 
 const WA_URL = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";
@@ -143,17 +143,15 @@ export default function TrabajaConMaxipisoPage() {
                 </svg>
                 Quiero ser distribuidor
               </a>
-              <a
-                href="https://maxipiso.com.ar/collections/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/catalogo"
                 className="inline-flex items-center gap-2 border border-white/20 text-white font-semibold px-8 py-4 rounded-full hover:border-[#DF8635] hover:text-[#DF8635] transition-colors text-base"
               >
                 Ver catálogo
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -264,11 +262,9 @@ export default function TrabajaConMaxipisoPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {lineas.map(({ label, href }, i) => (
-              <a
+              <Link
                 key={label}
                 href={href}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="group bg-white rounded-2xl p-5 text-center border border-gray-100 hover:border-[#DF8635] hover:shadow-md transition-all duration-300 block"
                 style={{
                   opacity: cat.inView ? 1 : 0,
@@ -279,21 +275,19 @@ export default function TrabajaConMaxipisoPage() {
               >
                 <p className="font-semibold text-[#111111] text-sm group-hover:text-[#DF8635] transition-colors">{label}</p>
                 <p className="text-[#DF8635] text-xs mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver →</p>
-              </a>
+              </Link>
             ))}
           </div>
           <div className="text-center mt-10">
-            <a
-              href="https://maxipiso.com.ar/collections/"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/catalogo"
               className="inline-flex items-center gap-2 border border-gray-300 text-gray-600 hover:border-[#DF8635] hover:text-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all"
             >
               Ver catálogo completo
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

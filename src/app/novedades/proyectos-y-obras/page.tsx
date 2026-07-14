@@ -152,17 +152,15 @@ export default function ProyectosObrasPage() {
                 </svg>
                 Solicitar presupuesto
               </a>
-              <a
-                href="https://maxipiso.com.ar/collections/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/catalogo"
                 className="inline-flex items-center gap-2 border border-white/20 text-white font-semibold px-8 py-4 rounded-full hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"
               >
                 Ver catálogo
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

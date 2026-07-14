@@ -68,12 +68,12 @@ const queEncontras = [
 ];
 
 const categorias = [
-  { label: "Pisos Flotantes",  href: "https://maxipiso.com.ar/collections/pisos-flotantes",           badge: "Más vendido" },
-  { label: "Porcelanato",      href: "https://maxipiso.com.ar/collections/porcelanato",                badge: "Oferta" },
-  { label: "Pisos de Madera",  href: "https://maxipiso.com.ar/collections/pisos-de-madera",            badge: null },
-  { label: "Pisos Vinílicos",  href: "https://maxipiso.com.ar/collections/pisos-vinilicos",            badge: "Nuevo" },
-  { label: "Deck WPC",         href: "https://maxipiso.com.ar/collections/deck-wpc",                   badge: null },
-  { label: "Revestimientos",   href: "https://maxipiso.com.ar/collections/revestimiento-de-pared",     badge: "Oferta" },
+  { label: "Pisos Flotantes",  href: "/catalogo/pisos",           badge: "Más vendido" },
+  { label: "Porcelanato",      href: "/catalogo/pisos",           badge: "Oferta" },
+  { label: "Pisos de Madera",  href: "/catalogo/pisos",           badge: null },
+  { label: "Pisos Vinílicos",  href: "/catalogo/pisos",           badge: "Nuevo" },
+  { label: "Deck WPC",         href: "/catalogo/decks",           badge: null },
+  { label: "Revestimientos",   href: "/catalogo/revestimientos",  badge: "Oferta" },
 ];
 
 const WA_OFERTAS = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";
@@ -135,10 +135,8 @@ export default function OfertasMayoristasPage() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <a
-                href="https://maxipiso.com.ar/collections/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/catalogo"
                 className="inline-flex items-center gap-3 bg-[#DF8635] text-white font-bold px-8 py-4 rounded-full hover:bg-[#c97220] transition-colors text-base shadow-lg shadow-[#DF8635]/20"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +144,7 @@ export default function OfertasMayoristasPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
                 Ver ofertas
-              </a>
+              </Link>
               <a
                 href={WA_OFERTAS}
                 target="_blank"
@@ -219,11 +217,9 @@ export default function OfertasMayoristasPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {categorias.map(({ label, href, badge }, i) => (
-              <a
+              <Link
                 key={label}
                 href={href}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="group relative bg-[#1A1A1A] rounded-2xl p-5 text-center border border-white/5 hover:border-[#DF8635] hover:shadow-[0_0_20px_rgba(223,134,53,0.15)] transition-all duration-300 block aspect-square flex flex-col items-center justify-center"
                 style={{
                   opacity: cats.inView ? 1 : 0,
@@ -239,21 +235,19 @@ export default function OfertasMayoristasPage() {
                 )}
                 <p className="font-semibold text-white text-sm group-hover:text-[#DF8635] transition-colors">{label}</p>
                 <p className="text-[#DF8635] text-xs mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver →</p>
-              </a>
+              </Link>
             ))}
           </div>
           <div className="text-center mt-10">
-            <a
-              href="https://maxipiso.com.ar/collections/"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/catalogo"
               className="inline-flex items-center gap-2 border border-white/20 text-white/60 hover:text-white hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all"
             >
               Ver catálogo completo
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -275,14 +269,12 @@ export default function OfertasMayoristasPage() {
               Contactá a un asesor y conseguí el precio mayorista más conveniente del mercado.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <a
-                href="https://maxipiso.com.ar/collections/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/catalogo"
                 className="inline-flex items-center gap-2 bg-white text-[#DF8635] font-bold px-8 py-4 rounded-full hover:bg-gray-100 transition-colors"
               >
                 Comprar ahora
-              </a>
+              </Link>
               <a
                 href={WA_OFERTAS}
                 target="_blank"

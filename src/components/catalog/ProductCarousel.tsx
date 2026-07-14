@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { FiChevronLeft, FiChevronRight, FiPackage } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import SafeImage from "./SafeImage";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 
 type ProductCarouselProps = {
@@ -53,19 +53,13 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
               className="snap-start shrink-0 w-[210px] bg-white rounded-[4px] border border-gray-200 overflow-hidden hover:shadow-md hover:border-[#DF8635] transition-all"
             >
               <div className="relative h-[150px] bg-[#F7F4EF] overflow-hidden">
-                {product.galeria[0] ? (
-                  <Image
-                    src={product.galeria[0]}
-                    alt={product.nombre}
-                    fill
-                    className="object-cover"
-                    sizes="210px"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300">
-                    <FiPackage size={28} />
-                  </div>
-                )}
+                <SafeImage
+                  src={product.galeria[0] ?? ""}
+                  alt={product.nombre}
+                  fill
+                  className="object-cover"
+                  iconSize={28}
+                />
               </div>
               <div className="p-3">
                 <p className="font-bold text-[#111111] text-xs line-clamp-1">{product.nombre}</p>

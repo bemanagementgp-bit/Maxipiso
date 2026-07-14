@@ -66,6 +66,7 @@ const CATALOG_ITEMS = [
 const STATIC_LINKS = [
   { href: "/empresa", label: "Empresa" },
   { href: "/novedades", label: "Novedades" },
+  { href: "/catalogo", label: "Catálogo" },
 ];
 
 // ─── MegaMenu ────────────────────────────────────────────────────────────────
@@ -183,7 +184,7 @@ export default function Header() {
               </Link>
             ))}
           <a
-            href="https://maxipiso.com.ar/collections/"
+            href="/catalogo"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors"
@@ -225,7 +226,7 @@ export default function Header() {
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4">
           <nav className="flex flex-col gap-1 pt-3">
           <a
-            href="https://maxipiso.com.ar/collections/"
+            href="/catalogo"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#111111] font-medium py-2.5 hover:text-[#DF8635] transition-colors"

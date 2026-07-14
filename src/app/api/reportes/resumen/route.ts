@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest) {
 
   const total        = productos.length;
   const activos      = productos.filter((p) => p.isActive).length;
-  const conImagen    = productos.filter((p) => p.imagen).length;
+  const conImagen    = productos.filter((p) => p.imagen || p.imagenes).length;
   const conCategoria = productos.filter((p) => p.categoria).length;
   const sinPrecio    = productos.filter((p) => !p.precio || p.precio === 0).length;
   const conStock     = productos.filter((p) => p.stock !== null && p.stock !== undefined).length;

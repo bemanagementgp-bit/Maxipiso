@@ -121,11 +121,6 @@ export async function POST(req: NextRequest) {
         })();
         if (!existing.includes(url)) existing.push(url);
         await delegate.update({ where: { id: productId }, data: { imagenes: JSON.stringify(existing) } });
-      } else {
-        // Single imagen field — only set if currently empty
-        if (!foundProduct.raw.imagen) {
-          await delegate.update({ where: { id: productId }, data: { imagen: url } });
-        }
       }
     }
 

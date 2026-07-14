@@ -45,7 +45,7 @@ const PASOS = [
 
 const CATEGORIAS_SOPORTADAS = [
   { id: "pisos-flotantes",  label: "Pisos Flotantes" },
-  { id: "porcelanatos",     label: "Porcelanatos y Ceramicos" },
+  { id: "porcellanatos",    label: "Porcelanatos y Ceramicos" },
   { id: "revestimientos",   label: "Revestimientos" },
   { id: "pisos-vinilicos",  label: "Pisos Vinilicos" },
   { id: "pisos-madera",     label: "Pisos de Madera e Ingenieria" },
@@ -78,12 +78,12 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
 
 export default function ImportacionPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [step, setStep] = useState<Step>("idle");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [sesiones, setSesiones] = useState<any[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [expandedSheet, setExpandedSheet] = useState<string | null>(null);
+  const [selectedPlantilla, setSelectedPlantilla] = useState("");
   const [infoOpen, setInfoOpen] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("import_info_seen") !== "1";
@@ -157,19 +157,9 @@ export default function ImportacionPage() {
   return (
     <div className="max-w-[1400px] w-full mx-auto px-6 lg:px-10 py-8 space-y-6">
 
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-[22px] font-medium text-[#111] tracking-tight leading-tight">Importacion masiva</h1>
-          <p className="text-[11px] text-[#aaa] mt-1">El sistema detecta la categoria de cada hoja automaticamente por sus columnas</p>
-        </div>
-        <a
-          href="/plantilla-importacion.xlsx"
-          download
-          className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#555] border border-[#E0DED8] bg-white hover:border-[#999] hover:text-[#111] transition-all rounded-sm"
-        >
-          <FiDownload size={12} />
-          Descargar plantilla
-        </a>
+      <div>
+        <h1 className="text-[22px] font-medium text-[#111] tracking-tight leading-tight">Importacion masiva</h1>
+        <p className="text-[11px] text-[#aaa] mt-1">El sistema detecta la categoria de cada hoja automaticamente por sus columnas</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
@@ -178,13 +168,9 @@ export default function ImportacionPage() {
 
           {/* Drop zone */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) selectFile(f); }}
             onClick={() => step === "idle" && inputRef.current?.click()}
             className={`flex flex-col items-center justify-center mx-5 mt-5 border-2 border-dashed transition-all rounded-sm ${
-              dragging ? "border-[#DF8635] bg-[#FFF8F0] cursor-copy"
-              : step === "done" ? "border-emerald-300 bg-emerald-50"
+              step === "done" ? "border-emerald-300 bg-emerald-50"
               : step === "error" ? "border-red-200 bg-red-50"
               : file ? "border-[#D0CEC8] bg-[#FAFAF8]"
               : "border-[#D0CEC8] hover:border-[#DF8635]/60 hover:bg-[#FFFCFA] cursor-pointer"
@@ -229,13 +215,52 @@ export default function ImportacionPage() {
                 </button>
               </div>
             ) : (
-              <div className="py-10 flex flex-col items-center">
-                <FiUploadCloud size={40} className="text-[#C8C6C0] mb-3" />
-                <p className="text-[14px] font-medium text-[#555]">Arrasta tu archivo aqui</p>
-                <p className="text-[12px] text-[#bbb] mt-1">
-                  o <span className="text-[#DF8635] underline underline-offset-2 cursor-pointer">hace click para seleccionar</span>
-                </p>
-                <p className="text-[10px] text-[#ccc] mt-3 uppercase tracking-[0.08em]">.xlsx .xls - max. 5 MB</p>
+              <div className="py-6 w-full px-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
+                  {/* Paso 1: Descargar plantilla */}
+                  <div className="flex flex-col items-center px-6 py-6 border-r border-[#E8E6E0]">
+                    <div className="w-8 h-8 rounded-full bg-[#DF8635] flex items-center justify-center text-[13px] font-bold text-white mb-3">1</div>
+                    <p className="text-[13px] font-semibold text-[#333] mb-1">Descarga la plantilla</p>
+                    <p className="text-[11px] text-[#aaa] text-center mb-4">Elegí la categoría y descargá el Excel con las columnas preparadas</p>
+                    <select
+                      value={selectedPlantilla}
+                      onChange={(e) => setSelectedPlantilla(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full max-w-[240px] h-9 px-3 text-[12px] text-[#555] border border-[#E0DED8] bg-white rounded-sm focus:outline-none focus:border-[#DF8635] appearance-none cursor-pointer mb-2.5"
+                    >
+                      <option value="">Todas las categorias</option>
+                      {CATEGORIAS_SOPORTADAS.map(({ id, label }) => (
+                        <option key={id} value={id}>{label}</option>
+                      ))}
+                    </select>
+                    <a
+                      href={selectedPlantilla ? `/api/productos/plantilla?categoria=${selectedPlantilla}` : "/api/productos/plantilla"}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-center gap-2 w-full max-w-[240px] h-9 text-[11px] font-semibold text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
+                    >
+                      <FiDownload size={13} />
+                      Descargar plantilla
+                    </a>
+                  </div>
+
+                  {/* Conector visual (flecha) en mobile */}
+                  <div className="sm:hidden flex justify-center py-3">
+                    <div className="w-px h-6 bg-[#E0DED8]" />
+                  </div>
+
+                  {/* Paso 2: Subir archivo */}
+                  <div className="flex flex-col items-center px-6 py-6">
+                    <div className="w-8 h-8 rounded-full bg-[#E0DED8] flex items-center justify-center text-[13px] font-bold text-[#888] mb-3">2</div>
+                    <p className="text-[13px] font-semibold text-[#888] mb-1">Subi el archivo completado</p>
+                    <p className="text-[11px] text-[#bbb] text-center mb-4">Completá la plantilla con tus productos y subila acá</p>
+                    <FiUploadCloud size={36} className="text-[#D0CEC8] mb-3" />
+                    <p className="text-[12px] text-[#bbb]">
+                      <span className="text-[#DF8635] underline underline-offset-2 cursor-pointer">Seleccionar archivo</span>
+                    </p>
+                    <p className="text-[10px] text-[#ccc] mt-2 uppercase tracking-[0.08em]">.xlsx .xls — max. 5 MB</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

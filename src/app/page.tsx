@@ -47,12 +47,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos",          href: "https://maxipiso.com.ar/collections/pisos",                  img: "/pisos.png",         Icon: FiGrid },
-  { label: "Maderas",        href: "https://maxipiso.com.ar/collections/madera",                 img: "/maderas.jpg",            Icon: FiLayers },
-  { label: "Deck WPC",       href: "https://maxipiso.com.ar/collections/deck-exterior",          img: "/deck.jpg",          Icon: FiSun },
-  { label: "Revestimientos", href: "https://maxipiso.com.ar/collections/revestimiento-de-pared", img: "/revestimientos.png",Icon: FiLayout },
-  { label: "Accesorios",     href: "https://maxipiso.com.ar/collections/accesorios",             img: "/accesorios.png",    Icon: FiTool },
-  { label: "Otros",          href: "https://maxipiso.com.ar/collections/all",                    img: "/adhesivos.jpg",     Icon: FiShoppingBag },
+  { label: "Pisos",          href: "/catalogo/pisos",          img: "/pisos.png",         Icon: FiGrid },
+  { label: "Maderas",        href: "/catalogo/maderas",        img: "/maderas.jpg",            Icon: FiLayers },
+  { label: "Deck WPC",       href: "/catalogo/decks",          img: "/deck.jpg",          Icon: FiSun },
+  { label: "Revestimientos", href: "/catalogo/revestimientos", img: "/revestimientos.png",Icon: FiLayout },
+  { label: "Accesorios",     href: "/catalogo/accesorios",     img: "/accesorios.png",    Icon: FiTool },
+  { label: "Otros",          href: "/catalogo",                img: "/adhesivos.jpg",     Icon: FiShoppingBag },
 ];
 
 const stats = [
@@ -263,15 +263,13 @@ function GalleryMarquee() {
         ))}
       </div>
       <Reveal className="text-center mt-10 px-4">
-        <a
-          href="https://maxipiso.com.ar/collections/"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/catalogo"
           className="inline-flex items-center gap-2 border border-[#111111] text-[#111111] text-sm font-semibold px-7 py-3 rounded-full hover:bg-[#111111] hover:text-white transition-colors"
         >
           Ver catálogo completo
           <FiArrowRight size={16} />
-        </a>
+        </Link>
       </Reveal>
     </section>
   );
@@ -480,14 +478,12 @@ export default function Home() {
               className="flex flex-wrap gap-4 animate-fade-up"
               style={{ animationDelay: "0.38s" }}
             >
-              <a
-                href="https://maxipiso.com.ar/collections/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/catalogo"
                 className="bg-[#DF8635] text-white font-semibold px-8 py-3.5 rounded-full hover:bg-[#c97220] transition-colors text-base"
               >
                 Ver catálogo
-              </a>
+              </Link>
               <a
                 href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
                 target="_blank"
@@ -521,10 +517,8 @@ export default function Home() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">
             {lineas.map(({ label, href, img, Icon }, i) => (
               <Reveal key={label} delay={i * 0.08}>
-                <a
+                <Link
                   href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
                   style={{ aspectRatio: "2/5" }}
                 >
@@ -561,22 +555,20 @@ export default function Home() {
                       {label}
                     </p>
                   </div>
-                </a>
+                </Link>
               </Reveal>
             ))}
           </div>
 
           {/* Link al catálogo completo */}
           <Reveal className="text-center mt-10">
-            <a
-              href="https://maxipiso.com.ar/collections/all"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/catalogo"
               className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all duration-300"
             >
               Ver catálogo completo
               <FiArrowRight size={16} />
-            </a>
+            </Link>
           </Reveal>
         </div>
       </section>

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       Marca:                   p.marca ?? "",
       Categoria:               p.categoria,
       Precio:                  p.precio,
-      Imagen:                  p.imagen ?? "",
+      Imagen:                  p.imagen ?? p.imagenes ?? "",
       Tabla:                   p.tablaNombre,
       "Fecha Creacion":        new Date(p.createdAt as string).toISOString().split("T")[0],
     }));

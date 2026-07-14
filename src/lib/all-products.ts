@@ -42,6 +42,17 @@ export const DB_NAMES: Record<TableKey, string> = {
   accesorio:     "accesorios",
 };
 
+export const TABLE_LABELS: Record<TableKey, string> = {
+  pisoFlotante:  "Pisos Flotantes",
+  porcellanato:  "Porcellanatos",
+  revestimiento: "Revestimientos",
+  pisoVinilico:  "Pisos Vinílicos",
+  pisoMadera:    "Pisos Madera e Ingeniería",
+  deck:          "Decks",
+  madera:        "Maderas",
+  accesorio:     "Accesorios",
+};
+
 export const TABLE_CATEGORIA: Record<TableKey, string> = {
   pisoFlotante:  "Pisos",
   porcellanato:  "Porcellanatos",
@@ -94,12 +105,16 @@ export interface NormalizedProduct {
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function firstImage(row: Record<string, unknown>): string | null {
-  if (row.imagen) return row.imagen as string;
   if (row.imagenes) {
-    try {
-      const arr = JSON.parse(row.imagenes as string);
-      return Array.isArray(arr) && arr[0] ? (arr[0] as string) : null;
-    } catch {}
+    const raw = String(row.imagenes).trim();
+    if (raw.startsWith("[")) {
+      try {
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) && arr[0] ? (arr[0] as string) : null;
+      } catch {}
+    }
+    const first = raw.split(/[;,]/)[0]?.trim();
+    if (first) return first;
   }
   return null;
 }
@@ -128,6 +143,25 @@ export function normalizeRow(row: Record<string, unknown>, tableKey: TableKey): 
     createdAt:   row.createdAt as Date | string,
     tablaNombre: DB_NAMES[tableKey],
     tableKey,
+  };
+}
+
+export function normalizeAdminRow(row: Record<string, unknown>, tableKey: TableKey) {
+  return {
+    id:           row.id,
+    sku:          row.sku,
+    nombre:       row.nombre ?? row.especie ?? row.sku,
+    marca:        row.marca ?? null,
+    precioM2:     row.precioM2 ?? row.precio ?? null,
+    moneda:       row.moneda ?? null,
+    stock:        row.stock ?? null,
+    isActive:     row.isActive,
+    createdAt:    row.createdAt,
+    updatedAt:    row.updatedAt,
+    descripcion:  row.descripcion ?? null,
+    imagen:       firstImage(row),
+    _tabla:       DB_NAMES[tableKey],
+    _tablaLabel:  TABLE_LABELS[tableKey],
   };
 }
 

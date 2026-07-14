@@ -129,6 +129,7 @@ model PisoFlotante {
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
+  metadatos          String?  // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -172,6 +173,7 @@ model Porcellanato {
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
+  metadatos          String?  // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -206,12 +208,13 @@ model Revestimiento {
   precioM2           Float?
   precioMl           Float?
   moneda             String?
-  imagen             String?
+  imagenes           String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
+  metadatos          String?  // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -265,6 +268,7 @@ model PisoVinilico {
   fichaTecnica         String?
   archivoInstalacion   String?
   descripcion          String?
+  metadatos            String?  // JSON key-value extra
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -312,6 +316,7 @@ model PisoMadera {
   fichaTecnica        String?
   archivoInstalacion  String?
   descripcion         String?
+  metadatos           String?  // JSON key-value extra
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -344,12 +349,13 @@ model Deck {
   precioM2           Float?
   precioMLineal      Float?
   moneda             String?
-  imagen             String?
+  imagenes           String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
+  metadatos          String?  // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -374,10 +380,11 @@ model Madera {
   unidadMedida         String?
   moneda               String?
   stock                Int?
-  imagen               String?
+  imagenes             String?
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
+  metadatos            String?  // JSON key-value extra
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -398,8 +405,9 @@ model Accesorio {
   dimensiones  String?
   colores      String?
   stock        Int?
-  imagen       String?
+  imagenes     String?
   descripcion  String?
+  metadatos    String?  // JSON key-value extra
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
