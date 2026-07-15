@@ -172,7 +172,7 @@ export default function TiendaPage() {
             {filtered.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((product) => {
-                  const mlUrl = ML_URLS[product.id];
+                  const mlUrl = MOCK_PRICES[product.id]?.mlUrl;
                   return (
                     <div
                       key={product.id}
