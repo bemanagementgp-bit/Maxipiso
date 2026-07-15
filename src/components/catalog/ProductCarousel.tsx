@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import SafeImage from "./SafeImage";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 
@@ -18,66 +18,100 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
   if (products.length === 0) return null;
 
   const scrollByAmount = (direction: number) => {
-    trackRef.current?.scrollBy({ left: direction * 280, behavior: "smooth" });
+    trackRef.current?.scrollBy({ left: direction * 300, behavior: "smooth" });
   };
 
   return (
     <section className="mt-9">
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <h2 className="text-sm font-bold text-[#111111]">{title}</h2>
-        {href && (
-          <Link href={href} className="text-xs font-medium text-gray-500 hover:text-[#111111] transition-colors">
-            Ver todos →
-          </Link>
-        )}
+      {/* Header */}
+      <div className="flex items-end justify-between gap-4 mb-6">
+        <div>
+          <span className="block w-10 h-1 rounded-full bg-[#DF8635] mb-3" />
+          <h2 className="text-xl md:text-2xl font-bold text-[#111111] leading-tight">{title}</h2>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {href && (
+            <Link
+              href={href}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DF8635] hover:text-[#c97220] transition-colors"
+            >
+              Ver todos
+              <FiArrowRight size={13} />
+            </Link>
+          )}
+          <div className="hidden md:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => scrollByAmount(-1)}
+              className="w-9 h-9 rounded-full border border-gray-200 bg-white text-[#111111] inline-flex items-center justify-center hover:bg-[#111111] hover:text-white hover:border-[#111111] transition-colors"
+              aria-label={`Ver anteriores de ${title}`}
+            >
+              <FiChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByAmount(1)}
+              className="w-9 h-9 rounded-full border border-gray-200 bg-white text-[#111111] inline-flex items-center justify-center hover:bg-[#111111] hover:text-white hover:border-[#111111] transition-colors"
+              aria-label={`Ver siguientes de ${title}`}
+            >
+              <FiChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => scrollByAmount(-1)}
-          className="hidden md:inline-flex absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full border border-gray-200 bg-white text-[#111111] items-center justify-center shadow-sm hover:border-[#DF8635] transition-colors"
-          aria-label={`Ver anteriores de ${title}`}
-        >
-          <FiChevronLeft size={18} />
-        </button>
+      {/* Track */}
+      <div
+        ref={trackRef}
+        className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-hide"
+      >
+        {products.map((product) => (
+          <Link
+            key={product.id}
+            href={`/catalogo/${product.id}`}
+            className="group snap-start shrink-0 w-[240px] bg-white rounded-none border border-gray-100 overflow-hidden hover:border-[#DF8635]/40 hover:shadow-xl transition-all duration-300 flex flex-col"
+          >
+            {/* Imagen */}
+            <div className="relative aspect-[4/3] bg-[#F7F4EF] overflow-hidden">
+              <SafeImage
+                src={product.galeria[0] ?? ""}
+                alt={product.nombre}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                iconSize={28}
+              />
+              {product.sku && (
+                <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
+                  {product.sku}
+                </span>
+              )}
+            </div>
 
-        <div
-          ref={trackRef}
-          className="flex gap-5 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
-        >
-          {products.map((product) => (
-            <Link
-              key={product.id}
-              href={`/catalogo/${product.id}`}
-              className="snap-start shrink-0 w-[210px] bg-white rounded-[4px] border border-gray-200 overflow-hidden hover:shadow-md hover:border-[#DF8635] transition-all"
-            >
-              <div className="relative h-[150px] bg-[#F7F4EF] overflow-hidden">
-                <SafeImage
-                  src={product.galeria[0] ?? ""}
-                  alt={product.nombre}
-                  fill
-                  className="object-cover"
-                  iconSize={28}
+            {/* Info */}
+            <div className="p-4 flex flex-col flex-1 gap-1">
+              {product.marca && product.marca !== "Maxipiso" && (
+                <p className="text-[10px] font-bold text-[#DF8635] uppercase tracking-widest">
+                  {product.marca}
+                </p>
+              )}
+              <p className="font-bold text-[#111111] text-sm leading-snug line-clamp-2 group-hover:text-[#DF8635] transition-colors">
+                {product.nombre}
+              </p>
+              {product.descripcion && (
+                <p className="text-gray-400 text-[11px] leading-relaxed line-clamp-2">
+                  {product.descripcion}
+                </p>
+              )}
+              <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#111111]">
+                Ver producto
+                <FiArrowRight
+                  size={12}
+                  className="transition-transform duration-300 group-hover:translate-x-1 group-hover:text-[#DF8635]"
                 />
-              </div>
-              <div className="p-3">
-                <p className="font-bold text-[#111111] text-xs line-clamp-1">{product.nombre}</p>
-                <p className="text-gray-400 text-xs mt-1 line-clamp-1">{product.descripcion}</p>
-                <p className="text-xs text-[#111111] mt-3 font-medium">Ver producto →</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => scrollByAmount(1)}
-          className="hidden md:inline-flex absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full border border-gray-200 bg-white text-[#111111] items-center justify-center shadow-sm hover:border-[#DF8635] transition-colors"
-          aria-label={`Ver siguientes de ${title}`}
-        >
-          <FiChevronRight size={18} />
-        </button>
+              </span>
+            </div>
+          </Link>
+        ))}
       </div>
     </section>
   );

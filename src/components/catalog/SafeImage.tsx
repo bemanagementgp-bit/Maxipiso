@@ -13,7 +13,7 @@ type SafeImageProps = {
   iconSize?: number;
 };
 
-export default function SafeImage({ src, alt, fill, className, iconSize = 44 }: SafeImageProps) {
+export default function SafeImage({ src, alt, fill, priority, sizes, className, iconSize = 44 }: SafeImageProps) {
   const [error, setError] = useState(false);
 
   if (error || !src) {
@@ -31,7 +31,11 @@ export default function SafeImage({ src, alt, fill, className, iconSize = 44 }: 
       alt={alt}
       className={`${fill ? "absolute inset-0 w-full h-full" : ""} ${className ?? ""}`}
       onError={() => setError(true)}
-      loading="lazy"
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "low"}
+      decoding="async"
+      sizes={sizes}
     />
   );
 }
+

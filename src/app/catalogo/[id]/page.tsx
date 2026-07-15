@@ -18,7 +18,7 @@ import {
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { prisma } from "@/lib/prisma";
-import { findProductById, buildSpecsFromRow, TABLE_KEYS } from "@/lib/all-products";
+import { findProductById, buildSpecsFromRow } from "@/lib/all-products";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
@@ -66,13 +66,6 @@ const SPEC_ICON_MAP: Record<string, React.ComponentType<{ size?: number; classNa
 
 function getSpecIcon(label: string) {
   return SPEC_ICON_MAP[label] ?? FiInfo;
-}
-
-function formatPrice(precio: number, moneda?: string | null, unidad?: string | null) {
-  if (!precio || precio <= 0) return "Consultar";
-  const sym = moneda === "ARS" ? "$" : "U$S";
-  const formatted = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(precio);
-  return `${sym} ${formatted}${unidad ? ` / ${unidad}` : ""}`;
 }
 
 function buildWA(msg: string) {
@@ -132,15 +125,6 @@ export default async function ProductPage({
     .findMany({ where: { id: { not: id }, isActive: true }, take: 12 })
     .catch(() => []);
 
-  // Productos asociados (otras tablas, hasta 3 de las primeras 4 tablas distintas)
-  const otherKeys = TABLE_KEYS.filter((k) => k !== tableKey).slice(0, 4);
-  const assocArrays = await Promise.all(
-    otherKeys.map((k) =>
-      (prisma as any)[k].findMany({ where: { isActive: true }, take: 3 }).catch(() => [])
-    )
-  );
-  const associatedRaw = assocArrays.flat();
-
   function rowToPublic(row: Record<string, unknown>, tk: string): CatalogPublicProduct {
     const imgs: string[] = parseImagenes(row.imagenes as string | null);
     const galeria = imgs.length > 0 ? imgs : [];
@@ -161,11 +145,9 @@ export default async function ProductPage({
     };
   }
 
-  const related     = (relatedRaw    as Record<string, unknown>[]).map((r) => rowToPublic(r, tableKey));
-  const associated  = (associatedRaw as Record<string, unknown>[]).map((r) => rowToPublic(r, ""));
+  const related = (relatedRaw as Record<string, unknown>[]).map((r) => rowToPublic(r, tableKey));
 
   const badgeLabel = product.subcategoria ?? product.categoria ?? "Producto";
-  const precioLabel = formatPrice(product.precio, product.moneda, product.unidadMedida);
 
   return (
     <div className="min-h-screen bg-[#FBFAF7]">
@@ -211,7 +193,7 @@ export default async function ProductPage({
                   href={card.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-white border border-gray-200 rounded-lg min-h-[96px] px-5 py-4 flex items-center gap-4 hover:border-[#DF8635] hover:shadow-sm transition-all"
+                  className="bg-white border border-gray-200 rounded-none min-h-[96px] px-5 py-4 flex items-center gap-4 hover:border-[#DF8635] hover:shadow-sm transition-all"
                 >
                   <div className="w-[52px] h-[60px] rounded-tl-xl rounded-tr-xl rounded-bl-xl bg-[#CDA77B] text-white flex flex-col items-center justify-center shrink-0">
                     <FiFileText size={22} />
@@ -256,13 +238,13 @@ export default async function ProductPage({
                 {specEntries.map(([label, value]) => {
                   const Icon = getSpecIcon(label);
                   return (
-                    <div key={label} className="flex items-start gap-3 py-3 border-b border-gray-100">
+                    <div key={label} className="flex items-start gap-2.5 py-2.5 border-b border-gray-100">
                       <div className="mt-0.5 shrink-0 text-gray-400">
-                        <Icon size={16} />
+                        <Icon size={13} />
                       </div>
                       <div>
-                        <p className="text-[13px] font-bold text-[#111111] leading-tight">{label}</p>
-                        <p className="text-[14px] text-gray-500 leading-tight mt-0.5">{value}</p>
+                        <p className="text-[10px] font-bold text-[#111111] leading-tight">{label}</p>
+                        <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{value}</p>
                       </div>
                     </div>
                   );
@@ -270,17 +252,8 @@ export default async function ProductPage({
               </div>
             )}
 
-            {/* Precio */}
+            {/* Envíos */}
             <div className="border-t border-gray-200 divide-y divide-gray-100">
-              <div className="flex items-start gap-3 py-3">
-                <div className="mt-0.5 shrink-0 text-gray-400"><FiTag size={16} /></div>
-                <div>
-                  <p className="text-[11px] font-bold text-[#111111] leading-tight">
-                    Precio {product.unidadMedida ? `x ${product.unidadMedida}` : ""}
-                  </p>
-                  <p className="text-[12px] text-gray-500 leading-tight mt-0.5">{precioLabel}</p>
-                </div>
-              </div>
               <div className="flex items-start gap-3 py-3">
                 <div className="mt-0.5 shrink-0 text-gray-400"><FiTruck size={16} /></div>
                 <div>
@@ -296,7 +269,7 @@ export default async function ProductPage({
                 href={consultHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#111111] px-5 py-3.5 text-[13px] font-bold uppercase tracking-widest text-white hover:bg-[#2a2a2a] transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-none bg-[#111111] px-5 py-3.5 text-[13px] font-bold uppercase tracking-widest text-white hover:bg-[#2a2a2a] transition-colors"
               >
                 <FaWhatsapp size={16} />
                 Consultar precio
@@ -307,7 +280,7 @@ export default async function ProductPage({
                 href={buildWA(`Hola, quiero calcular el envio de ${product.nombre} (SKU: ${product.sku}).`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-lg text-[12px] font-medium text-[#111111] hover:border-[#DF8635] transition-colors bg-white"
+                className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-none text-[12px] font-medium text-[#111111] hover:border-[#DF8635] transition-colors bg-white"
               >
                 <span className="flex items-center gap-2">
                   <FiTruck size={14} className="text-gray-400" />
@@ -317,7 +290,7 @@ export default async function ProductPage({
               </a>
 
               {/* Promo box */}
-              <div className="rounded-lg bg-[#F1ECE5] px-4 py-3 flex items-start gap-3">
+              <div className="rounded-none bg-[#F1ECE5] px-4 py-3 flex items-start gap-3">
                 <FiTag size={15} className="text-[#8A5A2B] mt-0.5 shrink-0" />
                 <div>
                   <p className="font-bold text-[#111111] text-xs">Espacio para promociones</p>
@@ -328,10 +301,9 @@ export default async function ProductPage({
           </aside>
         </div>
 
-        {/* Carruseles */}
-        <div className="mt-12 space-y-2">
-          <ProductCarousel title="Productos Similares"         href="/catalogo" products={related} />
-          <ProductCarousel title="Productos Asociados"         href="/catalogo" products={associated} />
+        {/* Productos similares */}
+        <div className="mt-12">
+          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} />
         </div>
       </div>
     </div>

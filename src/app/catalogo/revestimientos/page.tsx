@@ -1,30 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { FiChevronRight } from "react-icons/fi";
 import { MdLayers } from "react-icons/md";
 import { CategoryListing } from "@/components/catalog/CategoryListing";
 
-const SUBTABS = [
-  {
-    key: "exterior",
-    label: "Exteriores",
-    desc: "Siding, acanalados y perfiles WPC para fachadas y exteriores",
-  },
-  {
-    key: "interior",
-    label: "Interiores",
-    desc: "Placas EPS, laqueados, acústicos y perfiles de interior",
-  },
-] as const;
-
-type SubTab = (typeof SUBTABS)[number]["key"];
+const SUBCATEGORIES = [
+  { key: "exterior", label: "Exteriores", apiSlug: "revestimientos", filter: { field: "categoriaPrincipal", value: "Revestimientos y Exteriores" } },
+  { key: "interior", label: "Interiores", apiSlug: "revestimientos", filter: { field: "categoriaPrincipal", value: "Revestimientos y Perfil de Interior" } },
+];
 
 export default function RevestimientosPage() {
-  const [activeTab, setActiveTab] = useState<SubTab>("exterior");
-  const current = SUBTABS.find((t) => t.key === activeTab)!;
-
   return (
     <div className="min-h-screen bg-[#F9F8F6]">
       <div className="bg-[#111111] text-white">
@@ -49,41 +35,14 @@ export default function RevestimientosPage() {
             </div>
           </div>
         </div>
-
-        {/* Tabs exterior / interior */}
-        <div className="border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex gap-1 py-1">
-              {SUBTABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`shrink-0 px-5 py-3.5 text-sm font-semibold transition-all duration-200 border-b-2 ${
-                    activeTab === tab.key
-                      ? "border-[#DF8635] text-white"
-                      : "border-transparent text-white/40 hover:text-white/70"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <p className="text-sm text-gray-500">{current.desc}</p>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <CategoryListing
-          key={current.key}
-          title={`Revestimientos ${current.label}`}
+          title="Revestimientos"
           categorySlug="revestimientos"
           apiSlug="revestimientos"
+          subcategories={SUBCATEGORIES}
         />
       </div>
     </div>

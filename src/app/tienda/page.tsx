@@ -29,12 +29,6 @@ const MOCK_PRICES: Record<string, { price: number; original?: number; mlUrl: str
 
 const WA_BASE = "https://wa.me/5422143888894?text=";
 
-function fmtPrice(n: number) {
-  return "$ " + n.toLocaleString("es-AR");
-}
-
-type SortOption = "relevancia" | "precio-asc" | "precio-desc";
-
 const categoryLabel: Record<Category, string> = {
   Porcelanato: "Pisos Flotantes",
   Cerámica: "Revestimientos",
@@ -46,10 +40,9 @@ const categoryLabel: Record<Category, string> = {
 export default function TiendaPage() {
   const [activeCategory, setActiveCategory] = useState<Category | "Todos">("Todos");
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOption>("relevancia");
 
   const filtered = useMemo(() => {
-    let list = products.filter((p) => {
+    return products.filter((p) => {
       const matchCat = activeCategory === "Todos" || p.category === activeCategory;
       const matchSearch =
         search === "" ||
@@ -57,23 +50,7 @@ export default function TiendaPage() {
         p.description.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-
-    if (sort === "precio-asc") {
-      list = [...list].sort((a, b) => {
-        const pa = MOCK_PRICES[a.id]?.price ?? 0;
-        const pb = MOCK_PRICES[b.id]?.price ?? 0;
-        return pa - pb;
-      });
-    } else if (sort === "precio-desc") {
-      list = [...list].sort((a, b) => {
-        const pa = MOCK_PRICES[a.id]?.price ?? 0;
-        const pb = MOCK_PRICES[b.id]?.price ?? 0;
-        return pb - pa;
-      });
-    }
-
-    return list;
-  }, [activeCategory, search, sort]);
+  }, [activeCategory, search]);
 
   function waLink(productName: string) {
     const text = `Hola! Quiero consultar precio y disponibilidad de: ${productName}. ¿Pueden asesorarme?`;
@@ -124,15 +101,6 @@ export default function TiendaPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]"
           />
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
-            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635] bg-white"
-          >
-            <option value="relevancia">Más relevantes</option>
-            <option value="precio-asc">Menor precio</option>
-            <option value="precio-desc">Mayor precio</option>
-          </select>
         </div>
 
         <div className="flex gap-6">
@@ -204,7 +172,7 @@ export default function TiendaPage() {
             {filtered.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((product) => {
-                  const pricing = MOCK_PRICES[product.id];
+                  const mlUrl = ML_URLS[product.id];
                   return (
                     <div
                       key={product.id}
@@ -220,11 +188,6 @@ export default function TiendaPage() {
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                           />
-                          {pricing?.original && (
-                            <span className="absolute top-3 left-3 bg-[#DF8635] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                              OFERTA
-                            </span>
-                          )}
                           <span className="absolute top-3 right-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
                             {categoryLabel[product.category] ?? product.category}
                           </span>
@@ -245,45 +208,20 @@ export default function TiendaPage() {
 
                         {/* Price */}
                         <div className="mt-auto pt-3">
-                          {pricing ? (
-                            <>
-                              {pricing.original && (
-                                <p className="text-gray-400 text-xs line-through leading-none mb-0.5">
-                                  {fmtPrice(pricing.original)}
-                                </p>
-                              )}
-                              <p className="text-2xl font-bold text-[#111111] leading-none">
-                                {fmtPrice(pricing.price)}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-0.5">precio por m²</p>
-                            </>
-                          ) : (
-                            <p className="text-sm font-semibold text-gray-500 italic">
-                              Consultá precio
-                            </p>
-                          )}
+                          <p className="text-sm font-semibold text-gray-500 italic">
+                            Consultá precio
+                          </p>
 
                           {/* Actions */}
                           <div className="mt-3">
-                            {pricing?.mlUrl && pricing.mlUrl !== "#" ? (
-                              <a
-                                href={pricing.mlUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full flex items-center justify-center bg-[#FFE600] py-2.5 rounded-xl hover:brightness-95 transition-all"
-                              >
-                                <Image src="/mercado-libre-logo-2.png" alt="MercadoLibre" width={80} height={22} className="h-5 w-auto" />
-                              </a>
-                            ) : (
-                              <a
-                                href={waLink(product.name)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full flex items-center justify-center bg-[#FFE600] py-2.5 rounded-xl hover:brightness-95 transition-all"
-                              >
-                                <Image src="/mercado-libre-logo-2.png" alt="MercadoLibre" width={80} height={22} className="h-5 w-auto" />
-                              </a>
-                            )}
+                            <a
+                              href={mlUrl && mlUrl !== "#" ? mlUrl : waLink(product.name)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full flex items-center justify-center bg-[#FFE600] py-2.5 rounded-xl hover:brightness-95 transition-all"
+                            >
+                              <Image src="/mercado-libre-logo-2.png" alt="MercadoLibre" width={80} height={22} className="h-5 w-auto" />
+                            </a>
                           </div>
                         </div>
                       </div>

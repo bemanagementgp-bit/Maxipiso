@@ -1,51 +1,31 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { FiChevronRight } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
 import { CategoryListing } from "@/components/catalog/CategoryListing";
 
-const TABS = [
+const SUBCATEGORIES = [
   {
     key: "pisos-flotantes",
     label: "Flotantes",
-    desc: "Laminados HDF y WTR de alto tránsito",
     apiSlug: "pisos-flotantes",
+    children: [
+      { key: "flotantes-wr", label: "Water Resistant", apiSlug: "pisos-flotantes", filter: { field: "categoriaTerciaria", value: "Water Resistant" } },
+      { key: "flotantes-wp", label: "Waterproof", apiSlug: "pisos-flotantes", filter: { field: "categoriaTerciaria", value: "Waterproof" } },
+      { key: "flotantes-clasico", label: "Clasico", apiSlug: "pisos-flotantes", filter: { field: "categoriaTerciaria", value: "Clasico" } },
+    ],
   },
-  {
-    key: "pisos-vinilicos",
-    label: "Vinílicos",
-    desc: "Resistentes al agua, capa de uso garantizada",
-    apiSlug: "pisos-vinilicos",
-  },
-  {
-    key: "porcellanatos",
-    label: "Porcellanatos",
-    desc: "Cerámica porcellanizada para interior y exterior",
-    apiSlug: "porcellanatos",
-  },
-  {
-    key: "pisos-madera",
-    label: "Madera e Ingeniería",
-    desc: "Pisos de madera sólida y multicapa ingeniería",
-    apiSlug: "pisos-madera",
-  },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
+  { key: "pisos-vinilicos", label: "Vinílicos",            apiSlug: "pisos-vinilicos" },
+  { key: "porcellanatos",   label: "Porcellanatos",        apiSlug: "porcellanatos" },
+  { key: "pisos-madera",    label: "Madera e Ingeniería",  apiSlug: "pisos-madera" },
+];
 
 export default function PisosPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("pisos-flotantes");
-
-  const current = TABS.find((t) => t.key === activeTab)!;
-
   return (
     <div className="min-h-screen bg-[#F9F8F6]">
-      {/* Hero */}
       <div className="bg-[#111111] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-white/40 mb-6">
             <Link href="/" className="hover:text-white/70 transition-colors">Inicio</Link>
             <FiChevronRight size={12} />
@@ -67,43 +47,14 @@ export default function PisosPage() {
             </div>
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex overflow-x-auto gap-1 py-1 scrollbar-hide">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`shrink-0 px-5 py-3.5 text-sm font-semibold transition-all duration-200 border-b-2 ${
-                    activeTab === tab.key
-                      ? "border-[#DF8635] text-white"
-                      : "border-transparent text-white/40 hover:text-white/70"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
       </div>
 
-      {/* Tab description strip */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <p className="text-sm text-gray-500">{current.desc}</p>
-        </div>
-      </div>
-
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <CategoryListing
-          key={current.key}
-          title={current.label}
+          title="Pisos"
           categorySlug="pisos"
-          apiSlug={current.apiSlug}
+          apiSlug="pisos-flotantes"
+          subcategories={SUBCATEGORIES}
         />
       </div>
     </div>
