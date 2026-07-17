@@ -77,6 +77,7 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
                 src={product.galeria[0] ?? ""}
                 alt={product.nombre}
                 fill
+                sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 25vw"
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
                 iconSize={28}
               />

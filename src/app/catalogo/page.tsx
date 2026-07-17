@@ -25,8 +25,10 @@ function SkeletonCard() {
 }
 
 export default function CatalogoPage() {
+  const PAGE_SIZE = 30;
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -40,7 +42,7 @@ export default function CatalogoPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -54,6 +56,7 @@ export default function CatalogoPage() {
       }
       return next;
     });
+    setPage(1);
   };
 
   const handleRemoveFilter = (key: string) => {
@@ -62,13 +65,15 @@ export default function CatalogoPage() {
       delete next[key];
       return next;
     });
+    setPage(1);
   };
 
-  const handleClearFilters = () => setActiveFilters({});
+  const handleClearFilters = () => { setActiveFilters({}); setPage(1); };
 
   const handleSelectCategoria = (val: string) => {
     setSelectedCategoria(val);
     setActiveFilters({});
+    setPage(1);
   };
 
   const fetchData = useCallback(async () => {
@@ -78,7 +83,8 @@ export default function CatalogoPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const params = new URLSearchParams({ take: "60" });
+      const skip = (page - 1) * PAGE_SIZE;
+      const params = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(skip) });
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (selectedCategoria) params.set("categoria", selectedCategoria);
       for (const [key, val] of Object.entries(activeFilters)) {
@@ -103,7 +109,7 @@ export default function CatalogoPage() {
         abortRef.current = null;
       }
     }
-  }, [debouncedSearch, selectedCategoria, activeFilters]);
+  }, [debouncedSearch, selectedCategoria, activeFilters, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -111,6 +117,24 @@ export default function CatalogoPage() {
   const activeCount = Object.keys(activeFilters).length;
   const hasFilters = Object.keys(filtros).length > 0;
   const selectedCatLabel = categorias.find((c) => c.key === selectedCategoria)?.label;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const paginationRange = useMemo(() => {
+    const SIBLINGS = 5;
+    const pages: (number | "...")[] = [];
+    if (totalPages <= SIBLINGS * 2 + 3) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      const start = Math.max(2, page - SIBLINGS);
+      const end = Math.min(totalPages - 1, page + SIBLINGS);
+      pages.push(1);
+      if (start > 2) pages.push("...");
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [page, totalPages]);
 
   // Memoiza la grilla: sólo se reconstruye cuando cambia la lista de productos,
   // no al tipear en el buscador ni al abrir/cerrar filtros.
@@ -191,7 +215,7 @@ export default function CatalogoPage() {
 
               {/* Filtros */}
               {hasFilters && (() => {
-                const gateKey = selectedCategoria === "pisos-flotantes" ? "categoriaTerciaria" : null;
+                const gateKey = (selectedCategoria === "pisos-flotantes" || selectedCategoria === "pisos-vinilicos") ? "categoriaTerciaria" : null;
                 const gateSelected = gateKey ? !!activeFilters[gateKey] : true;
                 const gateFilter = gateKey ? filtros[gateKey] : null;
                 const restFilters = Object.entries(filtros).filter(([key]) => key !== gateKey);
@@ -285,7 +309,7 @@ export default function CatalogoPage() {
                 <FiChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
               {hasFilters && (() => {
-                const gateKey = selectedCategoria === "pisos-flotantes" ? "categoriaTerciaria" : null;
+                const gateKey = (selectedCategoria === "pisos-flotantes" || selectedCategoria === "pisos-vinilicos") ? "categoriaTerciaria" : null;
                 const gateSelected = gateKey ? !!activeFilters[gateKey] : true;
                 const gateFilter = gateKey ? filtros[gateKey] : null;
                 const restFilters = Object.entries(filtros).filter(([k]) => k !== gateKey);
@@ -384,13 +408,50 @@ export default function CatalogoPage() {
             {/* Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {loading ? (
-                Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+                Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
               ) : productos.length === 0 ? (
                 <EmptyState label={selectedCatLabel ?? "Catálogo"} />
               ) : (
                 productGrid
               )}
             </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && !loading && (
+              <nav className="flex items-center justify-center gap-1.5 mt-8">
+                <button
+                  onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === 1}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"
+                >
+                  Anterior
+                </button>
+                {paginationRange.map((p, i) =>
+                  p === "..." ? (
+                    <span key={`dots-${i}`} className="px-2 py-2 text-sm text-gray-400">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className={`min-w-[36px] py-2 text-sm rounded-lg border transition-colors ${
+                        p === page
+                          ? "border-[#DF8635] bg-[#DF8635] text-white font-bold"
+                          : "border-gray-200 hover:border-[#DF8635] hover:text-[#DF8635]"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === totalPages}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
           </div>
         </div>
       </div>

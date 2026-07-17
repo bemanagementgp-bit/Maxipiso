@@ -102,9 +102,19 @@ export async function GET(req: NextRequest) {
     const skip       = parseIntSafe(sp.get("skip"),  0,  0, 1_000_000);
     const take       = parseIntSafe(sp.get("take"), 10,  1, 200);
 
-    // Decide qué tablas consultar
-    const keys: TableKey[] = tablaFilter
-      ? TABLE_KEYS.filter((k) => DB_NAMES[k] === tablaFilter || k === tablaFilter)
+    // Decide qué tablas consultar + filtro especial para revestimientos ext/int
+    let catPrincipalFilter: string | null = null;
+    let effectiveTabla = tablaFilter;
+    if (tablaFilter === "revestimientos_ext") {
+      effectiveTabla = "revestimientos";
+      catPrincipalFilter = "Espacios Exterior";
+    } else if (tablaFilter === "revestimientos_int") {
+      effectiveTabla = "revestimientos";
+      catPrincipalFilter = "Espacios Interiores";
+    }
+
+    const keys: TableKey[] = effectiveTabla
+      ? TABLE_KEYS.filter((k) => DB_NAMES[k] === effectiveTabla || k === effectiveTabla)
       : TABLE_KEYS;
 
     // Construye filtros comunes
@@ -119,6 +129,7 @@ export async function GET(req: NextRequest) {
         const where: Record<string, unknown> = {};
         if (isActive !== undefined) where.isActive = isActive;
         if (marca) where.marca = marca;
+        if (catPrincipalFilter && key === "revestimiento") where.categoriaPrincipal = catPrincipalFilter;
 
         if (search) {
           const searchFields = key === "pisoMadera"
@@ -138,7 +149,10 @@ export async function GET(req: NextRequest) {
 
         return (rows as Record<string, unknown>[]).map((r) => {
           if (tablaFilter) {
-            return { ...(r as any), _tabla: DB_NAMES[key], _tablaLabel: TABLE_LABELS[key] };
+            const labelOverride = tablaFilter === "revestimientos_ext" ? "Revestimientos Exteriores"
+              : tablaFilter === "revestimientos_int" ? "Revestimientos Interiores"
+              : TABLE_LABELS[key];
+            return { ...(r as any), _tabla: DB_NAMES[key], _tablaLabel: labelOverride };
           }
           return normalizeAdminRow(r, key);
         });

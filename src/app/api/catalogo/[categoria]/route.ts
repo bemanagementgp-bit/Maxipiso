@@ -4,6 +4,10 @@ import { sanitizeText, parseIntSafe } from "@/lib/security";
 
 export const runtime = "nodejs";
 
+const CACHE_TTL_MS = 60_000;
+type CacheEntry = { expires: number; payload: unknown };
+const cache = new Map<string, CacheEntry>();
+
 type PrismaDelegate = {
   findMany: (args: object) => Promise<unknown[]>;
   count: (args: object) => Promise<number>;
@@ -55,6 +59,7 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
     { key: "tipoProducto", label: "Tipo" },
   ],
   "pisos-vinilicos": [
+    { key: "categoriaTerciaria", label: "Tipo" },
     { key: "marca", label: "Marca" },
     { key: "linea", label: "Línea" },
     { key: "material", label: "Material" },
@@ -63,7 +68,6 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
     { key: "capaDeUso", label: "Capa de uso" },
     { key: "bisel", label: "Bisel" },
     { key: "origen", label: "Origen" },
-    { key: "categoriaSecundaria", label: "Subcategoría" },
   ],
   "pisos-madera": [
     { key: "marca", label: "Marca" },
@@ -79,13 +83,14 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
     { key: "marca", label: "Marca" },
     { key: "material", label: "Material" },
     { key: "linea", label: "Línea" },
-    { key: "espesor", label: "Espesor" },
+    { key: "espesor", label: "Espesor (mm)" },
     { key: "tipoProducto", label: "Tipo" },
   ],
   "maderas": [
     { key: "tipoProducto", label: "Tipo" },
     { key: "origen", label: "Origen" },
     { key: "secado", label: "Secado" },
+    { key: "espesoresDisponibles", label: "Espesores" },
   ],
   "accesorios": [
     { key: "tipoProducto", label: "Tipo" },
@@ -94,6 +99,12 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
     { key: "colores", label: "Colores" },
   ],
 };
+
+const BRAND_ALIASES: Record<string, string> = {
+  "Max Core": "MaxCore",
+};
+
+const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
 
 const SEARCH_FIELDS: Record<string, string[]> = {
   "pisos-flotantes": ["nombre", "sku", "marca", "linea", "descripcion"],
@@ -136,44 +147,79 @@ export async function GET(
       if (val) activeFilters[fk] = val;
     }
 
-    // Build WHERE
+    // Reverse alias map: canonical → all DB variants
+    const reverseAliases: Record<string, string[]> = {};
+    for (const [variant, canonical] of Object.entries(BRAND_ALIASES)) {
+      if (!reverseAliases[canonical]) reverseAliases[canonical] = [canonical];
+      reverseAliases[canonical].push(variant);
+    }
+
+    // Cache lookup
+    const cacheKey = JSON.stringify({ slug, search, skip, take, activeFilters });
+    const cached = cache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) {
+      return NextResponse.json(cached.payload);
+    }
+
+    // Build WHERE (expand aliased brand values, use contains for multi-value fields)
     const where: Record<string, unknown> = { isActive: true };
     for (const [key, val] of Object.entries(activeFilters)) {
-      where[key] = val;
+      if (MULTI_VALUE_FIELDS.has(key)) {
+        where[key] = { contains: val };
+      } else {
+        const variants = reverseAliases[val];
+        where[key] = variants ? { in: variants } : val;
+      }
     }
     if (search) {
       const fields = SEARCH_FIELDS[slug] ?? ["nombre", "sku"];
       where.OR = fields.map((f) => ({ [f]: { contains: search } }));
     }
 
-    const [productosRaw, total] = await Promise.all([
+    // Run products + count + all filter queries in parallel
+    const filterPromises = fieldDefs.map((fd) => {
+      const otherFilters: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(activeFilters)) {
+        if (k === fd.key) continue;
+        if (MULTI_VALUE_FIELDS.has(k)) {
+          otherFilters[k] = { contains: v };
+        } else {
+          const vars = reverseAliases[v];
+          otherFilters[k] = vars ? { in: vars } : v;
+        }
+      }
+      return delegate
+        .findMany({ where: { isActive: true, ...otherFilters }, select: { [fd.key]: true } })
+        .catch(() => []);
+    });
+
+    const [productosRaw, total, ...filterResults] = await Promise.all([
       delegate.findMany({ where, skip, take, orderBy: { createdAt: "desc" } }),
       delegate.count({ where }),
+      ...filterPromises,
     ]);
 
-    // Build filtros: for each field, query unique values excluding that field's
-    // own active filter so all options remain visible when one is selected.
     const filtros: Record<string, { label: string; values: string[] }> = {};
-    if (fieldDefs.length > 0) {
-      const filterResults = await Promise.all(
-        fieldDefs.map((fd) => {
-          const otherFilters = { ...activeFilters };
-          delete otherFilters[fd.key];
-          return delegate
-            .findMany({ where: { isActive: true, ...otherFilters }, select: { [fd.key]: true } })
-            .catch(() => []);
-        })
-      );
-      for (let i = 0; i < fieldDefs.length; i++) {
-        const fd = fieldDefs[i];
-        const unique = [...new Set(
-          (filterResults[i] as Record<string, unknown>[])
-            .map((r) => r[fd.key])
-            .filter((v): v is string => typeof v === "string" && v.trim() !== "")
-        )].sort();
-        if (unique.length > 0) {
-          filtros[fd.key] = { label: fd.label, values: unique };
-        }
+    for (let i = 0; i < fieldDefs.length; i++) {
+      const fd = fieldDefs[i];
+      const isMulti = MULTI_VALUE_FIELDS.has(fd.key);
+      const unique = [...new Set(
+        (filterResults[i] as Record<string, unknown>[])
+          .flatMap((r) => {
+            const v = r[fd.key];
+            if (typeof v !== "string" || v.trim() === "") return [];
+            if (isMulti) {
+              return v.split("|").map((s) => s.trim()).filter(Boolean);
+            }
+            return [BRAND_ALIASES[v] ?? v];
+          })
+      )].sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return a.localeCompare(b, "es", { numeric: true });
+      });
+      if (unique.length > 0) {
+        filtros[fd.key] = { label: fd.label, values: unique };
       }
     }
 
@@ -186,9 +232,13 @@ export async function GET(
       return clean;
     });
 
-    return NextResponse.json({
-      success: true,
-      data: { productos, total, skip, take, filtros },
+    const payload = { success: true, data: { productos, total, skip, take, filtros } };
+    if (productos.length > 0) {
+      cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, payload });
+    }
+
+    return NextResponse.json(payload, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch (err) {
     console.error("[catalogo/[categoria]] error:", err);

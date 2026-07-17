@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getAllProducts, findProductsByIds, PRICE_FIELDS } from "@/lib/all-products";
+import { getAllProducts, findProductsByIds, PRICE_FIELDS, TABLE_LABELS } from "@/lib/all-products";
 
 export const runtime = "nodejs";
 
@@ -31,10 +31,20 @@ export async function GET(_req: NextRequest) {
   const conStock     = productos.filter((p) => p.stock !== null && p.stock !== undefined).length;
   const destacados   = 0; // field not present in multi-table schema
 
-  // Distribución por categoría
+  // Distribución por categoría (usa tabla real, revestimientos separados en ext/int)
+  const REV_RENAME: Record<string, string> = {
+    "Espacios Exterior": "Revestimientos Exteriores",
+    "Espacios Interiores": "Revestimientos Interiores",
+  };
   const catMap: Record<string, { count: number; sum: number }> = {};
   for (const p of productos) {
-    const cat = p.categoria ?? "Sin categoría";
+    let cat: string;
+    if (p.tablaNombre === "revestimientos") {
+      const raw = (p as any).categoria ?? "";
+      cat = REV_RENAME[raw] ?? "Revestimientos";
+    } else {
+      cat = TABLE_LABELS[p.tableKey as keyof typeof TABLE_LABELS] ?? p.tablaNombre;
+    }
     if (!catMap[cat]) catMap[cat] = { count: 0, sum: 0 };
     catMap[cat].count++;
     catMap[cat].sum += p.precio;
@@ -49,9 +59,11 @@ export async function GET(_req: NextRequest) {
     .sort((a, b) => b.count - a.count);
 
   // Ranking de marcas (top 10 por cantidad)
+  const BRAND_ALIASES: Record<string, string> = { "Max Core": "MaxCore" };
   const marcaMap: Record<string, { count: number; sum: number }> = {};
   for (const p of productos) {
-    const m = p.marca ?? "Sin marca";
+    const raw = p.marca ?? "Sin marca";
+    const m = BRAND_ALIASES[raw] ?? raw;
     if (!marcaMap[m]) marcaMap[m] = { count: 0, sum: 0 };
     marcaMap[m].count++;
     marcaMap[m].sum += p.precio;
@@ -64,20 +76,6 @@ export async function GET(_req: NextRequest) {
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
-
-  // Distribución de precios por rango
-  const rangos = [
-    { label: "< $5.000",       min: 0,      max: 5000 },
-    { label: "$5k â€“ $15k",     min: 5000,   max: 15000 },
-    { label: "$15k â€“ $30k",    min: 15000,  max: 30000 },
-    { label: "$30k â€“ $60k",    min: 30000,  max: 60000 },
-    { label: "$60k â€“ $100k",   min: 60000,  max: 100000 },
-    { label: "> $100.000",     min: 100000, max: Infinity },
-  ];
-  const distribucionPrecios = rangos.map((r) => ({
-    rango: r.label,
-    count: productos.filter((p) => p.precio >= r.min && p.precio < r.max).length,
-  }));
 
   // Últimas variaciones de precio (con delta %)
   const uniqueIds   = [...new Set(cambiosPrecios.map((c) => c.entidadId))];
@@ -113,7 +111,6 @@ export async function GET(_req: NextRequest) {
       catalogo: { total, activos, conImagen, conCategoria, sinPrecio, conStock, destacados, nuevosEsteMes },
       porCategoria,
       porMarca,
-      distribucionPrecios,
       ultimasVariaciones,
     },
   });

@@ -26,6 +26,12 @@ function timeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   });
 }
 
+const BRAND_ALIASES: Record<string, string> = {
+  "Max Core": "MaxCore",
+};
+
+const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
+
 const TABLES = [
   { key: "pisos-flotantes", delegate: () => prisma.pisoFlotante, label: "Pisos Flotantes" },
   { key: "porcellanatos",   delegate: () => prisma.porcellanato,  label: "Porcellanatos" },
@@ -37,7 +43,16 @@ const TABLES = [
   { key: "accesorios",      delegate: () => prisma.accesorio,     label: "Accesorios" },
 ] as const;
 
-const SEARCH_FIELDS = ["nombre", "sku", "marca", "descripcion"];
+const SEARCH_FIELDS: Record<string, string[]> = {
+  "pisos-flotantes": ["nombre", "sku", "marca", "descripcion"],
+  "porcellanatos":   ["nombre", "sku", "marca", "descripcion"],
+  "revestimientos":  ["nombre", "sku", "material", "descripcion"],
+  "pisos-vinilicos": ["nombre", "sku", "marca", "descripcion"],
+  "pisos-madera":    ["especie", "sku", "marca", "descripcion"],
+  "decks":           ["nombre", "sku", "marca", "descripcion"],
+  "maderas":         ["nombre", "sku", "origen", "descripcion"],
+  "accesorios":      ["nombre", "sku", "subtipo", "descripcion"],
+};
 
 type FilterField = { key: string; label: string };
 
@@ -89,7 +104,7 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "linea",        label: "Línea" },
     { key: "material",     label: "Material" },
     { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "espesor",      label: "Espesor" },
+    { key: "espesor",      label: "Espesor (mm)" },
   ],
   "maderas": [
     { key: "tipoProducto",         label: "Tipo de producto" },
@@ -110,7 +125,8 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const search = sanitizeText(sp.get("search") ?? "", 100);
     const categoria = sp.get("categoria") ?? "";
-    const take = parseIntSafe(sp.get("take"), 60, 1, 200);
+    const skip = parseIntSafe(sp.get("skip"), 0, 0, 1_000_000);
+    const take = parseIntSafe(sp.get("take"), 15, 1, 200);
 
     // Los filtros por característica solo aplican dentro de una categoría
     const filterFields: FilterField[] = categoria
@@ -124,8 +140,15 @@ export async function GET(req: NextRequest) {
       if (val) activeFilters[f.key] = val;
     }
 
+    // Reverse alias map
+    const reverseAliases: Record<string, string[]> = {};
+    for (const [variant, canonical] of Object.entries(BRAND_ALIASES)) {
+      if (!reverseAliases[canonical]) reverseAliases[canonical] = [canonical];
+      reverseAliases[canonical].push(variant);
+    }
+
     // Clave de caché por combinación de parámetros
-    const cacheKey = JSON.stringify({ search, categoria, take, activeFilters });
+    const cacheKey = JSON.stringify({ search, categoria, skip, take, activeFilters });
     const cached = cache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return NextResponse.json(cached.payload);
@@ -136,35 +159,73 @@ export async function GET(req: NextRequest) {
       ? TABLES.filter((t) => t.key === categoria)
       : TABLES;
 
-    // Query all tables in parallel (con timeout por tabla)
-    const results = await Promise.all(
-      tablesToQuery.map(async (table) => {
-        const d = table.delegate() as any;
-        const where: Record<string, unknown> = { isActive: true };
-
-        for (const [key, val] of Object.entries(activeFilters)) {
-          where[key] = val;
-        }
-
-        if (search) {
-          where.OR = SEARCH_FIELDS.map((f) => ({ [f]: { contains: search } }));
-        }
-
-        const [rows, count] = await Promise.all([
-          timeout(
-            d.findMany({ where, take, orderBy: { createdAt: "desc" } }) as Promise<Record<string, unknown>[]>,
+    // Build filter queries (run in parallel with product queries)
+    const filterTable = categoria && filterFields.length > 0 ? tablesToQuery[0] : null;
+    const filterPromises = filterTable
+      ? filterFields.map((fd) => {
+          const otherFilters: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(activeFilters)) {
+            if (k === fd.key) continue;
+            if (MULTI_VALUE_FIELDS.has(k)) {
+              otherFilters[k] = { contains: v };
+            } else {
+              const vars = reverseAliases[v];
+              otherFilters[k] = vars ? { in: vars } : v;
+            }
+          }
+          return timeout(
+            (filterTable.delegate() as any).findMany({
+              where: { isActive: true, ...otherFilters },
+              select: { [fd.key]: true },
+            }) as Promise<Record<string, unknown>[]>,
             QUERY_TIMEOUT_MS,
             [] as Record<string, unknown>[]
-          ),
-          timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0),
-        ]);
-        return { key: table.key, label: table.label, rows, count };
-      })
-    );
+          );
+        })
+      : [];
 
+    // Query all tables + filters in parallel
+    const singleTable = tablesToQuery.length === 1;
+    const productPromises = tablesToQuery.map(async (table) => {
+      const d = table.delegate() as any;
+      const where: Record<string, unknown> = { isActive: true };
+      for (const [key, val] of Object.entries(activeFilters)) {
+        if (MULTI_VALUE_FIELDS.has(key)) {
+          where[key] = { contains: val };
+        } else {
+          const vars = reverseAliases[val];
+          where[key] = vars ? { in: vars } : val;
+        }
+      }
+      if (search) {
+        const fields = SEARCH_FIELDS[table.key] ?? ["nombre", "sku"];
+        where.OR = fields.map((f) => ({ [f]: { contains: search } }));
+      }
+      const findArgs: Record<string, unknown> = { where, orderBy: { createdAt: "desc" } };
+      if (singleTable) {
+        findArgs.skip = skip;
+        findArgs.take = take;
+      } else {
+        findArgs.take = skip + take;
+      }
+      const [rows, count] = await Promise.all([
+        timeout(
+          d.findMany(findArgs) as Promise<Record<string, unknown>[]>,
+          QUERY_TIMEOUT_MS,
+          [] as Record<string, unknown>[]
+        ),
+        timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0),
+      ]);
+      return { key: table.key, label: table.label, rows, count };
+    });
+
+    const [results, filterResults] = await Promise.all([
+      Promise.all(productPromises),
+      Promise.all(filterPromises),
+    ]);
 
     // Merge all products
-    const allProducts = results.flatMap((r) =>
+    const merged = results.flatMap((r) =>
       r.rows.map((row) => {
         const clean: Record<string, unknown> = { _tabla: r.key, _tablaLabel: r.label };
         for (const [k, v] of Object.entries(row)) {
@@ -176,45 +237,31 @@ export async function GET(req: NextRequest) {
     );
 
     const total = results.reduce((sum, r) => sum + r.count, 0);
-    // Si el listado quedó vacío (p.ej. porque el findMany superó el timeout)
-    // no mostramos un total > 0: evita el estado incoherente "171 productos"
-    // sobre una grilla vacía.
-    const totalMostrado = allProducts.length > 0 ? total : 0;
+    const allProducts = singleTable ? merged : merged.slice(skip, skip + take);
+    const totalMostrado = merged.length > 0 ? total : 0;
 
-    // Build filter values per-category: for each field, exclude its own active
-    // filter so all options remain visible when one is selected.
+    // Build filter values
     const filtros: Record<string, { label: string; values: string[] }> = {};
-    if (categoria && filterFields.length > 0) {
-      const table = tablesToQuery[0];
-      if (table) {
-        const d = table.delegate() as any;
-
-        const filterResults = await Promise.all(
-          filterFields.map((fd) => {
-            const otherFilters = { ...activeFilters };
-            delete otherFilters[fd.key];
-            return timeout(
-              d.findMany({
-                where: { isActive: true, ...otherFilters },
-                select: { [fd.key]: true },
-              }) as Promise<Record<string, unknown>[]>,
-              QUERY_TIMEOUT_MS,
-              [] as Record<string, unknown>[]
-            );
+    for (let i = 0; i < filterFields.length; i++) {
+      const fd = filterFields[i];
+      const isMulti = MULTI_VALUE_FIELDS.has(fd.key);
+      const unique = [...new Set(
+        (filterResults[i] ?? [])
+          .flatMap((r) => {
+            const v = r[fd.key];
+            if (typeof v !== "string" || v.trim() === "") return [];
+            if (isMulti) {
+              return v.split("|").map((s) => s.trim()).filter(Boolean);
+            }
+            return [BRAND_ALIASES[v] ?? v];
           })
-        );
-
-        for (let i = 0; i < filterFields.length; i++) {
-          const fd = filterFields[i];
-          const unique = [...new Set(
-            filterResults[i]
-              .map((r) => r[fd.key])
-              .filter((v): v is string => typeof v === "string" && v.trim() !== "")
-          )].sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
-          if (unique.length > 0) {
-            filtros[fd.key] = { label: fd.label, values: unique };
-          }
-        }
+      )].sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return a.localeCompare(b, "es", { numeric: true });
+      });
+      if (unique.length > 0) {
+        filtros[fd.key] = { label: fd.label, values: unique };
       }
     }
 
@@ -232,7 +279,9 @@ export async function GET(req: NextRequest) {
       cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, payload });
     }
 
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    });
   } catch (err) {
     console.error("[catalogo/todos] error:", err);
     return NextResponse.json(

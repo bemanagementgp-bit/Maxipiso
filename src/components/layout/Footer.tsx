@@ -12,6 +12,7 @@ export default function Footer() {
               alt="Maxipiso"
               width={140}
               height={38}
+              style={{ height: "auto" }}
               className="brightness-0 invert mb-4"
             />
             <p className="text-gray-300 text-sm leading-relaxed">

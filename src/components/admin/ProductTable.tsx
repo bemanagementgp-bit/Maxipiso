@@ -33,7 +33,7 @@ function Thumb({ src, alt }: { src: string | null; alt: string }) {
   );
   return (
     <div className="relative w-10 h-10 rounded-md overflow-hidden border border-gray-200 shrink-0">
-      <Image src={src} alt={alt} fill className="object-cover" />
+      <Image src={src} alt={alt} fill sizes="40px" className="object-cover" />
     </div>
   );
 }

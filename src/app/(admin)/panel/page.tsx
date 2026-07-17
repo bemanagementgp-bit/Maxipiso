@@ -58,7 +58,8 @@ function FilterSelect({ value, onChange, children }: {
 const TABLAS = [
   { value: "pisos_flotantes",  label: "Pisos Flotantes" },
   { value: "porcellanatos",    label: "Porcellanatos" },
-  { value: "revestimientos",  label: "Revestimientos" },
+  { value: "revestimientos_ext",  label: "Revestimientos Exteriores" },
+  { value: "revestimientos_int",  label: "Revestimientos Interiores" },
   { value: "pisos_vinilicos", label: "Pisos Vinilicos" },
   { value: "pisos_madera",    label: "Pisos Madera e Ingenieria" },
   { value: "decks",           label: "Decks" },

@@ -29,7 +29,7 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
                 activeIndex === index ? "border-[#111111]" : "border-gray-200"
               }`}
             >
-              <SafeImage src={src} alt={`${productName} miniatura ${index + 1}`} fill className="object-cover" iconSize={20} />
+              <SafeImage src={src} alt={`${productName} miniatura ${index + 1}`} fill sizes="86px" className="object-cover" iconSize={20} />
             </button>
           ))}
         </div>
@@ -41,6 +41,7 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
             src={activeImage}
             alt={productName}
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
             iconSize={72}
           />

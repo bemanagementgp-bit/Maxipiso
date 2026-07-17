@@ -16,7 +16,16 @@ const SUBCATEGORIES = [
       { key: "flotantes-clasico", label: "Clasico", apiSlug: "pisos-flotantes", filter: { field: "categoriaTerciaria", value: "Clasico" } },
     ],
   },
-  { key: "pisos-vinilicos", label: "Vinílicos",            apiSlug: "pisos-vinilicos" },
+  {
+    key: "pisos-vinilicos",
+    label: "Vinílicos",
+    apiSlug: "pisos-vinilicos",
+    children: [
+      { key: "vinilicos-wr", label: "Water Resistant", apiSlug: "pisos-vinilicos", filter: { field: "categoriaTerciaria", value: "Water Resistant" } },
+      { key: "vinilicos-wp", label: "Waterproof", apiSlug: "pisos-vinilicos", filter: { field: "categoriaTerciaria", value: "Waterproof" } },
+      { key: "vinilicos-clasico", label: "Clasico", apiSlug: "pisos-vinilicos", filter: { field: "categoriaTerciaria", value: "Clasico" } },
+    ],
+  },
   { key: "porcellanatos",   label: "Porcellanatos",        apiSlug: "porcellanatos" },
   { key: "pisos-madera",    label: "Madera e Ingeniería",  apiSlug: "pisos-madera" },
 ];

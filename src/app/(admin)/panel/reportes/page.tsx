@@ -122,10 +122,6 @@ function CatalogHealth({ c }: { c: any }) {
           <div className="text-[20px] font-medium text-[#111] tabular-nums">{c.sinPrecio}</div>
           <div className="text-[9px] uppercase tracking-[0.07em] text-[#aaa] mt-0.5">Sin precio</div>
         </div>
-        <div className="text-center flex-1">
-          <div className="text-[20px] font-medium text-[#111] tabular-nums">{c.destacados}</div>
-          <div className="text-[9px] uppercase tracking-[0.07em] text-[#aaa] mt-0.5">Destacados</div>
-        </div>
       </div>
     </div>
   );
@@ -163,17 +159,20 @@ function UltimasVariaciones({ items }: { items: any[] }) {
   );
 }
 
-// ── Distribución de precios ───────────────────────────────────────────────────
-function DistribucionPrecios({ data }: { data: any[] }) {
+// ── Distribución por categoría ─────────────────────────────────────────────────
+function DistribucionCategorias({ data }: { data: any[] }) {
   if (!data?.length) return null;
   const max = Math.max(...data.map((d) => d.count));
+  const total = data.reduce((s, d) => s + d.count, 0);
   return (
     <div className="bg-white border border-[#E0DED8] px-6 py-5 space-y-3">
       {data.map((d) => (
-        <div key={d.rango}>
+        <div key={d.categoria}>
           <div className="flex justify-between mb-1">
-            <span className="text-[11px] text-[#555]">{d.rango}</span>
-            <span className="text-[11px] font-medium text-[#111] tabular-nums">{d.count}</span>
+            <span className="text-[11px] text-[#555]">{d.categoria}</span>
+            <span className="text-[11px] font-medium text-[#111] tabular-nums">
+              {d.count} <span className="text-[#aaa]">({total > 0 ? Math.round((d.count / total) * 100) : 0}%)</span>
+            </span>
           </div>
           <div className="h-1.5 bg-[#F0EEE8] rounded-full overflow-hidden">
             <div
@@ -389,7 +388,7 @@ export default function ReportesPage() {
       </Section>
 
       {/* 2 — Salud + últimas variaciones */}
-      <Section title="Salud del catálogo y variaciones recientes" sub="Completitud de datos y últimos cambios de precio">
+      <Section title="Estado del catálogo y variaciones recientes" sub="Completitud de datos y últimos cambios de precio">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CatalogHealth c={data?.catalogo} />
           <UltimasVariaciones items={data?.ultimasVariaciones ?? []} />
@@ -481,16 +480,16 @@ export default function ReportesPage() {
                 ))}
           </div>
 
-          {/* Distribución de precios */}
+          {/* Distribución por categoría */}
           <div className="space-y-3">
             <div className="bg-white border border-[#E0DED8] px-5 py-3.5 border-b-0">
-              <p className="text-[9px] uppercase tracking-[0.08em] text-[#aaa]">Distribución por rango de precio</p>
+              <p className="text-[9px] uppercase tracking-[0.08em] text-[#aaa]">Distribución por categoría</p>
             </div>
             {loading
               ? <div className="bg-white border border-[#E0DED8] px-6 py-5 space-y-3">
                   {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-3 bg-[#F0EEE8] rounded animate-pulse" />)}
                 </div>
-              : <DistribucionPrecios data={data?.distribucionPrecios ?? []} />}
+              : <DistribucionCategorias data={data?.porCategoria ?? []} />}
           </div>
         </div>
       </Section>

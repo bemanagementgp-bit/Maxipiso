@@ -52,6 +52,7 @@ export default function LoginPage() {
           src="/flota.jpg"
           alt="Maxipiso"
           fill
+          sizes="50vw"
           className="object-cover"
           priority
         />

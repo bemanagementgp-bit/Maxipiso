@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import Link from "next/link";
 import { FiPackage, FiSearch, FiX, FiChevronRight, FiChevronDown, FiArrowLeft } from "react-icons/fi";
 import SafeImage from "./SafeImage";
@@ -97,6 +97,7 @@ function ProductCardBase({
           src={img ?? ""}
           alt={name}
           fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
@@ -596,6 +597,7 @@ export function CategoryListing({
 
   const [filtros, setFiltros]           = useState<Record<string, FilterGroup>>({});
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const abortRef = useRef<AbortController | null>(null);
 
   const expandedParentDef = subcategories.find((s) => s.key === expandedParent);
   const effectiveApiSlug = selectedSubcat
@@ -644,6 +646,9 @@ export function CategoryListing({
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const params = new URLSearchParams({ take: "60" });
       if (debouncedSearch) params.set("search", debouncedSearch);
@@ -654,22 +659,34 @@ export function CategoryListing({
         params.set(`filtros[${key}]`, val);
       }
 
-      const res = await fetch(`/api/catalogo/${effectiveApiSlug}?${params}`);
+      const res = await fetch(`/api/catalogo/${effectiveApiSlug}?${params}`, { signal: controller.signal });
       if (!res.ok) throw new Error();
       const json = await res.json();
       const data = json.data;
       setProductos(data?.productos ?? []);
       setTotal(data?.total ?? 0);
       if (data?.filtros) setFiltros(data.filtros);
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       setProductos([]);
       setTotal(0);
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        setLoading(false);
+        abortRef.current = null;
+      }
     }
   }, [effectiveApiSlug, debouncedSearch, activeFilters, selectedSubcat, expandedParent]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const productGrid = useMemo(
+    () => productos.map((item) => (
+      <ProductCard key={item.id} item={item} categorySlug={categorySlug} />
+    )),
+    [productos, categorySlug]
+  );
 
   return (
     <div className="flex gap-6">
@@ -736,9 +753,7 @@ export function CategoryListing({
           ) : productos.length === 0 ? (
             <EmptyState label={selectedSubcat?.label ?? title} />
           ) : (
-            productos.map((item) => (
-              <ProductCard key={item.id} item={item} categorySlug={categorySlug} />
-            ))
+            productGrid
           )}
         </div>
       </div>
