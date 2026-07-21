@@ -6,7 +6,7 @@ import { FiX, FiPackage, FiLoader } from "react-icons/fi";
 
 const TABLA_LABELS: Record<string, string> = {
   pisos_flotantes: "Pisos Flotantes",
-  porcellanatos: "Porcellanatos",
+  porcellanatos: "Porcelanatos",
   revestimientos: "Revestimientos",
   pisos_vinilicos: "Pisos Vinílicos",
   pisos_madera: "Pisos Madera e Ingeniería",

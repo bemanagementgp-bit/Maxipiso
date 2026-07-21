@@ -65,7 +65,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
   },
   {
     tabla: "porcellanatos",
-    label: "Porcellanatos",
+    label: "Porcelanatos",
     dot: "#8b5cf6",
     fields: [
       ...COMMON_FIELDS,

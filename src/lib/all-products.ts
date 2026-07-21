@@ -7,6 +7,7 @@
  * import from here.
  */
 import { prisma } from "@/lib/prisma";
+import { formatOriginLabel } from "@/lib/flags";
 
 // ─── Table registry ──────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ export const DB_NAMES: Record<TableKey, string> = {
 
 export const TABLE_LABELS: Record<TableKey, string> = {
   pisoFlotante:  "Pisos Flotantes",
-  porcellanato:  "Porcellanatos",
+  porcellanato:  "Porcelanatos",
   revestimiento: "Revestimientos",
   pisoVinilico:  "Pisos Vinílicos",
   pisoMadera:    "Pisos Madera e Ingeniería",
@@ -55,7 +56,7 @@ export const TABLE_LABELS: Record<TableKey, string> = {
 
 export const TABLE_CATEGORIA: Record<TableKey, string> = {
   pisoFlotante:  "Pisos",
-  porcellanato:  "Porcellanatos",
+  porcellanato:  "Porcelanatos",
   revestimiento: "Revestimientos",
   pisoVinilico:  "Pisos",
   pisoMadera:    "Pisos",
@@ -258,6 +259,61 @@ export async function searchProducts(q: string, limit = 8): Promise<NormalizedPr
  * Build a specs object from available fields in a raw product row.
  * Used by the public catalog product page.
  */
+function formatMeasureValue(val: unknown, unit?: unknown, defaultUnit = "mm"): string | undefined {
+  if (val === null || val === undefined) return undefined;
+  const text = String(val).trim();
+  if (text === "") return undefined;
+  const unitText = unit !== null && unit !== undefined ? String(unit).trim() : "";
+
+  if (unitText) {
+    if (text.toLowerCase().endsWith(unitText.toLowerCase())) {
+      return text;
+    }
+    return `${text} ${unitText}`;
+  }
+
+  // If there is already a measurement unit, preserve it.
+  if (/[a-zA-Z%]/.test(text)) {
+    return text;
+  }
+
+  // Add default unit for numeric or dimension strings.
+  if (/^[\d.,\s×xX-]+$/.test(text)) {
+    return `${text} ${defaultUnit}`;
+  }
+
+  return text;
+}
+
+function formatOriginValue(val: unknown): string | undefined {
+  const text = formatOriginLabel(val);
+  return text ? text : undefined;
+}
+
+export function formatMeasureFields(row: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...row };
+
+  const set = (key: string, unitKey: string, defaultUnit = "mm") => {
+    const value = row[key];
+    const unit = row[unitKey];
+    const formatted = formatMeasureValue(value, unit, defaultUnit);
+    if (formatted !== undefined) {
+      result[key] = formatted;
+    }
+  };
+
+  set("espesor", "espesorUm", "mm");
+  set("espesorTotal", "espesorTotalUm", "mm");
+  set("espesorComposicion", "espesorComposicionUm", "mm");
+  set("espesorLamina", "espesorLaminaUm", "mm");
+  set("ancho", "anchoUm", "mm");
+  set("largo", "largoUm", "mm");
+  set("medidas", "", "mm");
+  set("dimensiones", "", "mm");
+
+  return result;
+}
+
 export function buildSpecsFromRow(row: Record<string, unknown>): Record<string, string> {
   const set = (key: string, val: unknown, unit?: unknown) => {
     if (val === null || val === undefined || val === "") return;
@@ -265,23 +321,26 @@ export function buildSpecsFromRow(row: Record<string, unknown>): Record<string, 
   };
 
   const specs: Record<string, string> = {};
+  set("SKU",                row.sku);
+  set("Fabrica",             row.marca);
   set("Tipo",               row.tipoProducto);
-  set("Origen",             row.origen);
+  set("Origen",             formatOriginLabel(row.origen));
   set("Especie",            row.especie);
-  set("Espesor",            row.espesor,    row.espesorUm);
-  set("Ancho",              row.ancho,      row.anchoUm);
-  set("Largo",              row.largo,      row.largoUm);
+  set("Espesor",            formatMeasureValue(row.espesor, row.espesorUm));
+  set("Ancho",              formatMeasureValue(row.ancho, row.anchoUm));
+  set("Largo",              formatMeasureValue(row.largo, row.largoUm));
   set("Bisel",              row.bisel);
-  set("Línea",              row.linea);
   set("Uso",                row.uso ?? row.tipoDeUso);
   set("Material",           row.material);
   set("Capa de Uso",        row.capaDeUso);
   set("Acabado",            row.acabado);
-  set("Terminación",        row.terminacion);
+  set("Característica",     row.terminacion);
   set("Manto Incorporado",  row.mantoIncorporado);
+  set("Base",               formatMeasureValue(row.base, row.baseUm, "m²"));
   set("Abrasión",           row.abrasion);
   set("Espesores Disponibles", row.espesoresDisponibles);
-  set("Medidas",            row.medidas);
+  set("Medidas",            formatMeasureValue(row.medidas));
+  set("Dimensiones",        formatMeasureValue(row.dimensiones));
   set("Secado",             row.secado);
   return specs;
 }

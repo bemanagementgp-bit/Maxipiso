@@ -47,11 +47,11 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos",          href: "/catalogo/pisos",          img: "/pisos.png",         Icon: FiGrid },
-  { label: "Maderas",        href: "/catalogo/maderas",        img: "/maderas.jpg",            Icon: FiLayers },
-  { label: "Deck WPC",       href: "/catalogo/decks",          img: "/deck.jpg",          Icon: FiSun },
-  { label: "Revestimientos", href: "/catalogo/revestimientos", img: "/revestimientos.png",Icon: FiLayout },
-  { label: "Accesorios",     href: "/catalogo/accesorios",     img: "/accesorios.png",    Icon: FiTool },
+  { label: "Pisos",          href: "/catalogo",          img: "/pisos.png",         Icon: FiGrid },
+  { label: "Maderas",        href: "/catalogo",        img: "/maderas.jpg",            Icon: FiLayers },
+  { label: "Deck WPC",       href: "/catalogo",          img: "/deck.jpg",          Icon: FiSun },
+  { label: "Revestimientos", href: "/catalogo", img: "/revestimientos.png",Icon: FiLayout },
+  { label: "Accesorios",     href: "/catalogo",     img: "/accesorios.png",    Icon: FiTool },
   { label: "Otros",          href: "/catalogo",                img: "/adhesivos.jpg",     Icon: FiShoppingBag },
 ];
 
@@ -178,10 +178,10 @@ function StatCard({ value, label, active, delay }: {
       className={`text-center px-2 sm:px-4 md:px-6 py-2 transition-all duration-700 ${active ? "animate-fade-up opacity-100" : "opacity-0"}`}
       style={active ? { animationDelay: `${delay}s` } : undefined}
     >
-      <div className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#DF8635] leading-none tabular-nums whitespace-nowrap">
+      <div className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold text-[#DF8635] leading-none tabular-nums whitespace-nowrap">
         +{fmtStat(count)}
       </div>
-      <div className="mt-3 text-white/50 text-xs sm:text-sm uppercase tracking-wide sm:tracking-widest font-medium">
+      <div className="mt-3 text-white/50 text-sm sm:text-base uppercase tracking-wide sm:tracking-widest font-medium">
         {label}
       </div>
     </div>
@@ -508,7 +508,7 @@ export default function Home() {
           <Reveal className="text-center mb-12">
             <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3 block">Catálogo</span>
             <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
-              Nuestras líneas de producto
+              Nuestras líneas de productos
             </h2>
             <p className="text-gray-400 text-lg mt-3">
               La mayor variedad en importación, en un solo lugar
@@ -519,7 +519,7 @@ export default function Home() {
               <Reveal key={label} delay={i * 0.08}>
                 <Link
                   href={href}
-                  className="group relative overflow-hidden rounded-3xl block shadow-sm hover:shadow-xl transition-shadow duration-300 bg-[#FAFAF8]"
+                  className="group relative overflow-hidden rounded-3xl block bg-[#FAFAF8] border border-gray-100"
                   style={{ aspectRatio: "2/5" }}
                 >
                   {/* Imagen full-background */}
@@ -546,14 +546,16 @@ export default function Home() {
                   </div>
 
                   {/* Contenido encima del SVG */}
-                  <div className="absolute top-0 left-0 z-20 px-5 pt-6 flex flex-col items-start">
+                  <div className="absolute top-0 left-0 z-20 px-5 pt-6 flex items-center gap-3">
                     <div className="text-[#666] group-hover:text-[#DF8635] transition-colors duration-300">
                       <Icon size={22} strokeWidth={1.5} />
                     </div>
-                    <div className="w-5 h-px bg-[#DF8635] my-2.5" />
-                    <p className="font-black text-[#1a1a1a] uppercase text-xs leading-snug tracking-[0.08em]">
-                      {label}
-                    </p>
+                    <div>
+                      <p className="font-black text-[#1a1a1a] uppercase text-sm lg:text-base xl:text-lg leading-snug tracking-[0.08em] mt-2">
+                        {label}
+                      </p>
+                      <div className="w-5 h-px bg-[#DF8635] mt-2" />
+                    </div>
                   </div>
                 </Link>
               </Reveal>

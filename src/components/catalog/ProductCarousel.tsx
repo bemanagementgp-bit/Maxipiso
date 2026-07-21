@@ -98,11 +98,6 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
               <p className="font-bold text-[#111111] text-sm leading-snug line-clamp-2 group-hover:text-[#DF8635] transition-colors">
                 {product.nombre}
               </p>
-              {product.descripcion && (
-                <p className="text-gray-400 text-[11px] leading-relaxed line-clamp-2">
-                  {product.descripcion}
-                </p>
-              )}
               <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#111111]">
                 Ver producto
                 <FiArrowRight

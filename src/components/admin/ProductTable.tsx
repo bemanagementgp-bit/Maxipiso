@@ -10,7 +10,7 @@ import { getGridColumns, getCategoryConfig } from "@/lib/category-fields";
 
 const TABLA_CONFIG: Record<string, { dot: string; label: string }> = {
   pisos_flotantes: { dot: "#f59e0b", label: "Pisos Flotantes"  },
-  porcellanatos:   { dot: "#8b5cf6", label: "Porcellanatos"    },
+  porcellanatos:   { dot: "#8b5cf6", label: "Porcelanatos"    },
   revestimientos:  { dot: "#0ea5e9", label: "Revestimientos"   },
   pisos_vinilicos: { dot: "#f97316", label: "Pisos Vinilicos"  },
   pisos_madera:    { dot: "#84cc16", label: "Pisos Madera"     },

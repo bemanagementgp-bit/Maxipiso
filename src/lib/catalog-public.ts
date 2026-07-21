@@ -10,6 +10,7 @@ export type CatalogDbProduct = {
   imagen: string | null;
   categoria: string | null;
   subcategoria: string | null;
+  origen?: string | null;
   imagenes?: ProductImage[];
 };
 

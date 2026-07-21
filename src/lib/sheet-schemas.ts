@@ -71,7 +71,7 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
   // 2. PORCELLANATOS
   {
     id: "porcellanatos",
-    label: "Porcellanatos",
+    label: "Porcelanatos",
     tabla: "porcellanatos",
     signatureColumns: ["acabado", "terminacion", "tipo de uso"],
     fieldMap: {

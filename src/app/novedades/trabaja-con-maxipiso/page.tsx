@@ -96,12 +96,12 @@ const pasos = [
 ];
 
 const lineas = [
-  { label: "Pisos Flotantes", href: "/catalogo/pisos" },
-  { label: "Pisos de Madera", href: "/catalogo/pisos" },
-  { label: "Porcelanato", href: "/catalogo/pisos" },
-  { label: "Revestimientos", href: "/catalogo/revestimientos" },
-  { label: "Deck WPC", href: "/catalogo/decks" },
-  { label: "Pisos Vinílicos", href: "/catalogo/pisos" },
+  { label: "Pisos Flotantes", href: "/catalogo" },
+  { label: "Pisos de Madera", href: "/catalogo" },
+  { label: "Porcelanato", href: "/catalogo" },
+  { label: "Revestimientos", href: "/catalogo" },
+  { label: "Deck WPC", href: "/catalogo" },
+  { label: "Pisos Vinílicos", href: "/catalogo" },
 ];
 
 const WA_URL = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";

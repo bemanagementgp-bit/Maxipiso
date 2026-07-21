@@ -18,7 +18,8 @@ import {
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { prisma } from "@/lib/prisma";
-import { findProductById, buildSpecsFromRow } from "@/lib/all-products";
+import { findProductById, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS } from "@/lib/all-products";
+import { getFlagUrl, getCountryLabel } from "@/lib/flags";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
@@ -68,8 +69,198 @@ function getSpecIcon(label: string) {
   return SPEC_ICON_MAP[label] ?? FiInfo;
 }
 
+type PathSegment = {
+  text: string;
+  href: string;
+  className?: string;
+};
+
+const TABLE_SLUGS: Record<string, string> = {
+  pisoFlotante: "pisos-flotantes",
+  porcellanato: "porcellanatos",
+  revestimiento: "revestimientos",
+  pisoVinilico: "pisos-vinilicos",
+  pisoMadera: "pisos-madera",
+  deck: "decks",
+  madera: "maderas",
+  accesorio: "accesorios",
+};
+
+const CATEGORY_PAGE_PATHS: Record<string, string> = {
+  "pisos-flotantes": "/catalogo",
+  "pisos-vinilicos": "/catalogo",
+  "pisos-madera": "/catalogo",
+  "porcellanatos": "/catalogo",
+  "revestimientos": "/catalogo",
+  "decks": "/catalogo",
+  "maderas": "/catalogo",
+  "accesorios": "/catalogo",
+};
+
 function buildWA(msg: string) {
   return "https://wa.me/5422143888894?text=" + encodeURIComponent(msg);
+}
+
+function buildCatalogHref(tableKey: string, filters: Record<string, string>) {
+  const slug = TABLE_SLUGS[tableKey] ?? "";
+  const params = new URLSearchParams();
+  if (slug) params.set("categoria", slug);
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(`filtros[${key}]`, value);
+  });
+  const query = params.toString();
+  return query ? `/catalogo?${query}` : "/catalogo";
+}
+
+function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {
+  const baseCategory = TABLE_CATEGORIA[tableKey] ?? "Producto";
+  const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();
+  const tipoProducto = String(raw.tipoProducto ?? raw.tipoDeProducto ?? "").trim();
+  const categoriaTerciaria = String(raw.categoriaTerciaria ?? "").trim();
+  const uso = String(raw.uso ?? raw.tipoDeUso ?? "").trim();
+  const material = String(raw.material ?? "").trim();
+  const subtipo2 = String(raw.subtipo2 ?? "").trim();
+  const subtipo = String(raw.subtipo ?? "").trim();
+  const linea = String(raw.linea ?? "").trim();
+
+  const pathDefs: Array<{ text: string; field?: string; value?: string }> = (() => {
+    switch (tableKey) {
+      case "pisoFlotante":
+        return [
+          { text: baseCategory },
+          { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
+          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
+        ];
+      case "pisoVinilico":
+        return [
+          { text: baseCategory },
+          { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
+          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
+        ];
+      case "porcellanato":
+        return [
+          { text: baseCategory },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+        ];
+      case "pisoMadera":
+        return [
+          { text: baseCategory },
+          { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
+          { text: subtipo2, field: "subtipo2", value: subtipo2 },
+          { text: subtipo, field: "subtipo", value: subtipo },
+        ];
+      case "madera":
+        return [
+          { text: baseCategory },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+        ];
+      case "revestimiento":
+        return [
+          { text: baseCategory },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+          { text: uso, field: "uso", value: uso },
+          { text: linea, field: "linea", value: linea },
+        ];
+      case "deck":
+        return [
+          { text: baseCategory },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+          { text: material, field: "material", value: material },
+        ];
+      default:
+        return [{ text: baseCategory }];
+    }
+  })();
+
+  const normalize = (text: string) => text.trim().toLowerCase().replace(/s$/, "");
+  const filters: Record<string, string> = {};
+
+  return pathDefs
+    .filter((entry, index) => entry.text && (index === 0 || normalize(entry.text) !== normalize(pathDefs[index - 1].text)))
+    .map((entry) => {
+      if (entry.field && entry.value) {
+        filters[entry.field] = entry.value;
+      }
+      return {
+        text: entry.text,
+        href: buildCatalogHref(tableKey, filters),
+        className: "text-[11px] text-[#111111] hover:text-[#111111] transition-colors",
+      };
+    });
+}
+
+function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {
+  const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();
+  const tipoProducto = String(raw.tipoProducto ?? raw.tipoDeProducto ?? "").trim();
+  const categoriaTerciaria = String(raw.categoriaTerciaria ?? "").trim();
+  const uso = String(raw.uso ?? raw.tipoDeUso ?? "").trim();
+  const material = String(raw.material ?? "").trim();
+  const subtipo2 = String(raw.subtipo2 ?? "").trim();
+  const subtipo = String(raw.subtipo ?? "").trim();
+  const linea = String(raw.linea ?? "").trim();
+
+  const pathDefs: Array<{ text: string; field?: string; value?: string }> = (() => {
+    switch (tableKey) {
+      case "pisoFlotante":
+        return [
+          { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
+          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+        ];
+      case "pisoVinilico":
+        return [
+          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: material, field: "material", value: material },
+          { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
+        ];
+      case "porcellanato":
+        return [{ text: tipoProducto, field: "tipoProducto", value: tipoProducto }];
+      case "pisoMadera":
+        return [
+          { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
+          { text: subtipo2, field: "subtipo2", value: subtipo2 },
+          { text: subtipo, field: "subtipo", value: subtipo },
+        ];
+      case "madera":
+        return [{ text: tipoProducto, field: "tipoProducto", value: tipoProducto }];
+      case "revestimiento":
+        return [
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+          { text: uso, field: "uso", value: uso },
+          { text: linea, field: "linea", value: linea },
+        ];
+      case "deck":
+        return [
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
+          { text: material, field: "material", value: material },
+        ];
+      default:
+        return [];
+    }
+  })();
+
+  const normalize = (text: string) => text.trim().toLowerCase().replace(/s$/, "");
+  const allLarge = tableKey === "madera";
+  const tipoProductoLarge = tableKey === "pisoFlotante";
+  const filters: Record<string, string> = {};
+
+  return pathDefs
+    .filter((entry, index) => entry.text && (index === 0 || normalize(entry.text) !== normalize(pathDefs[index - 1].text)))
+    .map((entry, index) => {
+      if (entry.field && entry.value) {
+        filters[entry.field] = entry.value;
+      }
+      return {
+        text: entry.text,
+        href: buildCatalogHref(tableKey, filters),
+        className: allLarge
+          ? "text-[13px] font-semibold text-[#111111] hover:text-[#DF8635] transition-colors"
+          : tipoProductoLarge && index === 1
+            ? "text-[12px] font-semibold text-[#111111] hover:text-[#DF8635] transition-colors"
+            : "text-[11px] text-[#111111] hover:text-[#DF8635] transition-colors",
+      };
+    });
 }
 
 export default async function ProductPage({
@@ -96,13 +287,16 @@ export default async function ProductPage({
   const product = {
     id:           normalized.id,
     sku:          normalized.sku,
-    nombre:       normalized.nombre,
+    nombre:       raw.codigo
+                    ? `${normalized.nombre} ${raw.codigo}`.trim()
+                    : normalized.nombre,
     marca:        normalized.marca ?? "",
     descripcion:  (raw.descripcion as string) ?? "",
     precio:       normalized.precio,
     imagen:       normalized.imagen ?? imagenesArr[0] ?? null,
     categoria:    normalized.categoria,
     subcategoria: (raw.categoriaSecundaria ?? raw.subcategoria ?? null) as string | null,
+    origen:       (raw.origen as string) ?? "",
     imagenes:     imagenesArr.map((url) => ({ url })),
     galeria,
     specs,
@@ -131,13 +325,16 @@ export default async function ProductPage({
     return {
       id:          row.id as string,
       sku:         row.sku as string,
-      nombre:      (row.nombre ?? row.especie ?? row.sku) as string,
+      nombre:      row.codigo
+        ? `${(row.nombre ?? row.sku) as string} ${row.codigo}`.trim()
+        : ((row.nombre ?? row.especie ?? row.sku) as string),
       marca:       (row.marca as string) ?? "",
       descripcion: (row.descripcion as string) ?? "",
       precio:      (row.precioM2 ?? row.precioCaja ?? row.precioTabla ?? row.precio ?? 0) as number,
       imagen:      imgs[0] ?? null,
       categoria:   (row.categoriaPrincipal as string) ?? "",
       subcategoria: (row.categoriaSecundaria as string) ?? null,
+      origen:      (row.origen as string) ?? "",
       imagenes:    imgs.map((url) => ({ url })),
       galeria,
       specs:       buildSpecsFromRow(row),
@@ -147,6 +344,8 @@ export default async function ProductPage({
 
   const related = (relatedRaw as Record<string, unknown>[]).map((r) => rowToPublic(r, tableKey));
 
+  const productCatalogPath = getProductCatalogPath(tableKey, raw);
+  const productDetailPath = getProductDetailPath(tableKey, raw);
   const badgeLabel = product.subcategoria ?? product.categoria ?? "Producto";
 
   return (
@@ -158,16 +357,16 @@ export default async function ProductPage({
             <Link href="/" className="hover:text-[#111111] transition-colors">Inicio</Link>
             <FiChevronRight size={12} />
             <Link href="/catalogo" className="hover:text-[#111111] transition-colors">Catálogo</Link>
-            {product.categoria && (
-              <>
+            {productCatalogPath.length > 0 && productCatalogPath.map((segment, index) => (
+              <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-1">
                 <FiChevronRight size={12} />
-                <Link href={`/catalogo?cat=${product.categoria}`} className="hover:text-[#111111] transition-colors">
-                  {product.categoria}
+                <Link href={segment.href} className="hover:text-[#111111] transition-colors text-[#111111]">
+                  {segment.text}
                 </Link>
-              </>
-            )}
+              </span>
+            ))}
             <FiChevronRight size={12} />
-            <span className="text-[#111111] font-medium truncate max-w-[200px]">{product.nombre}</span>
+            <span className="text-[#111111] font-medium truncate max-w-[200px]">{normalized.nombre}</span>
           </nav>
         </div>
       </div>
@@ -212,22 +411,35 @@ export default async function ProductPage({
 
           {/* ── Columna derecha: Detalle ── */}
           <aside className="xl:sticky xl:top-24">
-            {/* Badge */}
-            <span className="inline-flex items-center rounded-md bg-[#EFE0CB] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#8A5A2B] mb-4">
-              {badgeLabel}
-            </span>
+            {/* Badge + path */}
+            {productDetailPath.length > 0 && (
+              <div className="rounded-md bg-[#EFE0CB] px-3 py-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {productDetailPath.map((item, index) => (
+                  <span key={`${item.text}-${index}`} className="inline-flex items-center gap-1">
+                    <Link href={item.href} className={item.className}>
+                      {item.text}
+                    </Link>
+                    {index < productDetailPath.length - 1 && (
+                      <span className="mx-1 text-[#8A5A2B]">›</span>
+                    )}
+                  </span>
+                ))}
+                </div>
+              </div>
+            )}
 
             {/* Nombre */}
-            <h1 className="text-[34px] md:text-[40px] font-bold text-[#111111] leading-[1.05] mb-1">
-              {product.nombre}
+            <h1 className="text-[22px] md:text-[26px] font-bold text-[#111111] leading-[1.1] mb-2">
+              {normalized.nombre}
             </h1>
 
-            {/* Subtítulo */}
-            {product.marca && product.marca !== "Maxipiso" && (
-              <p className="text-base text-gray-400 mb-1">{product.marca}</p>
-            )}
-            {product.subcategoria && (
-              <p className="text-sm text-gray-400 mb-4">{product.subcategoria}</p>
+            {product.descripcion && (
+              <div className="mb-5">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {product.descripcion}
+                </p>
+              </div>
             )}
 
             <div className="border-t border-gray-200 mt-3" />
@@ -237,6 +449,8 @@ export default async function ProductPage({
               <div className="grid grid-cols-2 gap-x-6 gap-y-0">
                 {specEntries.map(([label, value]) => {
                   const Icon = getSpecIcon(label);
+                  const isOrigin = label === "Origen";
+                  const flagSrc = isOrigin ? getFlagUrl(value) : null;
                   return (
                     <div key={label} className="flex items-start gap-2.5 py-2.5 border-b border-gray-100">
                       <div className="mt-0.5 shrink-0 text-gray-400">
@@ -244,7 +458,16 @@ export default async function ProductPage({
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-[#111111] leading-tight">{label}</p>
-                        <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{value}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {flagSrc && (
+                            <img
+                              src={flagSrc}
+                              alt={value}
+                              className="w-5 h-3.5 object-cover rounded-[2px] border border-gray-200 shrink-0"
+                            />
+                          )}
+                          <p className="text-[11px] text-gray-500 leading-tight">{value}</p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -289,14 +512,6 @@ export default async function ProductPage({
                 <FiChevronRight size={14} className="text-gray-400" />
               </a>
 
-              {/* Promo box */}
-              <div className="rounded-none bg-[#F1ECE5] px-4 py-3 flex items-start gap-3">
-                <FiTag size={15} className="text-[#8A5A2B] mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-bold text-[#111111] text-xs">Espacio para promociones</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Descuentos, cuotas y más.</p>
-                </div>
-              </div>
             </div>
           </aside>
         </div>

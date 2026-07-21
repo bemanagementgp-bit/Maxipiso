@@ -14,27 +14,27 @@ datasource db {
 // ==================== USER MODELS (sin cambios) ====================
 
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  name               String?
-  passwordHash       String
-  role               UserRole  @default(VIEWER)
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         UserRole @default(VIEWER)
 
   failedLoginCount   Int       @default(0)
   lockedUntil        DateTime?
   passwordChangedAt  DateTime  @default(now())
   mustChangePassword Boolean   @default(false)
 
-  totpSecret         String?
-  totpEnabled        Boolean   @default(false)
-  totpBackupCodes    String?
+  totpSecret      String?
+  totpEnabled     Boolean @default(false)
+  totpBackupCodes String?
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  changeLogs         ChangeLog[]
-  sessions           Session[]
-  authEvents         AuthEvent[]
+  changeLogs ChangeLog[]
+  sessions   Session[]
+  authEvents AuthEvent[]
 
   @@map("users")
 }
@@ -92,47 +92,47 @@ model ChangeLog {
 
 // ── 1. PISOS FLOTANTES ─────────────────────────────────────────
 model PisoFlotante {
-  id                 String   @id @default(cuid())
-  sku                String   @unique
-  categoriaPrincipal String?
+  id                  String   @id @default(cuid())
+  sku                 String   @unique
+  categoriaPrincipal  String?
   categoriaSecundaria String?
-  categoriaTerciaria String?
-  tipoProducto       String?
-  origen             String?
-  nombre             String
-  codigo             String?
-  marca              String
-  linea              String?
-  tipoDeUso          String?
-  espesor            String?
-  espesorUm          String?
-  abrasion           String?
-  mantoIncorporado   String?
-  bisel              String?
-  ancho              String?
-  anchoUm            String?
-  largo              String?
-  largoUm            String?
-  base               String?
-  baseUm             String?
-  tablasPorCaja      Int?
-  precioM2           Float?
-  moneda             String?
-  precioCaja         Float?
-  pesoCaja           Float?
-  cajasPallet        Int?
-  pesoPallet         Float?
-  stock              Int?
-  imagenes           String?  // JSON array de URLs
-  precioEnvioCaja    Float?
-  garantia           String?
-  fichaTecnica       String?
-  archivoInstalacion String?
-  descripcion        String?
-  metadatos          String?  // JSON key-value extra
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  categoriaTerciaria  String?
+  tipoProducto        String?
+  origen              String?
+  nombre              String
+  codigo              String?
+  marca               String
+  linea               String?
+  tipoDeUso           String?
+  espesor             String?
+  espesorUm           String?
+  abrasion            String?
+  mantoIncorporado    String?
+  bisel               String?
+  ancho               String?
+  anchoUm             String?
+  largo               String?
+  largoUm             String?
+  base                String?
+  baseUm              String?
+  tablasPorCaja       Int?
+  precioM2            Float?
+  moneda              String?
+  precioCaja          Float?
+  pesoCaja            Float?
+  cajasPallet         Int?
+  pesoPallet          Float?
+  stock               Int?
+  imagenes            String? // JSON array de URLs
+  precioEnvioCaja     Float?
+  garantia            String?
+  fichaTecnica        String?
+  archivoInstalacion  String?
+  descripcion         String?
+  metadatos           String? // JSON key-value extra
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([sku])
   @@index([marca])
@@ -142,41 +142,41 @@ model PisoFlotante {
 
 // ── 2. PORCELLANATOS ───────────────────────────────────────────
 model Porcellanato {
-  id                 String   @id @default(cuid())
-  sku                String   @unique
-  categoriaPrincipal String?
+  id                  String   @id @default(cuid())
+  sku                 String   @unique
+  categoriaPrincipal  String?
   categoriaSecundaria String?
-  tipoProducto       String?
-  acabado            String?
-  terminacion        String?
-  origen             String?
-  nombre             String
-  codigo             String?
-  marca              String
-  linea              String?
-  tipoDeUso          String?
-  espesor            String?
-  espesorUm          String?
-  ancho              String?
-  anchoUm            String?
-  largo              String?
-  largoUm            String?
-  base               String?
-  baseUm             String?
-  precioM2           Float?
-  moneda             String?
-  precioCaja         Float?
-  stock              Int?
-  imagenes           String?  // JSON array de URLs
-  precioEnvioCaja    Float?
-  garantia           String?
-  fichaTecnica       String?
-  archivoInstalacion String?
-  descripcion        String?
-  metadatos          String?  // JSON key-value extra
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  tipoProducto        String?
+  acabado             String?
+  terminacion         String?
+  origen              String?
+  nombre              String
+  codigo              String?
+  marca               String
+  linea               String?
+  tipoDeUso           String?
+  espesor             String?
+  espesorUm           String?
+  ancho               String?
+  anchoUm             String?
+  largo               String?
+  largoUm             String?
+  base                String?
+  baseUm              String?
+  precioM2            Float?
+  moneda              String?
+  precioCaja          Float?
+  stock               Int?
+  imagenes            String? // JSON array de URLs
+  precioEnvioCaja     Float?
+  garantia            String?
+  fichaTecnica        String?
+  archivoInstalacion  String?
+  descripcion         String?
+  metadatos           String? // JSON key-value extra
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([sku])
   @@index([marca])
@@ -214,7 +214,7 @@ model Revestimiento {
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
-  metadatos          String?  // JSON key-value extra
+  metadatos          String? // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -262,13 +262,13 @@ model PisoVinilico {
   pesoCaja             Float?
   pesoPallet           Float?
   stock                Int?
-  imagenes             String?  // JSON array de URLs
+  imagenes             String? // JSON array de URLs
   precioEnvioCaja      Float?
   garantia             String?
   fichaTecnica         String?
   archivoInstalacion   String?
   descripcion          String?
-  metadatos            String?  // JSON key-value extra
+  metadatos            String? // JSON key-value extra
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -310,13 +310,13 @@ model PisoMadera {
   moneda              String?
   precioCaja          Float?
   stock               Int?
-  imagenes            String?  // JSON array de URLs
+  imagenes            String? // JSON array de URLs
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
   archivoInstalacion  String?
   descripcion         String?
-  metadatos           String?  // JSON key-value extra
+  metadatos           String? // JSON key-value extra
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -355,7 +355,7 @@ model Deck {
   fichaTecnica       String?
   archivoInstalacion String?
   descripcion        String?
-  metadatos          String?  // JSON key-value extra
+  metadatos          String? // JSON key-value extra
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -384,7 +384,7 @@ model Madera {
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
-  metadatos            String?  // JSON key-value extra
+  metadatos            String? // JSON key-value extra
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -407,7 +407,7 @@ model Accesorio {
   stock        Int?
   imagenes     String?
   descripcion  String?
-  metadatos    String?  // JSON key-value extra
+  metadatos    String? // JSON key-value extra
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -16,7 +16,7 @@ const prisma = new PrismaClient({ adapter });
 
 const TABLES = [
   { delegate: () => prisma.pisoFlotante,  label: "Pisos Flotantes" },
-  { delegate: () => prisma.porcellanato,  label: "Porcellanatos" },
+  { delegate: () => prisma.porcellanato,  label: "Porcelanatos" },
   { delegate: () => prisma.revestimiento, label: "Revestimientos" },
   { delegate: () => prisma.pisoVinilico,  label: "Pisos Vinílicos" },
   { delegate: () => prisma.pisoMadera,    label: "Pisos Madera" },

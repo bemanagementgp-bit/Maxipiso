@@ -68,12 +68,12 @@ const queEncontras = [
 ];
 
 const categorias = [
-  { label: "Pisos Flotantes",  href: "/catalogo/pisos",           badge: "Más vendido" },
-  { label: "Porcelanato",      href: "/catalogo/pisos",           badge: "Oferta" },
-  { label: "Pisos de Madera",  href: "/catalogo/pisos",           badge: null },
-  { label: "Pisos Vinílicos",  href: "/catalogo/pisos",           badge: "Nuevo" },
-  { label: "Deck WPC",         href: "/catalogo/decks",           badge: null },
-  { label: "Revestimientos",   href: "/catalogo/revestimientos",  badge: "Oferta" },
+  { label: "Pisos Flotantes",  href: "/catalogo",           badge: "Más vendido" },
+  { label: "Porcelanato",      href: "/catalogo",           badge: "Oferta" },
+  { label: "Pisos de Madera",  href: "/catalogo",           badge: null },
+  { label: "Pisos Vinílicos",  href: "/catalogo",           badge: "Nuevo" },
+  { label: "Deck WPC",         href: "/catalogo",           badge: null },
+  { label: "Revestimientos",   href: "/catalogo",  badge: "Oferta" },
 ];
 
 const WA_OFERTAS = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";

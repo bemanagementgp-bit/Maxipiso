@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import Link from "next/link";
 import { FiPackage, FiSearch, FiX, FiChevronRight, FiChevronDown, FiArrowLeft } from "react-icons/fi";
 import SafeImage from "./SafeImage";
+import { getFlagUrl, formatOriginLabel } from "@/lib/flags";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export type CatalogItem = {
   precio?: number;
   moneda?: string;
   stock?: number;
+  origen?: string;
   imagen?: string;
   imagenes?: string;
   descripcion?: string;
@@ -67,7 +69,11 @@ function firstImage(item: CatalogItem): string | null {
 }
 
 function displayName(item: CatalogItem): string {
-  return item.nombre || item.especie || item.sku;
+  const base = item.nombre || item.especie || item.sku;
+  if (item.codigo) {
+    return `${base} ${item.codigo}`.trim();
+  }
+  return base;
 }
 
 // ─── ProductCard ─────────────────────────────────────────────────────────────
@@ -106,12 +112,6 @@ function ProductCardBase({
       </Link>
 
       <div className="p-4 flex flex-col flex-1 gap-1.5">
-        {item.marca && (
-          <p className="text-[10px] font-bold text-[#DF8635] uppercase tracking-widest">
-            {item.marca}{item.linea ? ` · ${item.linea}` : ""}
-          </p>
-        )}
-
         <Link
           href={`/catalogo/${item.id}`}
           className="font-bold text-[#111111] text-sm leading-snug hover:text-[#DF8635] transition-colors line-clamp-2"
@@ -119,26 +119,18 @@ function ProductCardBase({
           {name}
         </Link>
 
-        {(item.espesor || item.ancho || item.largo) && (
-          <div className="flex flex-wrap gap-1 mt-0.5">
-            {item.espesor && (
-              <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                Esp. {item.espesor}
-              </span>
-            )}
-            {item.ancho && item.largo && (
-              <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                {item.ancho}×{item.largo}
-              </span>
-            )}
-          </div>
-        )}
-
-        {item.descripcion && (
-          <p className="text-gray-400 text-[11px] line-clamp-2 leading-relaxed">
-            {item.descripcion}
-          </p>
-        )}
+        {item.origen && (() => {
+          const flagSrc = getFlagUrl(item.origen);
+          const label = formatOriginLabel(item.origen);
+          return (
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              {flagSrc && (
+                <img src={flagSrc} alt={label ?? ""} className="w-4 h-3 object-cover rounded-[1px]" />
+              )}
+              <span>{label}</span>
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-2 gap-2 mt-auto pt-3">
           <Link
@@ -238,7 +230,7 @@ function Sidebar({
 
   return (
     <aside className="w-56 shrink-0 hidden md:block">
-      <div className="sticky top-24">
+      <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-hide">
         {/* ── Subcategorías: siempre visibles, la activa resaltada ── */}
         {hasSubcategories ? (
           <div>

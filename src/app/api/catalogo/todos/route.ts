@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
+import { formatMeasureFields } from "@/lib/all-products";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
 
 const TABLES = [
   { key: "pisos-flotantes", delegate: () => prisma.pisoFlotante, label: "Pisos Flotantes" },
-  { key: "porcellanatos",   delegate: () => prisma.porcellanato,  label: "Porcellanatos" },
+  { key: "porcellanatos",   delegate: () => prisma.porcellanato,  label: "Porcelanatos" },
   { key: "revestimientos",  delegate: () => prisma.revestimiento, label: "Revestimientos" },
   { key: "pisos-vinilicos", delegate: () => prisma.pisoVinilico,  label: "Pisos Vinílicos" },
   { key: "pisos-madera",    delegate: () => prisma.pisoMadera,    label: "Pisos Madera" },
@@ -232,7 +233,7 @@ export async function GET(req: NextRequest) {
           if (k.startsWith("precio") || k === "stock" || k === "moneda") continue;
           clean[k] = v;
         }
-        return clean;
+        return formatMeasureFields(clean);
       })
     );
 

@@ -30,7 +30,9 @@ function getDelegate(slug: string): PrismaDelegate | null {
 // Campos filtrables por categoría
 const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
   "pisos-flotantes": [
-    { key: "categoriaTerciaria", label: "Tipo" },
+    { key: "categoriaSecundaria", label: "Categoría secundaria" },
+    { key: "tipoDeProducto", label: "Tipo de producto" },
+    { key: "categoriaTerciaria", label: "Categoría terciaria" },
     { key: "marca", label: "Marca" },
     { key: "linea", label: "Línea" },
     { key: "tipoDeUso", label: "Tipo de uso" },
@@ -59,7 +61,9 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
     { key: "tipoProducto", label: "Tipo" },
   ],
   "pisos-vinilicos": [
-    { key: "categoriaTerciaria", label: "Tipo" },
+    { key: "categoriaSecundaria", label: "Categoría secundaria" },
+    { key: "tipoDeProducto", label: "Tipo de producto" },
+    { key: "categoriaTerciaria", label: "Categoría terciaria" },
     { key: "marca", label: "Marca" },
     { key: "linea", label: "Línea" },
     { key: "material", label: "Material" },

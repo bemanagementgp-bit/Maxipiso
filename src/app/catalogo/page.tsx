@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
@@ -26,6 +27,8 @@ function SkeletonCard() {
 
 export default function CatalogoPage() {
   const PAGE_SIZE = 30;
+  const searchParams = useSearchParams();
+
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -40,6 +43,20 @@ export default function CatalogoPage() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const abortRef = useRef<AbortController | null>(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    const cat = searchParams.get("categoria") ?? "";
+    const urlFilters: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      const match = key.match(/^filtros\[(.+)]$/);
+      if (match) urlFilters[match[1]] = value;
+    });
+    if (cat) setSelectedCategoria(cat);
+    if (Object.keys(urlFilters).length > 0) setActiveFilters(urlFilters);
+  }, [searchParams]);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
