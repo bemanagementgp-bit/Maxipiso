@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown } from "react-icons/fi";
@@ -25,7 +25,15 @@ function SkeletonCard() {
   );
 }
 
-export default function CatalogoPage() {
+export default function CatalogoPageWrapper() {
+  return (
+    <Suspense>
+      <CatalogoPage />
+    </Suspense>
+  );
+}
+
+function CatalogoPage() {
   const PAGE_SIZE = 30;
   const searchParams = useSearchParams();
 
