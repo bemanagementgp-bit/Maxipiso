@@ -282,12 +282,12 @@ export default async function ProductPage({
     : [];
 
   // Build specs from row fields
-  const specs = buildSpecsFromRow(raw);
+  const specs = buildSpecsFromRow(raw, tableKey);
 
   const product = {
     id:           normalized.id,
     sku:          normalized.sku,
-    nombre:       raw.codigo
+    nombre:       raw.codigo && !normalized.nombre.includes(String(raw.codigo))
                     ? `${normalized.nombre} ${raw.codigo}`.trim()
                     : normalized.nombre,
     marca:        normalized.marca ?? "",
@@ -305,7 +305,7 @@ export default async function ProductPage({
     moneda:       (raw.moneda as string) ?? null,
   };
 
-  const specEntries = Object.entries(specs);
+  const specEntries = specs;
   const consultHref = buildWA(`Hola, quiero consultar precio y disponibilidad de ${product.nombre} (SKU: ${product.sku}). Me pueden asesorar?`);
 
   const docCards = [
@@ -325,7 +325,7 @@ export default async function ProductPage({
     return {
       id:          row.id as string,
       sku:         row.sku as string,
-      nombre:      row.codigo
+      nombre:      row.codigo && !String(row.nombre ?? row.sku).includes(String(row.codigo))
         ? `${(row.nombre ?? row.sku) as string} ${row.codigo}`.trim()
         : ((row.nombre ?? row.especie ?? row.sku) as string),
       marca:       (row.marca as string) ?? "",
@@ -337,7 +337,7 @@ export default async function ProductPage({
       origen:      (row.origen as string) ?? "",
       imagenes:    imgs.map((url) => ({ url })),
       galeria,
-      specs:       buildSpecsFromRow(row),
+      specs:       buildSpecsFromRow(row, tk as any),
       destacado:   false,
     };
   }
@@ -447,7 +447,7 @@ export default async function ProductPage({
             {/* Specs */}
             {specEntries.length > 0 && (
               <div className="grid grid-cols-2 gap-x-6 gap-y-0">
-                {specEntries.map(([label, value]) => {
+                {specEntries.map(({ label, value }) => {
                   const Icon = getSpecIcon(label);
                   const isOrigin = label === "Origen";
                   const flagSrc = isOrigin ? getFlagUrl(value) : null;
@@ -459,6 +459,7 @@ export default async function ProductPage({
                       <div>
                         <p className="text-[10px] font-bold text-[#111111] leading-tight">{label}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
+                          <p className="text-[11px] text-gray-500 leading-tight">{value}</p>
                           {flagSrc && (
                             <img
                               src={flagSrc}
@@ -466,7 +467,6 @@ export default async function ProductPage({
                               className="w-5 h-3.5 object-cover rounded-[2px] border border-gray-200 shrink-0"
                             />
                           )}
-                          <p className="text-[11px] text-gray-500 leading-tight">{value}</p>
                         </div>
                       </div>
                     </div>

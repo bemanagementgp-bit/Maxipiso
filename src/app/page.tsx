@@ -526,7 +526,8 @@ export default function Home() {
                   <img
                     src={img}
                     alt={label}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    style={img === "/deck.jpg" ? { objectPosition: "center top" } : undefined}
                   />
 
                   {/* Arco blanco — cubre la parte superior, igual que en la referencia */}

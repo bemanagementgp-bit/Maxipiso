@@ -314,33 +314,83 @@ export function formatMeasureFields(row: Record<string, unknown>): Record<string
   return result;
 }
 
-export function buildSpecsFromRow(row: Record<string, unknown>): Record<string, string> {
-  const set = (key: string, val: unknown, unit?: unknown) => {
-    if (val === null || val === undefined || val === "") return;
-    specs[key] = unit ? `${val} ${unit}` : String(val);
-  };
+export type SpecEntry = { label: string; value: string };
 
-  const specs: Record<string, string> = {};
-  set("SKU",                row.sku);
-  set("Fabrica",             row.marca);
-  set("Tipo",               row.tipoProducto);
-  set("Origen",             formatOriginLabel(row.origen));
-  set("Especie",            row.especie);
-  set("Espesor",            formatMeasureValue(row.espesor, row.espesorUm));
-  set("Ancho",              formatMeasureValue(row.ancho, row.anchoUm));
-  set("Largo",              formatMeasureValue(row.largo, row.largoUm));
-  set("Bisel",              row.bisel);
-  set("Uso",                row.uso ?? row.tipoDeUso);
-  set("Material",           row.material);
-  set("Capa de Uso",        row.capaDeUso);
-  set("Acabado",            row.acabado);
-  set("Característica",     row.terminacion);
-  set("Manto Incorporado",  row.mantoIncorporado);
-  set("Base",               formatMeasureValue(row.base, row.baseUm, "m²"));
-  set("Abrasión",           row.abrasion);
-  set("Espesores Disponibles", row.espesoresDisponibles);
-  set("Medidas",            formatMeasureValue(row.medidas));
-  set("Dimensiones",        formatMeasureValue(row.dimensiones));
-  set("Secado",             row.secado);
-  return specs;
+type SpecSlot = {
+  label: string;
+  field: string;
+  measure?: { unitField: string; defaultUnit: string };
+  isOrigin?: boolean;
+  rawField?: string;
+};
+
+// Most common attributes first, then category-specific ones
+const MASTER_SLOTS: SpecSlot[] = [
+  { label: "SKU",                   field: "sku" },
+  { label: "Origen",                field: "origen", isOrigin: true },
+  { label: "Espesor",               field: "espesor", measure: { unitField: "espesorUm", defaultUnit: "mm" } },
+  { label: "Ancho",                 field: "ancho", measure: { unitField: "anchoUm", defaultUnit: "mm" } },
+  { label: "Largo",                 field: "largo", measure: { unitField: "largoUm", defaultUnit: "mm" } },
+  { label: "Bisel",                 field: "bisel" },
+  { label: "Uso",                   field: "uso" },
+  { label: "Uso",                   field: "tipoDeUso" },
+  { label: "Línea",                 field: "linea" },
+  { label: "Material",              field: "material" },
+  { label: "Acabado",               field: "acabado" },
+  { label: "Característica",        field: "terminacion" },
+  { label: "Base",                  field: "base", measure: { unitField: "baseUm", defaultUnit: "m²" } },
+  // Less common / category-specific
+  { label: "Fabrica",               field: "marca" },
+  { label: "Manto Incorporado",     field: "mantoIncorporado" },
+  { label: "Capa de Uso",           field: "capaDeUso" },
+  { label: "Abrasión",              field: "abrasion" },
+  { label: "Base Tabla",            field: "baseTabla", measure: { unitField: "baseTablUm", defaultUnit: "m²" } },
+  { label: "Espesores Disponibles", field: "espesoresDisponibles" },
+  { label: "Dimensiones",           field: "dimensiones" },
+  { label: "Colores",               field: "colores" },
+  { label: "Precio x m² (USD)",     field: "precioM2" },
+];
+
+// Allowed fields per table (by field name)
+const TABLE_FIELDS: Record<string, Set<string>> = {
+  pisoFlotante:  new Set(["sku","origen","espesor","ancho","largo","bisel","tipoDeUso","linea","mantoIncorporado","base","abrasion"]),
+  pisoVinilico:  new Set(["sku","origen","espesor","ancho","largo","bisel","uso","linea","material","capaDeUso","mantoIncorporado","precioM2"]),
+  porcellanato:  new Set(["sku","marca","origen","espesor","ancho","largo","tipoDeUso","linea","acabado","terminacion","base"]),
+  pisoMadera:    new Set(["sku","origen","espesor","ancho","largo","acabado","bisel","terminacion","base"]),
+  deck:          new Set(["sku","espesor","ancho","largo","linea","material"]),
+  revestimiento: new Set(["sku","espesor","ancho","largo","uso","linea","material","baseTabla"]),
+  madera:        new Set(["sku","origen","espesoresDisponibles"]),
+  accesorio:     new Set(["sku","dimensiones","colores"]),
+};
+
+export function buildSpecsFromRow(row: Record<string, unknown>, tableKey?: TableKey): SpecEntry[] {
+  const allowed = tableKey ? TABLE_FIELDS[tableKey] : null;
+  if (!allowed) return [];
+
+  const entries: SpecEntry[] = [];
+  const seenLabels = new Set<string>();
+
+  for (const slot of MASTER_SLOTS) {
+    if (!allowed.has(slot.field)) continue;
+    if (seenLabels.has(slot.label)) continue;
+    seenLabels.add(slot.label);
+
+    const rawVal = row[slot.field];
+    if (rawVal === null || rawVal === undefined || String(rawVal).trim() === "") continue;
+
+    let value: string;
+    if (slot.isOrigin) {
+      value = formatOriginLabel(rawVal) ?? String(rawVal);
+    } else if (slot.measure) {
+      const formatted = formatMeasureValue(rawVal, slot.measure.unitField ? row[slot.measure.unitField] : undefined, slot.measure.defaultUnit);
+      if (!formatted) continue;
+      value = formatted;
+    } else {
+      value = String(rawVal).trim();
+    }
+
+    entries.push({ label: slot.label, value });
+  }
+
+  return entries;
 }

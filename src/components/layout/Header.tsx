@@ -184,14 +184,12 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-          <a
+          <Link
             href="/catalogo"
-            target="_blank"
-            rel="noopener noreferrer"
             className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors"
           >
             Catálogo
-          </a>
+          </Link>
 
             <a
               href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"

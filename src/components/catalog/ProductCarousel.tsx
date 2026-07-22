@@ -72,13 +72,13 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
             className="group snap-start shrink-0 w-[240px] bg-white rounded-none border border-gray-100 overflow-hidden hover:border-[#DF8635]/40 hover:shadow-xl transition-all duration-300 flex flex-col"
           >
             {/* Imagen */}
-            <div className="relative aspect-[4/3] bg-[#F7F4EF] overflow-hidden">
+            <div className="relative aspect-square bg-[#F7F4EF] overflow-hidden">
               <SafeImage
                 src={product.galeria[0] ?? ""}
                 alt={product.nombre}
                 fill
                 sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 25vw"
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                className="object-contain group-hover:scale-105 transition-transform duration-500"
                 iconSize={28}
               />
               {product.sku && (
@@ -90,15 +90,10 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
 
             {/* Info */}
             <div className="p-4 flex flex-col flex-1 gap-1">
-              {product.marca && product.marca !== "Maxipiso" && (
-                <p className="text-[10px] font-bold text-[#DF8635] uppercase tracking-widest">
-                  {product.marca}
-                </p>
-              )}
               <p className="font-bold text-[#111111] text-sm leading-snug line-clamp-2 group-hover:text-[#DF8635] transition-colors">
                 {product.nombre}
               </p>
-              <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#111111]">
+              <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DF8635]">
                 Ver producto
                 <FiArrowRight
                   size={12}

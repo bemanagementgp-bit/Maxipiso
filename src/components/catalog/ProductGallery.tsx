@@ -35,14 +35,14 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
         </div>
       )}
 
-      <div className={`order-1 ${hasThumbs ? "md:order-2" : "md:col-span-2"} relative rounded-[5px] overflow-hidden bg-[#F7F4EF] aspect-[4/4.7] md:aspect-auto md:h-[690px]`}>
+      <div className={`order-1 ${hasThumbs ? "md:order-2" : "md:col-span-2"} relative rounded-[5px] overflow-hidden bg-[#F7F4EF] aspect-square`}>
         {activeImage ? (
           <SafeImage
             src={activeImage}
             alt={productName}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
+            className="object-contain"
             iconSize={72}
           />
         ) : (

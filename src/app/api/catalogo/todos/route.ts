@@ -100,13 +100,7 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "origen",      label: "Origen" },
     { key: "espesor",     label: "Espesor" },
   ],
-  "decks": [
-    { key: "marca",        label: "Marca" },
-    { key: "linea",        label: "Línea" },
-    { key: "material",     label: "Material" },
-    { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "espesor",      label: "Espesor (mm)" },
-  ],
+  "decks": [],
   "maderas": [
     { key: "tipoProducto",         label: "Tipo de producto" },
     { key: "origen",               label: "Origen" },

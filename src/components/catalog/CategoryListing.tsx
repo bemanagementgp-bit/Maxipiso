@@ -70,7 +70,7 @@ function firstImage(item: CatalogItem): string | null {
 
 function displayName(item: CatalogItem): string {
   const base = item.nombre || item.especie || item.sku;
-  if (item.codigo) {
+  if (item.codigo && !base.includes(String(item.codigo))) {
     return `${base} ${item.codigo}`.trim();
   }
   return base;
@@ -97,14 +97,14 @@ function ProductCardBase({
     >
       <Link
         href={`/catalogo/${item.id}`}
-        className="relative aspect-[4/3] bg-gray-50 overflow-hidden block shrink-0"
+        className="relative aspect-square bg-gray-50 overflow-hidden block shrink-0"
       >
         <SafeImage
           src={img ?? ""}
           alt={name}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className="object-contain group-hover:scale-105 transition-transform duration-500"
         />
         <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
           {item.sku}
