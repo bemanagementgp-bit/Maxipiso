@@ -291,6 +291,7 @@ model PisoMadera {
   especie             String?
   acabado             String?
   terminacion         String?
+  calidad             String?
   origen              String?
   marca               String?
   linea               String?

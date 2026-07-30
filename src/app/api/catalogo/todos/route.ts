@@ -115,6 +115,16 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
   ],
 };
 
+const PRIORITY_TYPE: Record<string, string> = {
+  "pisos-flotantes": "piso flotante",
+  "porcellanatos": "porcelanato",
+  "revestimientos": "revestimiento",
+  "pisos-vinilicos": "piso vinilico",
+  "decks": "deck",
+  "maderas": "madera",
+  "accesorios": "accesorio",
+};
+
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
@@ -196,11 +206,12 @@ export async function GET(req: NextRequest) {
         const fields = SEARCH_FIELDS[table.key] ?? ["nombre", "sku"];
         where.OR = fields.map((f) => ({ [f]: { contains: search } }));
       }
+      const needsPrioritySort = singleTable && !!PRIORITY_TYPE[table.key];
       const findArgs: Record<string, unknown> = { where, orderBy: { createdAt: "desc" } };
-      if (singleTable) {
+      if (singleTable && !needsPrioritySort) {
         findArgs.skip = skip;
         findArgs.take = take;
-      } else {
+      } else if (!singleTable) {
         findArgs.take = skip + take;
       }
       const [rows, count] = await Promise.all([
@@ -211,7 +222,7 @@ export async function GET(req: NextRequest) {
         ),
         timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0),
       ]);
-      return { key: table.key, label: table.label, rows, count };
+      return { key: table.key, label: table.label, rows, count, needsPrioritySort };
     });
 
     const [results, filterResults] = await Promise.all([
@@ -232,7 +243,20 @@ export async function GET(req: NextRequest) {
     );
 
     const total = results.reduce((sum, r) => sum + r.count, 0);
-    const allProducts = singleTable ? merged : merged.slice(skip, skip + take);
+
+    const priorityType = categoria ? PRIORITY_TYPE[categoria] : null;
+    if (priorityType) {
+      merged.sort((a, b) => {
+        const aMatch = typeof a.tipoProducto === "string" && a.tipoProducto.toLowerCase().includes(priorityType) ? 0 : 1;
+        const bMatch = typeof b.tipoProducto === "string" && b.tipoProducto.toLowerCase().includes(priorityType) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    const hasPrioritySort = results.some((r) => r.needsPrioritySort);
+    const allProducts = singleTable
+      ? (hasPrioritySort ? merged.slice(skip, skip + take) : merged)
+      : merged.slice(skip, skip + take);
     const totalMostrado = merged.length > 0 ? total : 0;
 
     // Build filter values

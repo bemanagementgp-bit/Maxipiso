@@ -51,6 +51,22 @@ const COUNTRY_MAP: Record<string, { code: string; label: string }> = {
 
   "africa": { code: "af", label: "África" },
   "af": { code: "af", label: "África" },
+
+  "bolivia": { code: "bo", label: "Bolivia" },
+  "bo": { code: "bo", label: "Bolivia" },
+  "camerun": { code: "cm", label: "Camerún" },
+  "cm": { code: "cm", label: "Camerún" },
+  "canada": { code: "ca", label: "Canadá" },
+  "ca": { code: "ca", label: "Canadá" },
+  "croacia": { code: "hr", label: "Croacia" },
+  "hr": { code: "hr", label: "Croacia" },
+
+  "misiones": { code: "ar", label: "Argentina" },
+  "nacional": { code: "ar", label: "Argentina" },
+  "brazil": { code: "br", label: "Brasil" },
+  "brasil bolivia": { code: "br", label: "Brasil / Bolivia" },
+  "eeuu": { code: "us", label: "Estados Unidos" },
+  "eeUU": { code: "us", label: "Estados Unidos" },
 };
 
 function normalizeCountry(input: string): string {

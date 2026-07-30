@@ -159,10 +159,31 @@ export async function GET(req: NextRequest) {
       })
     );
 
+    // Priorizar productos cuyo tipoProducto coincide con la categoría
+    const ADMIN_PRIORITY: Record<string, string> = {
+      "pisos_flotantes": "piso flotante",
+      "porcellanatos": "porcelanato",
+      "revestimientos": "revestimiento",
+      "pisos_vinilicos": "piso vinilico",
+      "decks": "deck",
+      "maderas": "madera",
+      "accesorios": "accesorio",
+    };
+    const priorityType = tablaFilter ? ADMIN_PRIORITY[tablaFilter] ?? ADMIN_PRIORITY[effectiveTabla ?? ""] : null;
+
     // Combina, ordena por createdAt desc y pagina
     const all = results
       .flat()
-      .sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+      .sort((a, b) => {
+        if (priorityType) {
+          const aTP = String((a as any).tipoProducto ?? "").toLowerCase();
+          const bTP = String((b as any).tipoProducto ?? "").toLowerCase();
+          const aMatch = aTP.includes(priorityType) ? 0 : 1;
+          const bMatch = bTP.includes(priorityType) ? 0 : 1;
+          if (aMatch !== bMatch) return aMatch - bMatch;
+        }
+        return new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime();
+      });
 
     const total       = all.length;
     const productos   = all.slice(skip, skip + take);

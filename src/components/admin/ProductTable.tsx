@@ -38,14 +38,30 @@ function Thumb({ src, alt }: { src: string | null; alt: string }) {
   );
 }
 
-function formatCellValue(value: unknown, type: string): string {
+const GRID_MEASURE: Record<string, { unitField: string; defaultUnit: string }> = {
+  espesor: { unitField: "espesorUm", defaultUnit: "mm" },
+  ancho: { unitField: "anchoUm", defaultUnit: "mm" },
+  largo: { unitField: "largoUm", defaultUnit: "mm" },
+  base: { unitField: "baseUm", defaultUnit: "m²" },
+  baseTabla: { unitField: "baseTablUm", defaultUnit: "m²" },
+};
+
+function formatCellValue(value: unknown, type: string, key?: string, product?: Record<string, unknown>): string {
   if (value == null || value === "") return "-";
   if (type === "number") {
     const n = Number(value);
     if (isNaN(n)) return String(value);
     return n.toLocaleString("es-AR", { minimumFractionDigits: n % 1 === 0 ? 0 : 2 });
   }
-  return String(value);
+  const text = String(value);
+  if (key && product && GRID_MEASURE[key]) {
+    const m = GRID_MEASURE[key];
+    const unit = String(product[m.unitField] ?? "").trim() || m.defaultUnit;
+    if (!text.toLowerCase().endsWith(unit.toLowerCase()) && !/[a-zA-Z²]/.test(text)) {
+      return `${text} ${unit}`;
+    }
+  }
+  return text;
 }
 
 function StockCell({ stock }: { stock: number | null }) {
@@ -237,7 +253,7 @@ export function ProductTable({
                               {p[col.key] != null ? Number(p[col.key]).toLocaleString("es-AR", { minimumFractionDigits: 2 }) : "-"}
                             </span>
                           ) : (
-                            <span className="text-[11px] text-gray-600">{formatCellValue(p[col.key], col.type)}</span>
+                            <span className="text-[11px] text-gray-600">{formatCellValue(p[col.key], col.type, col.key, p)}</span>
                           )}
                         </td>
                       ))}

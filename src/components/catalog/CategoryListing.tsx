@@ -124,10 +124,10 @@ function ProductCardBase({
           const label = formatOriginLabel(item.origen);
           return (
             <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span>{label}</span>
               {flagSrc && (
                 <img src={flagSrc} alt={label ?? ""} className="w-4 h-3 object-cover rounded-[1px]" />
               )}
-              <span>{label}</span>
             </div>
           );
         })()}

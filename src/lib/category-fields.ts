@@ -162,6 +162,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "subtipo2",           label: "Subtipo 2",        type: "text" },
       { key: "acabado",            label: "Acabado",          type: "text",   gridVisible: true },
       { key: "terminacion",        label: "Terminación",      type: "text" },
+      { key: "calidad",            label: "Calidad",          type: "text",   gridVisible: true },
       { key: "origen",             label: "Origen",           type: "text" },
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },

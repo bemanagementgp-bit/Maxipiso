@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
@@ -36,6 +36,7 @@ export default function CatalogoPageWrapper() {
 function CatalogoPage() {
   const PAGE_SIZE = 30;
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -51,19 +52,20 @@ function CatalogoPage() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const abortRef = useRef<AbortController | null>(null);
-  const initializedRef = useRef(false);
+  const lastPushedRef = useRef("");
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
     const cat = searchParams.get("categoria") ?? "";
+    const key = searchParams.toString();
+    if (key === lastPushedRef.current) return;
     const urlFilters: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      const match = key.match(/^filtros\[(.+)]$/);
+    searchParams.forEach((value, k) => {
+      const match = k.match(/^filtros\[(.+)]$/);
       if (match) urlFilters[match[1]] = value;
     });
-    if (cat) setSelectedCategoria(cat);
-    if (Object.keys(urlFilters).length > 0) setActiveFilters(urlFilters);
+    setSelectedCategoria(cat);
+    setActiveFilters(Object.keys(urlFilters).length > 0 ? urlFilters : {});
+    setPage(1);
   }, [searchParams]);
 
   useEffect(() => {
@@ -99,6 +101,10 @@ function CatalogoPage() {
     setSelectedCategoria(val);
     setActiveFilters({});
     setPage(1);
+    const params = val ? `categoria=${val}` : "";
+    lastPushedRef.current = params;
+    const url = val ? `/catalogo?${params}` : "/catalogo";
+    router.replace(url, { scroll: false });
   };
 
   const fetchData = useCallback(async () => {

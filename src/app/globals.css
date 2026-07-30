@@ -130,17 +130,25 @@ html {
 [data-theme="dark"] .divide-\[\#F0EEE8\] > * + * { border-color: #222222; }
 [data-theme="dark"] .divide-\[\#E0DED8\] > * + * { border-color: #2D2D2D; }
 /* Text */
-[data-theme="dark"] .text-\[\#111\] { color: #EEEEEE; }
-[data-theme="dark"] .text-\[\#222\] { color: #DDDDDD; }
-[data-theme="dark"] .text-\[\#333\] { color: #CCCCCC; }
-[data-theme="dark"] .text-\[\#444\] { color: #BBBBBB; }
-[data-theme="dark"] .text-\[\#555\] { color: #AAAAAA; }
-[data-theme="dark"] .text-\[\#777\] { color: #888888; }
-[data-theme="dark"] .text-\[\#888\] { color: #777777; }
-[data-theme="dark"] .text-\[\#999\] { color: #777777; }
-[data-theme="dark"] .text-\[\#aaa\] { color: #666666; }
-[data-theme="dark"] .text-\[\#bbb\] { color: #555555; }
-[data-theme="dark"] .text-\[\#ccc\] { color: #444444; }
+[data-theme="dark"] .text-\[\#111\] { color: #F0F0F0; }
+[data-theme="dark"] .text-\[\#222\] { color: #E0E0E0; }
+[data-theme="dark"] .text-\[\#333\] { color: #D0D0D0; }
+[data-theme="dark"] .text-\[\#444\] { color: #C0C0C0; }
+[data-theme="dark"] .text-\[\#555\] { color: #B0B0B0; }
+[data-theme="dark"] .text-\[\#777\] { color: #999999; }
+[data-theme="dark"] .text-\[\#888\] { color: #909090; }
+[data-theme="dark"] .text-\[\#999\] { color: #888888; }
+[data-theme="dark"] .text-\[\#aaa\] { color: #808080; }
+[data-theme="dark"] .text-\[\#bbb\] { color: #909090; }
+[data-theme="dark"] .text-\[\#ccc\] { color: #808080; }
+/* Tailwind text colors */
+[data-theme="dark"] .text-gray-500 { color: #999999; }
+[data-theme="dark"] .text-gray-600 { color: #AAAAAA; }
+[data-theme="dark"] .text-gray-700 { color: #BBBBBB; }
+[data-theme="dark"] .text-gray-800 { color: #CCCCCC; }
+[data-theme="dark"] .text-gray-900 { color: #E0E0E0; }
+[data-theme="dark"] .text-stone-600 { color: #AAAAAA; }
+[data-theme="dark"] .text-stone-700 { color: #BBBBBB; }
 /* Orange accent stays in dark mode */
 [data-theme="dark"] .text-\[\#DF8635\] { color: #F09040; }
 [data-theme="dark"] .bg-\[\#DF8635\] { background-color: #DF8635; }
@@ -167,11 +175,18 @@ html {
 }
 [data-theme="dark"] input::placeholder,
 [data-theme="dark"] textarea::placeholder { color: #444444; }
+/* Category badge */
+[data-theme="dark"] .bg-stone-100 { background-color: #2A2A2A; }
+[data-theme="dark"] .bg-gray-50 { background-color: #1E1E1E; }
+[data-theme="dark"] .bg-gray-100 { background-color: #252525; }
 /* Skeleton */
 [data-theme="dark"] .animate-pulse { background-color: #252525; }
 /* Emerald badges - stays readable in dark */
-[data-theme="dark"] .bg-emerald-50 { background-color: rgba(16,185,129,0.1); }
-[data-theme="dark"] .bg-amber-50 { background-color: rgba(245,158,11,0.1); }
-[data-theme="dark"] .bg-red-50 { background-color: rgba(239,68,68,0.1); }
+[data-theme="dark"] .bg-emerald-50 { background-color: rgba(16,185,129,0.15); }
+[data-theme="dark"] .text-emerald-700 { color: #34d399; }
+[data-theme="dark"] .bg-amber-50 { background-color: rgba(245,158,11,0.15); }
+[data-theme="dark"] .text-amber-700 { color: #fbbf24; }
+[data-theme="dark"] .bg-red-50 { background-color: rgba(239,68,68,0.15); }
+[data-theme="dark"] .text-red-700 { color: #f87171; }
 /* Focus ring */
 [data-theme="dark"] *:focus { outline-color: #DF8635; }

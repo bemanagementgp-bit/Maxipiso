@@ -114,6 +114,7 @@ function buildCatalogHref(tableKey: string, filters: Record<string, string>) {
 
 function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {
   const baseCategory = TABLE_CATEGORIA[tableKey] ?? "Producto";
+  const categoriaPrincipal = String(raw.categoriaPrincipal ?? "").trim();
   const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();
   const tipoProducto = String(raw.tipoProducto ?? raw.tipoDeProducto ?? "").trim();
   const categoriaTerciaria = String(raw.categoriaTerciaria ?? "").trim();
@@ -142,14 +143,13 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
       case "porcellanato":
         return [
           { text: baseCategory },
+          { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
           { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
         ];
       case "pisoMadera":
         return [
           { text: baseCategory },
           { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
-          { text: subtipo2, field: "subtipo2", value: subtipo2 },
-          { text: subtipo, field: "subtipo", value: subtipo },
         ];
       case "madera":
         return [
@@ -165,7 +165,7 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
         ];
       case "deck":
         return [
-          { text: baseCategory },
+          { text: categoriaPrincipal || baseCategory },
           { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
           { text: material, field: "material", value: material },
         ];
@@ -178,7 +178,11 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
   const filters: Record<string, string> = {};
 
   return pathDefs
-    .filter((entry, index) => entry.text && (index === 0 || normalize(entry.text) !== normalize(pathDefs[index - 1].text)))
+    .filter((entry, index, arr) => {
+      if (!entry.text) return false;
+      const norm = normalize(entry.text);
+      return !arr.slice(0, index).some((prev) => prev.text && normalize(prev.text) === norm);
+    })
     .map((entry) => {
       if (entry.field && entry.value) {
         filters[entry.field] = entry.value;
@@ -246,7 +250,11 @@ function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): P
   const filters: Record<string, string> = {};
 
   return pathDefs
-    .filter((entry, index) => entry.text && (index === 0 || normalize(entry.text) !== normalize(pathDefs[index - 1].text)))
+    .filter((entry, index, arr) => {
+      if (!entry.text) return false;
+      const norm = normalize(entry.text);
+      return !arr.slice(0, index).some((prev) => prev.text && normalize(prev.text) === norm);
+    })
     .map((entry, index) => {
       if (entry.field && entry.value) {
         filters[entry.field] = entry.value;
@@ -287,9 +295,13 @@ export default async function ProductPage({
   const product = {
     id:           normalized.id,
     sku:          normalized.sku,
-    nombre:       raw.codigo && !normalized.nombre.includes(String(raw.codigo))
-                    ? `${normalized.nombre} ${raw.codigo}`.trim()
-                    : normalized.nombre,
+    nombre:       (() => {
+                    const cod = String(raw.codigo ?? "").trim();
+                    if (cod && !normalized.nombre.toLowerCase().includes(cod.toLowerCase())) {
+                      return `${normalized.nombre} ${cod}`.trim();
+                    }
+                    return normalized.nombre;
+                  })(),
     marca:        normalized.marca ?? "",
     descripcion:  (raw.descripcion as string) ?? "",
     precio:       normalized.precio,
@@ -431,7 +443,7 @@ export default async function ProductPage({
 
             {/* Nombre */}
             <h1 className="text-[22px] md:text-[26px] font-bold text-[#111111] leading-[1.1] mb-2">
-              {normalized.nombre}
+              {product.nombre}
             </h1>
 
             {product.descripcion && (

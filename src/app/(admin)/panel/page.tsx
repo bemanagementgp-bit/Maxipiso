@@ -79,7 +79,7 @@ export default function ProductosPage() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [tablaFilter, setTablaFilter] = useState("");
+  const [tablaFilter, setTablaFilter] = useState("pisos_flotantes");
   const [marcaFilter, setMarcaFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("activo");
 

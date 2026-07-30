@@ -224,7 +224,23 @@ export default function Header() {
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4">
           <nav className="flex flex-col gap-1 pt-3">
-
+            {STATIC_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors py-2 px-3 rounded-lg hover:bg-gray-50"
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link
+              href="/catalogo"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors py-2 px-3 rounded-lg hover:bg-gray-50"
+            >
+              Catálogo
+            </Link>
 
             <a
               href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"

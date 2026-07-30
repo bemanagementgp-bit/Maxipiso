@@ -178,10 +178,10 @@ function StatCard({ value, label, active, delay }: {
       className={`text-center px-2 sm:px-4 md:px-6 py-2 transition-all duration-700 ${active ? "animate-fade-up opacity-100" : "opacity-0"}`}
       style={active ? { animationDelay: `${delay}s` } : undefined}
     >
-      <div className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold text-[#DF8635] leading-none tabular-nums whitespace-nowrap">
+      <div className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#DF8635] leading-none tabular-nums">
         +{fmtStat(count)}
       </div>
-      <div className="mt-3 text-white/50 text-sm sm:text-base uppercase tracking-wide sm:tracking-widest font-medium">
+      <div className="mt-3 text-white/50 text-[11px] sm:text-sm uppercase tracking-wide sm:tracking-widest font-medium">
         {label}
       </div>
     </div>

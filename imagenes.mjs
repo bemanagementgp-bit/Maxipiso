@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import crypto from "node:crypto";
 import { createClient } from "@libsql/client";
 
 // ============================================================
@@ -143,8 +144,19 @@ async function main() {
         continue;
       }
 
+      // Deduplicar imágenes por contenido (hash MD5)
+      const seen = new Set();
+      const imagenesUnicas = [];
+      for (const img of imagenes) {
+        const hash = crypto.createHash("md5").update(fs.readFileSync(img.ruta)).digest("hex");
+        if (!seen.has(hash)) {
+          seen.add(hash);
+          imagenesUnicas.push(img);
+        }
+      }
+
       // Nombres de archivo para guardar en la DB (rutas relativas a public/)
-      const nombresArchivos = imagenes.map((img) => `/${img.nombre}`);
+      const nombresArchivos = imagenesUnicas.map((img) => `/${img.nombre}`);
       const jsonImagenes = JSON.stringify(nombresArchivos);
 
       if (MODO_PRUEBA) {
@@ -153,7 +165,7 @@ async function main() {
       }
 
       // Copiar imágenes a public/
-      for (const img of imagenes) {
+      for (const img of imagenesUnicas) {
         const destino = path.join(CARPETA_DESTINO, img.nombre);
         if (!fs.existsSync(destino)) {
           fs.copyFileSync(img.ruta, destino);

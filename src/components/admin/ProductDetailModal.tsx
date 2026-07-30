@@ -124,7 +124,20 @@ const SECTIONS: { title: string; keys: string[] }[] = [
   },
 ];
 
-function formatValue(key: string, value: unknown): string {
+const MEASURE_UNITS: Record<string, { unitField: string; defaultUnit: string }> = {
+  espesor: { unitField: "espesorUm", defaultUnit: "mm" },
+  espesorTotal: { unitField: "espesorTotalUm", defaultUnit: "mm" },
+  espesorComposicion: { unitField: "espesorComposicionUm", defaultUnit: "mm" },
+  espesorLamina: { unitField: "espesorLaminaUm", defaultUnit: "mm" },
+  ancho: { unitField: "anchoUm", defaultUnit: "mm" },
+  largo: { unitField: "largoUm", defaultUnit: "mm" },
+  base: { unitField: "baseUm", defaultUnit: "m²" },
+  baseTabla: { unitField: "baseTablUm", defaultUnit: "m²" },
+};
+
+const UNIT_FIELDS = new Set(Object.values(MEASURE_UNITS).map(m => m.unitField));
+
+function formatValue(key: string, value: unknown, product?: Record<string, unknown>): string {
   if (value == null || value === "") return "—";
   if (key === "isActive") return value ? "Activo" : "Inactivo";
   if (key === "createdAt" || key === "updatedAt") {
@@ -138,7 +151,15 @@ function formatValue(key: string, value: unknown): string {
   if (typeof value === "number") {
     return value.toLocaleString("es-AR", { minimumFractionDigits: value % 1 === 0 ? 0 : 2 });
   }
-  return String(value);
+  const text = String(value).trim();
+  if (product && MEASURE_UNITS[key]) {
+    const m = MEASURE_UNITS[key];
+    const unit = String(product[m.unitField] ?? "").trim() || m.defaultUnit;
+    if (!text.toLowerCase().endsWith(unit.toLowerCase()) && !/[a-zA-Z²]/.test(text)) {
+      return `${text} ${unit}`;
+    }
+  }
+  return text;
 }
 
 interface Props {
@@ -221,7 +242,7 @@ export function ProductDetailModal({ isOpen, productId, onClose }: Props) {
           {product && !loading && (
             <div className="space-y-5">
               {SECTIONS.map((section) => {
-                const fields = section.keys.filter((k) => product[k] != null && product[k] !== "");
+                const fields = section.keys.filter((k) => product[k] != null && product[k] !== "" && !UNIT_FIELDS.has(k));
                 if (fields.length === 0) return null;
                 return (
                   <div key={section.title}>
@@ -239,7 +260,7 @@ export function ProductDetailModal({ isOpen, productId, onClose }: Props) {
                               ? product[key] ? "text-emerald-600" : "text-red-500"
                               : ""
                           }`}>
-                            {formatValue(key, product[key])}
+                            {formatValue(key, product[key], product)}
                           </span>
                         </div>
                       ))}
