@@ -65,8 +65,6 @@ const COUNTRY_MAP: Record<string, { code: string; label: string }> = {
   "nacional": { code: "ar", label: "Argentina" },
   "brazil": { code: "br", label: "Brasil" },
   "brasil bolivia": { code: "br", label: "Brasil / Bolivia" },
-  "eeuu": { code: "us", label: "Estados Unidos" },
-  "eeUU": { code: "us", label: "Estados Unidos" },
 };
 
 function normalizeCountry(input: string): string {
