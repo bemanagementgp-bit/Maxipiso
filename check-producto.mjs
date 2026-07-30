@@ -8,8 +8,19 @@ const db = createClient({
 });
 
 async function main() {
-  const res = await db.execute("SELECT sku, especie, base, baseUm FROM pisos_madera WHERE sku = '100011'");
-  console.log(JSON.stringify(res.rows[0]));
+  const res = await db.execute("PRAGMA table_info(revestimientos)");
+  for (const row of res.rows) {
+    if (String(row.name).toLowerCase().includes("base") || String(row.name).toLowerCase().includes("tabla")) {
+      console.log(`${row.name} (${row.type})`);
+    }
+  }
+
+  // Check sample data
+  const sample = await db.execute("SELECT sku, nombre, baseTabla, baseTablUm FROM revestimientos WHERE baseTabla IS NOT NULL LIMIT 3");
+  console.log("\nRevestimientos con baseTabla:");
+  for (const row of sample.rows) {
+    console.log(JSON.stringify(row));
+  }
 }
 
 main().catch(console.error);
