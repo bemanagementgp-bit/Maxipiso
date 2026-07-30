@@ -158,16 +158,14 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
         ];
       case "revestimiento":
         return [
-          { text: baseCategory },
           { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
           { text: uso, field: "uso", value: uso },
-          { text: linea, field: "linea", value: linea },
         ];
       case "deck":
         return [
-          { text: categoriaPrincipal || baseCategory },
+          { text: baseCategory },
           { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
-          { text: material, field: "material", value: material },
+          { text: uso, field: "uso", value: uso },
         ];
       default:
         return [{ text: baseCategory }];
@@ -237,7 +235,8 @@ function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): P
       case "deck":
         return [
           { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
-          { text: material, field: "material", value: material },
+          { text: uso, field: "uso", value: uso },
+          { text: linea, field: "linea", value: linea },
         ];
       default:
         return [];

@@ -362,7 +362,7 @@ const TABLE_FIELDS: Record<string, Set<string>> = {
   pisoVinilico:  new Set(["sku","tipoProducto","codigo","origen","espesorTotal","ancho","largo","bisel","uso","linea","material","capaDeUso","mantoIncorporado","base"]),
   porcellanato:  new Set(["sku","tipoProducto","codigo","marca","origen","espesor","ancho","largo","tipoDeUso","linea","acabado","terminacion","base"]),
   pisoMadera:    new Set(["sku","tipoProducto","origen","espesor","ancho","largo","acabado","bisel","terminacion","calidad","base"]),
-  deck:          new Set(["sku","tipoProducto","origen","espesor","ancho","largo","linea","material","baseTabla"]),
+  deck:          new Set(["sku","tipoProducto","espesor","ancho","largo","linea","material","baseTabla"]),
   revestimiento: new Set(["sku","tipoProducto","espesor","ancho","largo","uso","linea","material","baseTabla"]),
   madera:        new Set(["sku","tipoProducto","origen","espesoresDisponibles"]),
   accesorio:     new Set(["sku","tipoProducto","dimensiones","colores"]),

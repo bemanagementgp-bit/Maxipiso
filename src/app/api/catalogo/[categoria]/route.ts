@@ -227,6 +227,19 @@ export async function GET(
       }
     }
 
+    // Sort: main products first, accessories/secondary types last
+    const SECONDARY_TYPES = new Set([
+      "Accesorios", "Pastinas", "Adhesivos", "Limpiador",
+      "Terminaciones", "Perfil",
+    ]);
+    (productosRaw as Record<string, unknown>[]).sort((a, b) => {
+      const aSecondary = SECONDARY_TYPES.has(String(a.tipoProducto ?? "")) ||
+        String(a.categoriaSecundaria ?? "") === "Accesorios" ? 1 : 0;
+      const bSecondary = SECONDARY_TYPES.has(String(b.tipoProducto ?? "")) ||
+        String(b.categoriaSecundaria ?? "") === "Accesorios" ? 1 : 0;
+      return aSecondary - bSecondary;
+    });
+
     const productos = (productosRaw as Record<string, unknown>[]).map((row) => {
       const clean: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(row)) {
