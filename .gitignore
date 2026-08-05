@@ -44,5 +44,9 @@ next-env.d.ts
 public/drone.mp4
 assets/Maxi Pisos Drone.mp4
 
+# product images source folder
+imagenes-sku/
+
 # claude internal
 .claude/
+.env*.local
