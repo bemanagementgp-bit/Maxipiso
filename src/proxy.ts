@@ -27,10 +27,10 @@ function checkRate(ip: string, limit: number): { ok: boolean; remaining: number 
   return { ok: b.count <= limit, remaining: Math.max(0, limit - b.count) };
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rate limit en rutas públicas de API
+  // Rate limit on public API routes
   if (pathname.startsWith("/api/catalogo") || pathname.startsWith("/api/contacto")) {
     const ip = getIp(request);
     const { ok, remaining } = checkRate(ip, RATE_LIMIT_API);
@@ -39,6 +39,13 @@ export async function proxy(request: NextRequest) {
         { error: "Demasiadas solicitudes" },
         { status: 429, headers: { "Retry-After": "60" } }
       );
+    }
+    // Catalog API requires auth
+    if (pathname.startsWith("/api/catalogo")) {
+      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
     }
     const res = NextResponse.next();
     res.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -51,10 +58,19 @@ export async function proxy(request: NextRequest) {
   const isAdmin = token?.role === "ADMIN";
   const isAuthenticated = !!token;
 
+  // Protect catalog pages (but not the login page)
+  if (pathname.startsWith("/catalogo") && !pathname.startsWith("/catalogo/login")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/catalogo/login", request.url));
+    }
+  }
+
+  // Admin panel
   if (pathname.startsWith("/panel") && !isAdmin) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
+  // Protected API routes
   if (
     (pathname.startsWith("/api/upload") ||
       pathname.startsWith("/api/productos/import") ||
@@ -87,6 +103,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/catalogo/:path*",
     "/panel/:path*",
     "/api/:path*",
   ],
