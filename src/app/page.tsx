@@ -7,6 +7,7 @@ import { CATEGORIES } from "@/data/products";
 import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
 import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiShoppingBag } from "react-icons/fi";
+import HeroCarousel from "@/components/home/HeroCarousel";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -47,12 +48,12 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const lineas = [
-  { label: "Pisos",          href: "/catalogo",          img: "/pisos.png",         Icon: FiGrid },
-  { label: "Maderas",        href: "/catalogo",        img: "/maderas.jpg",            Icon: FiLayers },
-  { label: "Deck WPC",       href: "/catalogo",          img: "/deck.jpg",          Icon: FiSun },
-  { label: "Revestimientos", href: "/catalogo", img: "/revestimientos.png",Icon: FiLayout },
-  { label: "Accesorios",     href: "/catalogo",     img: "/accesorios.png",    Icon: FiTool },
-  { label: "Otros",          href: "/catalogo",                img: "/adhesivos.jpg",     Icon: FiShoppingBag },
+  { label: "Pisos",          href: "/catalogo?categoria=pisos-flotantes", img: "/pisos.png",          Icon: FiGrid },
+  { label: "Maderas",        href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiLayers },
+  { label: "Deck WPC",       href: "/catalogo?categoria=decks",           img: "/deck.jpg",           Icon: FiSun },
+  { label: "Revestimientos", href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
+  { label: "Accesorios",     href: "/catalogo?categoria=accesorios",      img: "/accesorios.png",     Icon: FiTool },
+  { label: "Otros",          href: "/catalogo",                           img: "/adhesivos.jpg",      Icon: FiShoppingBag },
 ];
 
 const stats = [
@@ -431,17 +432,9 @@ function ContactSection() {
 export default function Home() {
   return (
     <>
-      {/* Hero — video background */}
+      {/* Hero — dynamic carousel */}
       <section className="relative overflow-hidden h-[86vh] min-h-[560px] flex items-center">
-        {/* Drone video */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          src="https://res.cloudinary.com/dnaom2evd/video/upload/v1778512357/drone_lgjdsd.mp4"
-        />
+        <HeroCarousel />
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent" />
 

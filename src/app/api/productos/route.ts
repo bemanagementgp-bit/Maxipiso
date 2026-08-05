@@ -103,14 +103,14 @@ export async function GET(req: NextRequest) {
     const take       = parseIntSafe(sp.get("take"), 10,  1, 200);
 
     // Decide qué tablas consultar + filtro especial para revestimientos ext/int
-    let catPrincipalFilter: string | null = null;
+    let catPrincipalFilter: string[] | null = null;
     let effectiveTabla = tablaFilter;
     if (tablaFilter === "revestimientos_ext") {
       effectiveTabla = "revestimientos";
-      catPrincipalFilter = "Espacios Exterior";
+      catPrincipalFilter = ["Espacios Exterior", "Revestimiento Exterior"];
     } else if (tablaFilter === "revestimientos_int") {
       effectiveTabla = "revestimientos";
-      catPrincipalFilter = "Espacios Interiores";
+      catPrincipalFilter = ["Espacios Interiores"];
     }
 
     const keys: TableKey[] = effectiveTabla
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
         const where: Record<string, unknown> = {};
         if (isActive !== undefined) where.isActive = isActive;
         if (marca) where.marca = marca;
-        if (catPrincipalFilter && key === "revestimiento") where.categoriaPrincipal = catPrincipalFilter;
+        if (catPrincipalFilter && key === "revestimiento") where.categoriaPrincipal = { in: catPrincipalFilter };
 
         if (search) {
           const searchFields = key === "pisoMadera"
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
 
     const tableKey = TABLE_KEYS.find((k) => DB_NAMES[k] === tablaNombre);
     if (!tableKey) {
-      return NextResponse.json({ error: `Tabla desconocida: ${tablaNombre}` }, { status: 400 });
+      return NextResponse.json({ error: "Tabla desconocida" }, { status: 400 });
     }
 
     const delegate = (prisma as Record<string, { findUnique: Function; create: Function }>)[tableKey];

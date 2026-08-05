@@ -17,6 +17,8 @@ import {
   FiMaximize2,
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findProductById, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS } from "@/lib/all-products";
 import { getFlagUrl, getCountryLabel } from "@/lib/flags";
@@ -276,6 +278,8 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const isAuthenticated = !!session;
 
   const found = await findProductById(id);
   if (!found || !found.normalized.isActive) notFound();
@@ -285,8 +289,8 @@ export default async function ProductPage({
   // Build gallery from imagenes JSON array, semicolon/comma list, or single imagen field
   const imagenesArr: string[] = parseImagenes(raw.imagenes as string | null);
   const galeria: string[] = imagenesArr.length > 0
-    ? imagenesArr
-    : [];
+    ? [...imagenesArr, "/constante.png"]
+    : ["/constante.png"];
 
   // Build specs from row fields
   const specs = buildSpecsFromRow(raw, tableKey);
@@ -361,24 +365,23 @@ export default async function ProductPage({
 
   return (
     <div className="min-h-screen bg-[#FBFAF7]">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-[1260px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <nav className="flex items-center gap-1.5 text-xs text-gray-400">
-            <Link href="/" className="hover:text-[#111111] transition-colors">Inicio</Link>
+      {/* Header negro */}
+      <div className="w-full bg-[#111]">
+        <div className="max-w-[1260px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <nav className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+            <Link href="/" className="hover:text-white transition-colors">Inicio</Link>
             <FiChevronRight size={12} />
-            <Link href="/catalogo" className="hover:text-[#111111] transition-colors">Catálogo</Link>
+            <Link href="/catalogo" className="hover:text-white transition-colors">Catálogo</Link>
             {productCatalogPath.length > 0 && productCatalogPath.map((segment, index) => (
               <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-1">
                 <FiChevronRight size={12} />
-                <Link href={segment.href} className="hover:text-[#111111] transition-colors text-[#111111]">
+                <Link href={segment.href} className="hover:text-white transition-colors">
                   {segment.text}
                 </Link>
               </span>
             ))}
-            <FiChevronRight size={12} />
-            <span className="text-[#111111] font-medium truncate max-w-[200px]">{normalized.nombre}</span>
           </nav>
+          <h1 className="text-xl font-bold text-white tracking-tight">Detalle de producto</h1>
         </div>
       </div>
 
@@ -453,6 +456,16 @@ export default async function ProductPage({
               </div>
             )}
 
+            {isAuthenticated && product.precio > 0 && (
+              <p className="text-[#DF8635] font-bold text-lg mb-1">
+                {product.moneda === "USD" ? "US$" : "$"}{" "}
+                {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                <span className="text-xs font-normal text-gray-400 ml-1">
+                  {product.unidadMedida ? `/${product.unidadMedida}` : "mayorista"}
+                </span>
+              </p>
+            )}
+
             <div className="border-t border-gray-200 mt-3" />
 
             {/* Specs */}
@@ -486,29 +499,9 @@ export default async function ProductPage({
               </div>
             )}
 
-            {/* Envíos */}
-            <div className="border-t border-gray-200 divide-y divide-gray-100">
-              <div className="flex items-start gap-3 py-3">
-                <div className="mt-0.5 shrink-0 text-gray-400"><FiTruck size={16} /></div>
-                <div>
-                  <p className="text-[11px] font-bold text-[#111111] leading-tight">Envíos a todo el país</p>
-                  <p className="text-[12px] text-gray-500 leading-tight mt-0.5">Consultá disponibilidad y plazos</p>
-                </div>
-              </div>
-            </div>
 
             {/* CTA */}
             <div className="mt-4 space-y-3">
-              <a
-                href={consultHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-none bg-[#111111] px-5 py-3.5 text-[13px] font-bold uppercase tracking-widest text-white hover:bg-[#2a2a2a] transition-colors"
-              >
-                <FaWhatsapp size={16} />
-                Consultar precio
-              </a>
-
               {/* Calculá tu envío */}
               <a
                 href={buildWA(`Hola, quiero calcular el envio de ${product.nombre} (SKU: ${product.sku}).`)}
@@ -529,7 +522,7 @@ export default async function ProductPage({
 
         {/* Productos similares */}
         <div className="mt-12">
-          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} />
+          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} showPrices={isAuthenticated} />
         </div>
       </div>
     </div>

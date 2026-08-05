@@ -445,3 +445,19 @@ enum AuthEventType {
   TOTP_DISABLED
   TOTP_FAIL
 }
+
+// ==================== HERO MEDIA ====================
+
+model HeroMedia {
+  id        String   @id @default(cuid())
+  type      String   // "image" | "video"
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("hero_media")
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
@@ -127,6 +128,10 @@ const PRIORITY_TYPE: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const isAuthenticated = !!(cookieStore.get("next-auth.session-token")?.value
+      || cookieStore.get("__Secure-next-auth.session-token")?.value);
+
     const sp = req.nextUrl.searchParams;
     const search = sanitizeText(sp.get("search") ?? "", 100);
     const categoria = sp.get("categoria") ?? "";
@@ -153,7 +158,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Clave de caché por combinación de parámetros
-    const cacheKey = JSON.stringify({ search, categoria, skip, take, activeFilters });
+    const cacheKey = JSON.stringify({ search, categoria, skip, take, activeFilters, auth: isAuthenticated });
     const cached = cache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return NextResponse.json(cached.payload);
@@ -193,7 +198,7 @@ export async function GET(req: NextRequest) {
     const singleTable = tablesToQuery.length === 1;
     const productPromises = tablesToQuery.map(async (table) => {
       const d = table.delegate() as any;
-      const where: Record<string, unknown> = { isActive: true };
+      const where: Record<string, unknown> = { isActive: true, AND: [{ imagenes: { not: null } }, { imagenes: { not: "" } }, { imagenes: { not: "[]" } }] };
       for (const [key, val] of Object.entries(activeFilters)) {
         if (MULTI_VALUE_FIELDS.has(key)) {
           where[key] = { contains: val };
@@ -235,7 +240,7 @@ export async function GET(req: NextRequest) {
       r.rows.map((row) => {
         const clean: Record<string, unknown> = { _tabla: r.key, _tablaLabel: r.label };
         for (const [k, v] of Object.entries(row)) {
-          if (k.startsWith("precio") || k === "stock" || k === "moneda") continue;
+          if (!isAuthenticated && (k.startsWith("precio") || k === "stock" || k === "moneda")) continue;
           clean[k] = v;
         }
         return formatMeasureFields(clean);

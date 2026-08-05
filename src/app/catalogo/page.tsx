@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown } from "react-icons/fi";
+import { useSession, signOut } from "next-auth/react";
+import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown, FiUser } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
 import { ProductCard, EmptyState } from "@/components/catalog/CategoryListing";
 import type { CatalogItem } from "@/components/catalog/CategoryListing";
+import LoginModal from "@/components/catalog/LoginModal";
 
 type FilterGroup = { label: string; values: string[] };
 type CategoriaOption = { key: string; label: string };
@@ -37,6 +39,9 @@ function CatalogoPage() {
   const PAGE_SIZE = 30;
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status, update: updateSession } = useSession();
+  const [showLogin, setShowLogin] = useState(false);
+  const [authTick, setAuthTick] = useState(0);
 
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -45,8 +50,9 @@ function CatalogoPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const [sortBy, setSortBy] = useState("relevancia");
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
-  const [selectedCategoria, setSelectedCategoria] = useState("");
+  const [selectedCategoria, setSelectedCategoria] = useState(() => searchParams.get("categoria") ?? "");
 
   const [filtros, setFiltros] = useState<Record<string, FilterGroup>>({});
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
@@ -108,6 +114,7 @@ function CatalogoPage() {
   };
 
   const fetchData = useCallback(async () => {
+    if (status === "loading") return;
     setLoading(true);
     // Cancela cualquier petición previa en vuelo (evita renders con datos viejos)
     abortRef.current?.abort();
@@ -140,7 +147,7 @@ function CatalogoPage() {
         abortRef.current = null;
       }
     }
-  }, [debouncedSearch, selectedCategoria, activeFilters, page]);
+  }, [debouncedSearch, selectedCategoria, activeFilters, page, authTick, status]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -167,39 +174,76 @@ function CatalogoPage() {
     return pages;
   }, [page, totalPages]);
 
-  // Memoiza la grilla: sólo se reconstruye cuando cambia la lista de productos,
-  // no al tipear en el buscador ni al abrir/cerrar filtros.
+  const sortedProductos = useMemo(() => {
+    if (sortBy === "relevancia") return productos;
+    const sorted = [...productos];
+    switch (sortBy) {
+      case "precio-menor":
+        sorted.sort((a, b) => ((a.precioM2 ?? a.precioCaja ?? a.precio ?? Infinity) as number) - ((b.precioM2 ?? b.precioCaja ?? b.precio ?? Infinity) as number));
+        break;
+      case "precio-mayor":
+        sorted.sort((a, b) => ((b.precioM2 ?? b.precioCaja ?? b.precio ?? 0) as number) - ((a.precioM2 ?? a.precioCaja ?? a.precio ?? 0) as number));
+        break;
+      case "nombre-az":
+        sorted.sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es"));
+        break;
+      case "nombre-za":
+        sorted.sort((a, b) => (b.nombre ?? "").localeCompare(a.nombre ?? "", "es"));
+        break;
+      case "recientes":
+        sorted.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+        break;
+    }
+    return sorted;
+  }, [productos, sortBy]);
+
   const productGrid = useMemo(
-    () => productos.map((item) => (
+    () => sortedProductos.map((item) => (
       <ProductCard key={item.id} item={item} categorySlug="catalogo" />
     )),
-    [productos]
+    [sortedProductos]
   );
 
   return (
     <div className="min-h-screen bg-[#F9F8F6]">
-      {/* Banner */}
-      <div className="w-full relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/banner_catalogo.png"
-          alt="Catálogo Maxipiso"
-          width={6667}
-          height={1417}
-          fetchPriority="high"
-          decoding="async"
-          className="w-full aspect-[6667/1417] max-h-[320px] min-h-[110px] object-cover"
-        />
-        {/* Sombra interior inferior */}
-        <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
-      </div>
-
-      {/* Título */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
-        <h1 className="text-3xl md:text-4xl font-black text-[#111111] leading-none mb-2">Catálogo</h1>
-        <p className="text-gray-500 text-sm max-w-xl leading-relaxed">
-          Explorá todo nuestro stock mayorista. Entrega en todo el país.
-        </p>
+      {/* Header negro */}
+      <div className="w-full bg-[#111]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Catálogo</h1>
+            <p className="text-gray-400 text-sm mt-0.5">
+              Explorá todo nuestro stock mayorista. Entrega en todo el país.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {!session ? (
+              <button
+                onClick={() => setShowLogin(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#DF8635] text-white text-sm font-semibold hover:bg-[#c97220] transition-colors shrink-0"
+              >
+                <FiUser size={14} />
+                Acceder
+              </button>
+            ) : (
+              <button
+                onClick={async () => { await signOut({ redirect: false }); await updateSession(); setAuthTick((t) => t + 1); }}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-600 text-gray-300 text-sm font-semibold hover:bg-white/10 transition-colors shrink-0"
+              >
+                <FiUser size={14} />
+                Cerrar sesión
+              </button>
+            )}
+            <div className="relative">
+              <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full sm:w-56 pl-9 pr-4 py-2 bg-white/10 border border-gray-700 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#DF8635] transition-colors"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -385,21 +429,28 @@ function CatalogoPage() {
               })()}
             </div>
 
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-4 items-start sm:items-center justify-between">
-              <div>
-                {!loading && (
-                  <p className="text-xs text-gray-400">{total} producto{total !== 1 ? "s" : ""}</p>
-                )}
-              </div>
-              <div className="relative w-full sm:w-64">
-                <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar..."
-                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 text-sm focus:outline-none focus:border-[#DF8635] transition-colors"
-                />
+            {/* Sort bar */}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+              {!loading ? (
+                <p className="text-xs text-gray-400">{total} producto{total !== 1 ? "s" : ""}</p>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="hidden sm:inline">Ordenar por</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-xs bg-transparent border border-gray-200 px-2.5 py-1.5 pr-7 text-gray-700 focus:outline-none focus:border-[#DF8635] cursor-pointer appearance-none"
+                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+                >
+                  <option value="relevancia">Más relevantes</option>
+                  <option value="precio-menor">Menor precio</option>
+                  <option value="precio-mayor">Mayor precio</option>
+                  <option value="nombre-az">A → Z</option>
+                  <option value="nombre-za">Z → A</option>
+                  <option value="recientes">Más recientes</option>
+                </select>
               </div>
             </div>
 
@@ -486,6 +537,8 @@ function CatalogoPage() {
           </div>
         </div>
       </div>
+
+      {showLogin && <LoginModal onClose={(loggedIn) => { setShowLogin(false); if (loggedIn) { updateSession(); setAuthTick((t) => t + 1); } }} />}
     </div>
   );
 }

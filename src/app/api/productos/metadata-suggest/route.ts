@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
 
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   let tabla: unknown;
   try {

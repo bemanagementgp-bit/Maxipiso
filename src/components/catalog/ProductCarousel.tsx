@@ -10,9 +10,10 @@ type ProductCarouselProps = {
   title: string;
   href?: string;
   products: CatalogPublicProduct[];
+  showPrices?: boolean;
 };
 
-export default function ProductCarousel({ title, href, products }: ProductCarouselProps) {
+export default function ProductCarousel({ title, href, products, showPrices }: ProductCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   if (products.length === 0) return null;
@@ -93,6 +94,11 @@ export default function ProductCarousel({ title, href, products }: ProductCarous
               <p className="font-bold text-[#111111] text-sm leading-snug line-clamp-2 group-hover:text-[#DF8635] transition-colors">
                 {product.nombre}
               </p>
+              {showPrices && product.precio > 0 && (
+                <p className="text-[#DF8635] font-bold text-sm">
+                  $ {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                </p>
+              )}
               <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DF8635]">
                 Ver producto
                 <FiArrowRight

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 
@@ -126,6 +127,10 @@ export async function GET(
   { params }: { params: Promise<{ categoria: string }> }
 ) {
   try {
+    const cookieStore = await cookies();
+    const isAuthenticated = !!(cookieStore.get("next-auth.session-token")?.value
+      || cookieStore.get("__Secure-next-auth.session-token")?.value);
+
     const { categoria } = await params;
     const slug = categoria.toLowerCase();
 
@@ -159,14 +164,14 @@ export async function GET(
     }
 
     // Cache lookup
-    const cacheKey = JSON.stringify({ slug, search, skip, take, activeFilters });
+    const cacheKey = JSON.stringify({ slug, search, skip, take, activeFilters, auth: isAuthenticated });
     const cached = cache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return NextResponse.json(cached.payload);
     }
 
     // Build WHERE (expand aliased brand values, use contains for multi-value fields)
-    const where: Record<string, unknown> = { isActive: true };
+    const where: Record<string, unknown> = { isActive: true, AND: [{ imagenes: { not: null } }, { imagenes: { not: "" } }, { imagenes: { not: "[]" } }] };
     for (const [key, val] of Object.entries(activeFilters)) {
       if (MULTI_VALUE_FIELDS.has(key)) {
         where[key] = { contains: val };
@@ -243,7 +248,7 @@ export async function GET(
     const productos = (productosRaw as Record<string, unknown>[]).map((row) => {
       const clean: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(row)) {
-        if (k.startsWith("precio") || k === "stock" || k === "moneda") continue;
+        if (!isAuthenticated && (k.startsWith("precio") || k === "stock" || k === "moneda")) continue;
         clean[k] = v;
       }
       return clean;

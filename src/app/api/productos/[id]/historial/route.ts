@@ -12,6 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
     const sp = req.nextUrl.searchParams;
     const skip = parseIntSafe(sp.get("skip"), 0, 0, 1_000_000);

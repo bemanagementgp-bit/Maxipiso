@@ -27,8 +27,12 @@ function checkRate(ip: string, limit: number): { ok: boolean; remaining: number 
   return { ok: b.count <= limit, remaining: Math.max(0, limit - b.count) };
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/auth") && !pathname.startsWith("/api/auth/password") && !pathname.startsWith("/api/auth/2fa")) {
+    return NextResponse.next();
+  }
 
   // Rate limit on public API routes
   if (pathname.startsWith("/api/catalogo") || pathname.startsWith("/api/contacto")) {
@@ -39,13 +43,6 @@ export async function middleware(request: NextRequest) {
         { error: "Demasiadas solicitudes" },
         { status: 429, headers: { "Retry-After": "60" } }
       );
-    }
-    // Catalog API requires auth
-    if (pathname.startsWith("/api/catalogo")) {
-      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-      if (!token) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
     }
     const res = NextResponse.next();
     res.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -58,26 +55,26 @@ export async function middleware(request: NextRequest) {
   const isAdmin = token?.role === "ADMIN";
   const isAuthenticated = !!token;
 
-  // Protect catalog pages (but not the login page)
-  if (pathname.startsWith("/catalogo") && !pathname.startsWith("/catalogo/login")) {
-    if (!isAuthenticated) {
-      return NextResponse.redirect(new URL("/catalogo/login", request.url));
-    }
-  }
+  // Catalog pages are public (prices gated at API level)
 
   // Admin panel
   if (pathname.startsWith("/panel") && !isAdmin) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  // Protected API routes
+  // Protected API routes — ADMIN only
   if (
     (pathname.startsWith("/api/upload") ||
       pathname.startsWith("/api/productos/import") ||
-      pathname.startsWith("/api/productos/export")) &&
+      pathname.startsWith("/api/productos/export") ||
+      pathname.startsWith("/api/productos/plantilla") ||
+      pathname.startsWith("/api/productos/stats") ||
+      pathname.startsWith("/api/productos/metadata-suggest") ||
+      pathname.startsWith("/api/reportes") ||
+      (pathname.startsWith("/api/hero") && request.method !== "GET")) &&
     !isAdmin
   ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   if (
@@ -85,14 +82,14 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/api/auth/2fa")) &&
     !isAuthenticated
   ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   if (
-    (pathname.startsWith("/api/productos") || pathname.startsWith("/api/reportes")) &&
+    pathname.startsWith("/api/productos") &&
     !isAuthenticated
   ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   const res = NextResponse.next();

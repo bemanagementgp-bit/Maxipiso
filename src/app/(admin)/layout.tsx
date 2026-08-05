@@ -3,11 +3,12 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiLogOut, FiBox, FiUploadCloud, FiBarChart2 } from "react-icons/fi";
+import { FiLogOut, FiBox, FiUploadCloud, FiBarChart2, FiImage } from "react-icons/fi";
 import Link from "next/link";
 
 const NAV = [
   { href: "/panel", label: "Productos", icon: FiBox },
+  { href: "/panel/hero", label: "Hero", icon: FiImage },
   { href: "/panel/importacion", label: "Importación", icon: FiUploadCloud },
   { href: "/panel/reportes", label: "Reportes", icon: FiBarChart2 },
 ];

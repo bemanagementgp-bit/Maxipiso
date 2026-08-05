@@ -112,12 +112,27 @@ function ProductCardBase({
       </Link>
 
       <div className="p-4 flex flex-col flex-1 gap-1.5">
+        {(item._tablaLabel || item.categoriaTerciaria) && (
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide leading-tight">
+            {item._tablaLabel as string}
+            {item.categoriaTerciaria ? ` — ${item.categoriaTerciaria as string}` : ""}
+          </p>
+        )}
+
         <Link
           href={`/catalogo/${item.id}`}
           className="font-bold text-[#111111] text-sm leading-snug hover:text-[#DF8635] transition-colors line-clamp-2"
         >
           {name}
         </Link>
+
+        {(item.precioM2 || item.precioCaja || item.precio) && (
+          <p className="text-[#DF8635] font-bold text-sm">
+            {item.moneda === "USD" ? "US$" : "$"}{" "}
+            {(item.precioM2 ?? item.precioCaja ?? item.precio)?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+            {item.precioM2 ? " /m²" : item.precioCaja ? " /caja" : ""}
+          </p>
+        )}
 
         {item.origen && (() => {
           const flagSrc = getFlagUrl(item.origen);
