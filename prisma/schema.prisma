@@ -3,7 +3,8 @@
 // Schema v2 — Tablas separadas por categoría de producto
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
