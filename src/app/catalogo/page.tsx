@@ -191,7 +191,7 @@ function CatalogoPage() {
         sorted.sort((a, b) => (b.nombre ?? "").localeCompare(a.nombre ?? "", "es"));
         break;
       case "recientes":
-        sorted.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+        sorted.sort((a, b) => new Date(String(b.createdAt ?? 0)).getTime() - new Date(String(a.createdAt ?? 0)).getTime());
         break;
     }
     return sorted;

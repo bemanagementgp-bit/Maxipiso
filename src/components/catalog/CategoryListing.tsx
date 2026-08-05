@@ -112,7 +112,7 @@ function ProductCardBase({
       </Link>
 
       <div className="p-4 flex flex-col flex-1 gap-1.5">
-        {(item._tablaLabel || item.categoriaTerciaria) && (
+        {(typeof item._tablaLabel === "string" || typeof item.categoriaTerciaria === "string") && (
           <p className="text-[10px] text-gray-400 uppercase tracking-wide leading-tight">
             {item._tablaLabel as string}
             {item.categoriaTerciaria ? ` — ${item.categoriaTerciaria as string}` : ""}
