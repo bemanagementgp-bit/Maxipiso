@@ -42,6 +42,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // No revelar que el sitio corre Next.js (header X-Powered-By)
   poweredByHeader: false,
+  serverExternalPackages: ["@prisma/client", "@libsql/client"],
   // Solo empaqueta los íconos usados de react-icons (evita cargar todo el set)
   experimental: {
     optimizePackageImports: ["react-icons"],
