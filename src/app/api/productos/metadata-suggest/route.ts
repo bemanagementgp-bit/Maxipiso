@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     const delegate = (prisma as any)[prismaKey];
     const rows = await delegate.findMany({
-      where: { metadatos: { not: null } },
+      where: { NOT: { metadatos: null } },
       select: { metadatos: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
       take: 50,

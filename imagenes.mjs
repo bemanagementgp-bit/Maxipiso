@@ -144,15 +144,26 @@ async function main() {
         continue;
       }
 
-      // Deduplicar imágenes por contenido (hash MD5)
-      const seen = new Set();
+      // Deduplicar imágenes por contenido (hash MD5) y por nombre de archivo
+      const seenHashes = new Set();
+      const seenNombres = new Set();
       const imagenesUnicas = [];
       for (const img of imagenes) {
         const hash = crypto.createHash("md5").update(fs.readFileSync(img.ruta)).digest("hex");
-        if (!seen.has(hash)) {
-          seen.add(hash);
-          imagenesUnicas.push(img);
+        const nombrePublico = `/${img.nombre}`;
+
+        if (seenHashes.has(hash)) {
+          continue;
         }
+
+        if (seenNombres.has(nombrePublico)) {
+          console.warn(`ADVERTENCIA    | SKU: ${sku} | nombre repetido ${nombrePublico} - se omitirá`);
+          continue;
+        }
+
+        seenHashes.add(hash);
+        seenNombres.add(nombrePublico);
+        imagenesUnicas.push(img);
       }
 
       // Nombres de archivo para guardar en la DB (rutas relativas a public/)
