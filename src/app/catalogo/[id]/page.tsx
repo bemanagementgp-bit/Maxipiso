@@ -100,7 +100,7 @@ const CATEGORY_PAGE_PATHS: Record<string, string> = {
 };
 
 function buildWA(msg: string) {
-  return "https://wa.me/5422143888894?text=" + encodeURIComponent(msg);
+  return "https://wa.me/542214388894?text=" + encodeURIComponent(msg);
 }
 
 function buildCatalogHref(tableKey: string, filters: Record<string, string>) {
@@ -458,7 +458,7 @@ export default async function ProductPage({
 
             {isAuthenticated && product.precio > 0 && (
               <p className="text-[#DF8635] font-bold text-lg mb-1">
-                {product.moneda === "USD" ? "US$" : "$"}{" "}
+                {product.precio > 500 ? "$" : "u$d"}{" "}
                 {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 <span className="text-xs font-normal text-gray-400 ml-1">
                   {product.unidadMedida ? `/${product.unidadMedida}` : "mayorista"}

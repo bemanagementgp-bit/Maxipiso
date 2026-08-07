@@ -58,10 +58,9 @@ function FilterSelect({ value, onChange, children }: {
 const TABLAS = [
   { value: "pisos_flotantes",  label: "Pisos Flotantes" },
   { value: "porcellanatos",    label: "Porcelanatos" },
-  { value: "revestimientos_ext",  label: "Revestimientos Exteriores" },
-  { value: "revestimientos_int",  label: "Revestimientos Interiores" },
-  { value: "pisos_vinilicos", label: "Pisos Vinilicos" },
-  { value: "pisos_madera",    label: "Pisos Madera e Ingenieria" },
+  { value: "revestimientos",   label: "Revestimientos" },
+  { value: "pisos_vinilicos",  label: "Pisos Vinílicos" },
+  { value: "pisos_madera",     label: "Pisos Madera" },
   { value: "decks",           label: "Decks" },
   { value: "maderas",         label: "Maderas" },
   { value: "accesorios",      label: "Accesorios" },

@@ -76,7 +76,7 @@ const categorias = [
   { label: "Revestimientos",   href: "/catalogo",  badge: "Oferta" },
 ];
 
-const WA_OFERTAS = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";
+const WA_OFERTAS = "https://wa.me/542214388894?text=Hola%2C%20quiero%20consultar%20las%20ofertas%20y%20precios%20mayoristas%20de%20Maxipiso";
 
 export default function OfertasMayoristasPage() {
   const stats  = useInView(0.2);

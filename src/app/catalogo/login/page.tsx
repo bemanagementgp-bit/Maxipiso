@@ -8,7 +8,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import Image from "next/image";
 
 const WA_HREF =
-  "https://wa.me/5422143888894?text=Hola%2C%20quiero%20solicitar%20acceso%20al%20cat%C3%A1logo%20mayorista";
+  "https://wa.me/542214388894?text=Hola%2C%20quiero%20solicitar%20acceso%20al%20cat%C3%A1logo%20mayorista";
 
 export default function CatalogoLoginPage() {
   const [email, setEmail] = useState("");

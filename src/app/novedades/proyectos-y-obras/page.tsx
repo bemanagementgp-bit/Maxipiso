@@ -95,7 +95,7 @@ const proyectos = [
   },
 ];
 
-const WA_OBRAS = "https://wa.me/5422143888894?text=Hola%2C%20tengo%20un%20proyecto%20de%20obra%20y%20quiero%20solicitar%20un%20presupuesto%20de%20Maxipiso";
+const WA_OBRAS = "https://wa.me/542214388894?text=Hola%2C%20tengo%20un%20proyecto%20de%20obra%20y%20quiero%20solicitar%20un%20presupuesto%20de%20Maxipiso";
 
 export default function ProyectosObrasPage() {
   const stats = useInView(0.2);

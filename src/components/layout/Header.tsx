@@ -64,6 +64,7 @@ const CATALOG_ITEMS = [
 ] as const;
 
 const STATIC_LINKS = [
+  { href: "/", label: "Inicio" },
   { href: "/empresa", label: "Empresa" },
   { href: "/novedades", label: "Novedades" },
 ];
@@ -127,7 +128,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
           Ver catálogo completo →
         </Link>
         <a
-          href="https://wa.me/5422143888894"
+          href="https://wa.me/542214388894"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-gray-400 hover:text-[#111111] transition-colors"
@@ -192,7 +193,7 @@ export default function Header() {
           </Link>
 
             <a
-              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+              href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#DF8635] text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-[#c97220] transition-colors"
@@ -243,7 +244,7 @@ export default function Header() {
             </Link>
 
             <a
-              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+              href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 bg-[#DF8635] text-white font-semibold px-5 py-2.5 rounded-full text-center hover:bg-[#c97220] transition-colors"

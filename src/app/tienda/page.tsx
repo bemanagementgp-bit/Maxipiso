@@ -27,7 +27,7 @@ const MOCK_PRICES: Record<string, { price: number; original?: number; mlUrl: str
   "compact-city":          { price: 27000, mlUrl: "#" },
 };
 
-const WA_BASE = "https://wa.me/5422143888894?text=";
+const WA_BASE = "https://wa.me/542214388894?text=";
 
 const categoryLabel: Record<Category, string> = {
   Porcelanato: "Pisos Flotantes",

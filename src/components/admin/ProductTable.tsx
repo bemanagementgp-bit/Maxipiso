@@ -1,10 +1,10 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight } from "react-icons/fi";
 import { isRemoteImageUrl } from "@/lib/google-drive";
 import { getGridColumns, getCategoryConfig } from "@/lib/category-fields";
 
@@ -76,7 +76,8 @@ function StockCell({ stock }: { stock: number | null }) {
 }
 
 function PriceCell({ p }: { p: any }) {
-  const currency = p.moneda ?? "USD";
+  const priceValue = p.precioM2 != null && p.precioM2 > 0 ? p.precioM2 : p.precio != null && p.precio > 0 ? p.precio : 0;
+  const currency = priceValue > 500 ? "$" : "u$d";
   if (p.precioM2 != null && p.precioM2 > 0) return (
     <span className="tabular-nums">
       <span className="text-[10px] text-gray-400 mr-0.5">{currency}</span>
@@ -124,8 +125,133 @@ export function ProductTable({
   const [totalPages, setTotalPages]       = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow]       = useState<string | null>(null);
+  const [dragIdx, setDragIdx]             = useState<number | null>(null);
+  const [overIdx, setOverIdx]             = useState<number | null>(null);
+  const [dragPageTarget, setDragPageTarget] = useState<"prev" | "next" | null>(null);
+  const [saving, setSaving]               = useState(false);
+  const [orderDirty, setOrderDirty]       = useState(false);
+  const [saveMsg, setSaveMsg]             = useState<string | null>(null);
+  const [moveTarget, setMoveTarget]       = useState<{ id: string; nombre: string } | null>(null);
+  const [movePos, setMovePos]             = useState("");
   const router = useRouter();
   const PER_PAGE = 10;
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(idx));
+    const row = (e.target as HTMLElement).closest("tr");
+    if (row) row.style.opacity = "0.4";
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const row = (e.target as HTMLElement).closest("tr");
+    if (row) row.style.opacity = "1";
+    setDragIdx(null);
+    setOverIdx(null);
+    setDragPageTarget(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setOverIdx(idx);
+  };
+
+  const handlePageDragOver = (e: React.DragEvent, target: "prev" | "next") => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragPageTarget(target);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === dropIdx) { setDragIdx(null); setOverIdx(null); return; }
+    const updated = [...productos];
+    const [moved] = updated.splice(dragIdx, 1);
+    updated.splice(dropIdx, 0, moved);
+    setProductos(updated);
+    setDragIdx(null);
+    setOverIdx(null);
+    setOrderDirty(true);
+    setSaveMsg(null);
+  };
+
+  const saveOrder = async () => {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const pageOffset = (page - 1) * PER_PAGE;
+      const items = productos.map((p, i) => ({ id: p.id, sortOrder: pageOffset + i }));
+      const res = await fetch("/api/productos/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, tabla: tablaFilter }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      setOrderDirty(false);
+      setSaveMsg("Orden guardado");
+      setTimeout(() => setSaveMsg(null), 2500);
+    } catch {
+      setSaveMsg("Error al guardar el orden");
+    }
+    setSaving(false);
+  };
+
+  const moveItemToPosition = async (itemId: string, pos: number) => {
+    const res = await fetch("/api/productos/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: itemId, sortOrder: pos }],
+        tabla: tablaFilter,
+      }),
+    });
+    if (!res.ok) throw new Error("Error al mover producto");
+  };
+
+  const handleMoveToPosition = async () => {
+    if (!moveTarget || !movePos) return;
+    const pos = parseInt(movePos, 10);
+    if (isNaN(pos) || pos < 1) return;
+    setSaving(true);
+    try {
+      await moveItemToPosition(moveTarget.id, pos - 1);
+      setMoveTarget(null);
+      setMovePos("");
+      fetchProductos((page - 1) * PER_PAGE);
+      setSaveMsg("Producto movido");
+      setTimeout(() => setSaveMsg(null), 2500);
+    } catch {
+      setSaveMsg("Error al mover producto");
+    }
+    setSaving(false);
+  };
+
+  const handlePageDrop = async (e: React.DragEvent, target: "prev" | "next") => {
+    e.preventDefault();
+    setDragPageTarget(null);
+    if (dragIdx === null || !tablaFilter || orderDirty) return;
+    const item = productos[dragIdx];
+    if (!item) return;
+    const targetPage = target === "next" ? page + 1 : page - 1;
+    if (targetPage < 1 || targetPage > totalPages) return;
+    const targetIndex = target === "next" ? page * PER_PAGE : (page - 2) * PER_PAGE;
+    setSaving(true);
+    try {
+      await moveItemToPosition(item.id, targetIndex);
+      setDragIdx(null);
+      setOverIdx(null);
+      setOrderDirty(false);
+      setPage(targetPage);
+      fetchProductos((targetPage - 1) * PER_PAGE);
+      setSaveMsg("Producto movido a la página " + targetPage);
+      setTimeout(() => setSaveMsg(null), 2500);
+    } catch {
+      setSaveMsg("Error al mover producto");
+    }
+    setSaving(false);
+  };
 
   const isDedicatedView = !!tablaFilter;
   const catConfig = tablaFilter ? getCategoryConfig(tablaFilter) : null;
@@ -147,6 +273,8 @@ export function ProductTable({
       setProductos(data.productos ?? []);
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 0);
+      setOrderDirty(false);
+      setSaveMsg(null);
       setError("");
     } catch (err: any) {
       setError(err.message);
@@ -165,7 +293,14 @@ export function ProductTable({
     setDeleteConfirm(null);
   };
 
-  const goToPage = (p: number) => { setPage(p); fetchProductos((p - 1) * PER_PAGE); };
+  const goToPage = (p: number) => {
+    if (orderDirty) {
+      setSaveMsg("Guarda el orden antes de cambiar de página");
+      return;
+    }
+    setPage(p);
+    fetchProductos((p - 1) * PER_PAGE);
+  };
 
   if (error) return (
     <div className="flex items-center gap-2 px-6 py-10 text-sm text-red-500">
@@ -184,16 +319,38 @@ export function ProductTable({
       <div className="flex flex-col">
         {/* Badge de categoría */}
         {catConfig && (
-          <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: catConfig.dot }} />
-            <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-[0.08em]">{catConfig.label}</span>
-            <span className="text-[10px] text-gray-400 ml-1">{total} productos</span>
+          <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: catConfig.dot }} />
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-[0.08em]">{catConfig.label}</span>
+              <span className="text-[10px] text-gray-400 ml-1">{total} productos</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={saveOrder}
+                disabled={!orderDirty || saving}
+                className="h-8 px-3 text-[11px] font-semibold rounded-sm transition-colors text-white bg-[#111] hover:bg-[#333] disabled:bg-gray-300 disabled:text-gray-500"
+              >
+                Guardar orden
+              </button>
+              {orderDirty && !saving && (
+                <span className="text-[11px] text-orange-600">Cambios sin guardar</span>
+              )}
+              {saving && (
+                <span className="text-[11px] text-[#DF8635] animate-pulse">Guardando orden...</span>
+              )}
+              {saveMsg && !saving && (
+                <span className="text-[11px] text-gray-600">{saveMsg}</span>
+              )}
+            </div>
           </div>
         )}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-[#111] text-white">
+                {isDedicatedView && <th className="w-[30px] px-1 py-3" />}
                 <th className="w-[50px] px-3 py-3" />
                 <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Producto</th>
                 <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Marca</th>
@@ -209,31 +366,53 @@ export function ProductTable({
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={4 + extraCols.length} />)
-              ) : productos.length === 0 ? (
-                <tr>
-                  <td colSpan={4 + extraCols.length + 1} className="py-20 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <FiPackage size={28} className="text-gray-200" />
-                      <p className="text-[11px] uppercase tracking-[0.1em] text-gray-300 font-medium">Sin resultados</p>
-                    </div>
-                  </td>
-                </tr>
               ) : (
-                productos.map((p) => {
+                <>
+                  {dragIdx !== null && page > 1 && (
+                    <tr
+                      onDragOver={(e) => handlePageDragOver(e, "prev")}
+                      onDrop={(e) => handlePageDrop(e, "prev")}
+                      className={`bg-[#f8fafc] text-center ${dragPageTarget === "prev" ? "border-2 border-dashed border-[#DF8635]" : "border-t border-gray-200"}`}
+                    >
+                      <td colSpan={4 + extraCols.length + 1} className="px-4 py-4 text-[12px] text-gray-500">
+                        Suelta aquí para mover el producto a la página {page - 1}
+                      </td>
+                    </tr>
+                  )}
+                  {productos.length === 0 ? (
+                    <tr>
+                      <td colSpan={4 + extraCols.length + 1} className="py-20 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <FiPackage size={28} className="text-gray-200" />
+                          <p className="text-[11px] uppercase tracking-[0.1em] text-gray-300 font-medium">Sin resultados</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    productos.map((p, rowIdx) => {
                   const isHovered = hoveredRow === p.id;
                   const imgSrc = p.imagenes ? (() => { try { const arr = JSON.parse(p.imagenes); return Array.isArray(arr) ? arr[0] : null; } catch { return null; } })() : null;
                   const nombre = p.nombre ?? p.especie ?? p.sku;
+                  const isOver = overIdx === rowIdx && dragIdx !== rowIdx;
                   return (
                     <tr
                       key={p.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, rowIdx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, rowIdx)}
+                      onDrop={(e) => handleDrop(e, rowIdx)}
                       onMouseEnter={() => setHoveredRow(p.id)}
                       onMouseLeave={() => setHoveredRow(null)}
-                      className="bg-white hover:bg-gray-50 transition-colors duration-100"
+                      className={`bg-white hover:bg-gray-50 transition-colors duration-100 ${isOver ? "border-t-2 !border-t-[#DF8635]" : ""}`}
                       style={{
                         borderLeft: `3px solid ${isHovered ? catConfig?.dot ?? "#999" : "transparent"}`,
                         transition: "border-color 150ms, background-color 100ms",
                       }}
                     >
+                      <td className="px-1 py-2.5 w-[30px] cursor-grab active:cursor-grabbing">
+                        <FiMenu size={14} className="text-gray-300 hover:text-gray-500 mx-auto" />
+                      </td>
                       <td className="pl-3 pr-1 py-2.5 w-[50px]">
                         <Thumb src={imgSrc} alt={nombre} />
                       </td>
@@ -272,6 +451,16 @@ export function ProductTable({
 
                           <button onClick={() => onViewHistory(p.id)} title="Historial" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiClock size={13} /></button>
                           <button onClick={() => onEdit(p)} title="Editar" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiEdit2 size={13} /></button>
+                          <button
+                            onClick={() => {
+                              setMoveTarget({ id: p.id, nombre });
+                              setMovePos(String((page - 1) * PER_PAGE + rowIdx + 1));
+                            }}
+                            title="Mover a posición"
+                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <FiArrowUpRight size={13} />
+                          </button>
                           {deleteConfirm === p.id ? (
                             <div className="flex items-center gap-1 ml-1">
                               <button onClick={() => handleDelete(p.id)} className="text-[10px] font-semibold text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded-md transition-colors">Sí</button>
@@ -286,12 +475,71 @@ export function ProductTable({
                   );
                 })
               )}
+            </>
+          )}
             </tbody>
           </table>
         </div>
 
+        {!isLoading && page < totalPages && dragIdx !== null && (
+          <div
+            onDragOver={(e) => handlePageDragOver(e, "next")}
+            onDrop={(e) => handlePageDrop(e, "next")}
+            className={`mt-2 rounded-md border border-dashed p-3 text-center text-sm text-gray-500 ${dragPageTarget === "next" ? "border-[#DF8635] bg-orange-50/50" : "border-gray-200 bg-white"}`}
+          >
+            Suelta aquí para mover el producto a la página {page + 1}
+          </div>
+        )}
+
         {!isLoading && totalPages > 0 && (
           <Pagination page={page} totalPages={totalPages} total={total} perPage={PER_PAGE} goToPage={goToPage} />
+        )}
+
+        {moveTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-8">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-black/5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Mover producto</p>
+                  <p className="mt-1 text-xs text-gray-500">{moveTarget.nombre}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoveTarget(null)}
+                  className="text-gray-400 hover:text-gray-700"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <label className="mt-5 block text-[11px] uppercase tracking-[0.12em] text-gray-500">Nueva posición</label>
+              <input
+                type="number"
+                min={1}
+                max={total}
+                value={movePos}
+                onChange={(e) => setMovePos(e.target.value)}
+                className="mt-2 w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#111] focus:outline-none"
+                placeholder={`1 - ${total}`}
+              />
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMoveTarget(null)}
+                  className="h-9 px-3 text-[11px] font-semibold rounded-sm border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMoveToPosition}
+                  disabled={saving || !movePos}
+                  className="h-9 px-3 text-[11px] font-semibold rounded-sm text-white bg-[#111] hover:bg-[#333] disabled:bg-gray-300 disabled:text-gray-500"
+                >
+                  Mover
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -342,7 +590,7 @@ export function ProductTable({
                     }}
                   >
                     <td className="pl-3 pr-2 py-3 w-[60px]">
-                      <Thumb src={(() => { try { const arr = JSON.parse(p.imagenes ?? "[]"); return Array.isArray(arr) ? arr[0] : null; } catch { return null; } })()} alt={p.nombre ?? ""} />
+                      <Thumb src={p.imagen ?? null} alt={p.nombre ?? ""} />
                     </td>
                     <td className="px-4 py-3 max-w-[220px]">
                       <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">{p.nombre ?? "-"}</p>

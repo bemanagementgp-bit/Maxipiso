@@ -120,6 +120,19 @@ export async function GET(req: NextRequest) {
     // Construye filtros comunes
     const isActive = estado === "activo" ? true : estado === "inactivo" ? false : undefined;
 
+    const SEARCH_FIELDS: Record<string, string[]> = {
+      pisoFlotante: ["nombre", "sku", "marca"],
+      porcellanato: ["nombre", "sku", "marca"],
+      revestimiento: ["nombre", "sku", "marca"],
+      pisoVinilico: ["nombre", "sku", "marca"],
+      pisoMadera: ["especie", "sku", "marca"],
+      deck: ["nombre", "sku", "marca"],
+      madera: ["nombre", "sku", "origen"],
+      accesorio: ["nombre", "sku"],
+    };
+
+    const tablesWithMarca = new Set(["pisoFlotante", "porcellanato", "revestimiento", "pisoVinilico", "pisoMadera", "deck"]);
+
     // Consulta todas las tablas en paralelo
     const results = await Promise.all(
       keys.map(async (key) => {
@@ -128,22 +141,17 @@ export async function GET(req: NextRequest) {
 
         const where: Record<string, unknown> = {};
         if (isActive !== undefined) where.isActive = isActive;
-        if (marca) where.marca = marca;
+        if (marca && tablesWithMarca.has(key)) where.marca = marca;
         if (catPrincipalFilter && key === "revestimiento") where.categoriaPrincipal = { in: catPrincipalFilter };
 
         if (search) {
-          const searchFields = key === "pisoMadera"
-            ? ["especie", "sku", "marca"]
-            : key === "madera"
-            ? ["nombre", "sku", "origen"]
-            : ["nombre", "sku", "marca"];
-
+          const searchFields = SEARCH_FIELDS[key] ?? ["nombre", "sku"];
           where.OR = searchFields.map((f) => ({ [f]: { contains: search } }));
         }
 
         const rows = await delegate.findMany({
           where,
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
           take: 2000, // trae muchos para paginar en memoria
         });
 
@@ -170,11 +178,22 @@ export async function GET(req: NextRequest) {
       "accesorios": "accesorio",
     };
     const priorityType = tablaFilter ? ADMIN_PRIORITY[tablaFilter] ?? ADMIN_PRIORITY[effectiveTabla ?? ""] : null;
+    const categoryOrder = new Map(TABLE_KEYS.map((key, index) => [DB_NAMES[key], index]));
 
-    // Combina, ordena por createdAt desc y pagina
+    // Combina y ordena. En vista dedicada respeta el sortOrder manual;
+    // en la vista global agrupa según el orden de categorías del panel.
     const all = results
       .flat()
       .sort((a, b) => {
+        if (tablaFilter) {
+          const aSort = Number((a as any).sortOrder ?? 0);
+          const bSort = Number((b as any).sortOrder ?? 0);
+          if (aSort !== bSort) return aSort - bSort;
+        } else {
+          const aCategory = categoryOrder.get(String((a as any)._tabla)) ?? TABLE_KEYS.length;
+          const bCategory = categoryOrder.get(String((b as any)._tabla)) ?? TABLE_KEYS.length;
+          if (aCategory !== bCategory) return aCategory - bCategory;
+        }
         if (priorityType) {
           const aTP = String((a as any).tipoProducto ?? "").toLowerCase();
           const bTP = String((b as any).tipoProducto ?? "").toLowerCase();

@@ -104,7 +104,7 @@ const lineas = [
   { label: "Pisos Vinílicos", href: "/catalogo" },
 ];
 
-const WA_URL = "https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";
+const WA_URL = "https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20cómo%20trabajar%20con%20Maxipiso";
 
 export default function TrabajaConMaxipisoPage() {
   const stats = useInView(0.2);

@@ -338,7 +338,7 @@ export default function EmpresaPage() {
               Quiero ser distribuidor
             </Link>
             <a
-              href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20Maxipiso"
+              href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20Maxipiso"
               target="_blank"
               rel="noopener noreferrer"
               className="border border-white/30 text-white font-semibold px-8 py-3 rounded-full hover:bg-white/10 transition-colors flex items-center gap-2"

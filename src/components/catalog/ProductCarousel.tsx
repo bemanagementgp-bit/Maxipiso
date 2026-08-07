@@ -96,7 +96,7 @@ export default function ProductCarousel({ title, href, products, showPrices }: P
               </p>
               {showPrices && product.precio > 0 && (
                 <p className="text-[#DF8635] font-bold text-sm">
-                  $ {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  {(product.precio > 500 ? "$" : "u$d")} {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </p>
               )}
               <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DF8635]">

@@ -128,7 +128,7 @@ function ProductCardBase({
 
         {(item.precioM2 || item.precioCaja || item.precio) && (
           <p className="text-[#DF8635] font-bold text-sm">
-            {item.moneda === "USD" ? "US$" : "$"}{" "}
+            {((item.precioM2 ?? item.precioCaja ?? item.precio) ?? 0) > 500 ? "$" : "u$d"}{" "}
             {(item.precioM2 ?? item.precioCaja ?? item.precio)?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             {item.precioM2 ? " /m²" : item.precioCaja ? " /caja" : ""}
           </p>
@@ -155,7 +155,7 @@ function ProductCardBase({
             Ver detalle
           </Link>
           <a
-            href={`https://wa.me/5422143888894?text=${waText}`}
+            href={`https://wa.me/542214388894?text=${waText}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-center bg-[#DF8635] text-white text-xs font-semibold py-2.5 rounded-xl hover:bg-[#c97220] transition-colors"
@@ -202,7 +202,7 @@ export function EmptyState({ label }: { label: string }) {
         No se encontraron productos en <strong>{label}</strong> con los filtros seleccionados.
       </p>
       <a
-        href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20consultar%20disponibilidad%20de%20productos"
+        href="https://wa.me/542214388894?text=Hola%2C%20quiero%20consultar%20disponibilidad%20de%20productos"
         target="_blank"
         rel="noopener noreferrer"
         className="mt-6 inline-flex items-center gap-2 bg-[#DF8635] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#c97220] transition-colors"
@@ -666,7 +666,7 @@ export function CategoryListing({
         params.set(`filtros[${key}]`, val);
       }
 
-      const res = await fetch(`/api/catalogo/${effectiveApiSlug}?${params}`, { signal: controller.signal });
+      const res = await fetch(`/api/catalogo/${effectiveApiSlug}?${params}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) throw new Error();
       const json = await res.json();
       const data = json.data;

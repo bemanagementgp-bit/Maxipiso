@@ -212,7 +212,7 @@ export async function GET(req: NextRequest) {
         where.OR = fields.map((f) => ({ [f]: { contains: search } }));
       }
       const needsPrioritySort = singleTable && !!PRIORITY_TYPE[table.key];
-      const findArgs: Record<string, unknown> = { where, orderBy: { createdAt: "desc" } };
+      const findArgs: Record<string, unknown> = { where, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] };
       if (singleTable && !needsPrioritySort) {
         findArgs.skip = skip;
         findArgs.take = take;
@@ -304,7 +304,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+      headers: { "Cache-Control": "private, no-store, max-age=0" },
     });
   } catch (err) {
     console.error("[catalogo/todos] error:", err);

@@ -129,7 +129,7 @@ function CatalogoPage() {
         params.set(`filtros[${key}]`, val);
       }
 
-      const res = await fetch(`/api/catalogo/todos?${params}`, { signal: controller.signal });
+      const res = await fetch(`/api/catalogo/todos?${params}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) throw new Error();
       const json = await res.json();
       const data = json.data;

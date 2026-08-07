@@ -133,6 +133,7 @@ model PisoFlotante {
   descripcion         String?
   metadatos           String? // JSON key-value extra
   isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -177,6 +178,7 @@ model Porcellanato {
   descripcion         String?
   metadatos           String? // JSON key-value extra
   isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -218,6 +220,7 @@ model Revestimiento {
   descripcion        String?
   metadatos          String? // JSON key-value extra
   isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -272,6 +275,7 @@ model PisoVinilico {
   descripcion          String?
   metadatos            String? // JSON key-value extra
   isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -321,6 +325,7 @@ model PisoMadera {
   descripcion         String?
   metadatos           String? // JSON key-value extra
   isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -360,6 +365,7 @@ model Deck {
   descripcion        String?
   metadatos          String? // JSON key-value extra
   isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -389,6 +395,7 @@ model Madera {
   archivoInstalacion   String?
   metadatos            String? // JSON key-value extra
   isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -412,6 +419,7 @@ model Accesorio {
   descripcion  String?
   metadatos    String? // JSON key-value extra
   isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -8,6 +8,14 @@ import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
 import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiShoppingBag } from "react-icons/fi";
 import HeroCarousel from "@/components/home/HeroCarousel";
+import { articles as novedadesArticles } from "@/data/novedades";
+
+const novedadesLandings = [
+  { slug: "ofertas-mayoristas", title: "Ofertas imperdibles — hasta 30% OFF", excerpt: "Descuentos exclusivos en pisos y revestimientos. Packs por cantidad, envío inmediato y stock actualizado.", image: "/maderas.jpg", category: "Ofertas", date: "Actualizado permanentemente" },
+  { slug: "trabaja-con-maxipiso", title: "¿Por qué trabajar con Maxipiso?", excerpt: "Stock garantizado, precios de mayorista, logística propia y más de 1.000 productos.", image: "/equipo.jpg", category: "Para comercios", date: "Para revendedores" },
+  { slug: "proyectos-y-obras", title: "Soluciones para grandes proyectos", excerpt: "Abastecemos obras de cualquier escala. Stock permanente, precios por volumen y asesoramiento técnico.", image: "/obras-construccion.jpg", category: "Obras & Proyectos", date: "Para constructoras" },
+];
+const allNovedades = [...novedadesLandings, ...novedadesArticles];
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -234,6 +242,97 @@ function Reveal({ children, className = "", delay = 0 }: {
   );
 }
 
+// ── Novedades carousel ───────────────────────────────────────────────────────
+
+function NovedadesCarousel() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const items = [...allNovedades, ...allNovedades, ...allNovedades];
+
+  const scroll = (dir: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardW = el.querySelector("a")?.offsetWidth ?? 280;
+    el.scrollBy({ left: dir === "left" ? -(cardW + 20) : (cardW + 20), behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const oneSetWidth = el.scrollWidth / 3;
+    el.scrollLeft = oneSetWidth;
+
+    const handleScroll = () => {
+      if (el.scrollLeft < 10) {
+        el.style.scrollBehavior = "auto";
+        el.scrollLeft += oneSetWidth;
+        el.style.scrollBehavior = "";
+      } else if (el.scrollLeft >= oneSetWidth * 2 - 10) {
+        el.style.scrollBehavior = "auto";
+        el.scrollLeft -= oneSetWidth;
+        el.style.scrollBehavior = "";
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div className="relative group/carousel">
+      <button
+        onClick={() => scroll("left")}
+        className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/90 backdrop-blur shadow-xl border border-gray-100 flex items-center justify-center transition-all duration-300 hover:bg-[#DF8635] hover:text-white hover:border-[#DF8635] hover:scale-110"
+        aria-label="Anterior"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      <button
+        onClick={() => scroll("right")}
+        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/90 backdrop-blur shadow-xl border border-gray-100 flex items-center justify-center transition-all duration-300 hover:bg-[#DF8635] hover:text-white hover:border-[#DF8635] hover:scale-110"
+        aria-label="Siguiente"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+      </button>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-5 overflow-x-auto px-4 sm:px-8 lg:px-16"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+      >
+        {items.map((card, i) => (
+          <Link
+            key={`${card.slug}-${i}`}
+            href={`/novedades/${card.slug}`}
+            className="group block flex-shrink-0 w-[260px] snap-start"
+          >
+            <article className="overflow-hidden border border-gray-200 hover:border-[#DF8635] hover:shadow-xl transition-all duration-300 flex flex-col bg-white">
+              <div className="relative aspect-square overflow-hidden bg-gray-100 shrink-0">
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <span className="absolute top-3 left-3 bg-[#DF8635] text-white text-[9px] font-semibold px-2.5 py-1 uppercase tracking-wide">
+                  {card.category}
+                </span>
+              </div>
+              <div className="p-4 flex flex-col gap-1.5">
+                <p className="text-gray-400 text-[10px] uppercase tracking-widest">{card.date}</p>
+                <h3 className="font-bold text-[#111111] text-sm leading-snug group-hover:text-[#DF8635] transition-colors line-clamp-2">
+                  {card.title}
+                </h3>
+                <span className="mt-1 text-[#DF8635] text-xs font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                  Leer más <FiArrowRight size={12} />
+                </span>
+              </div>
+            </article>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Product gallery marquee ───────────────────────────────────────────────────
 
 function GalleryMarquee() {
@@ -356,7 +455,7 @@ function ContactSection() {
                 </div>
                 <div>
                   <p className="font-semibold text-[#111111]">WhatsApp</p>
-                  <a href="https://wa.me/5422143888894" target="_blank" rel="noopener noreferrer" className="text-[#DF8635] hover:underline">+54 221 438-8894</a>
+                  <a href="https://wa.me/542214388894" target="_blank" rel="noopener noreferrer" className="text-[#DF8635] hover:underline">+54 221 438-8894</a>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -478,7 +577,7 @@ export default function Home() {
                 Ver catálogo
               </Link>
               <a
-                href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
+                href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="border-2 border-white text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white hover:text-[#111111] transition-colors text-base flex items-center gap-2"
@@ -572,6 +671,31 @@ export default function Home() {
       {/* Stats wall — the surprise */}
       <StatsSection />
 
+      {/* Novedades */}
+      <section className="bg-[#fafafa] py-16 border-y border-gray-100 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Reveal className="text-center mb-10">
+            <p className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-2">
+              Blog & Guías
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
+              Novedades
+            </h2>
+          </Reveal>
+        </div>
+        <NovedadesCarousel />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Reveal className="text-center mt-8">
+            <Link
+              href="/novedades"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#DF8635] hover:underline"
+            >
+              Ver todas las novedades <FiArrowRight size={14} />
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
       {/* Product gallery marquee */}
       <GalleryMarquee />
 
@@ -649,7 +773,7 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a
-                href="https://wa.me/5422143888894?text=Hola%2C%20quiero%20información%20para%20ser%20distribuidor%20de%20Maxipiso"
+                href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20para%20ser%20distribuidor%20de%20Maxipiso"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white text-[#DF8635] font-semibold px-8 py-3 rounded-full hover:bg-gray-100 transition-colors"

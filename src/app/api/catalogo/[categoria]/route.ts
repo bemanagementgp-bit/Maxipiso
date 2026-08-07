@@ -203,7 +203,7 @@ export async function GET(
     });
 
     const [productosRaw, total, ...filterResults] = await Promise.all([
-      delegate.findMany({ where, skip, take, orderBy: { createdAt: "desc" } }),
+      delegate.findMany({ where, skip, take, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
       delegate.count({ where }),
       ...filterPromises,
     ]);
@@ -260,7 +260,7 @@ export async function GET(
     }
 
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+      headers: { "Cache-Control": "private, no-store, max-age=0" },
     });
   } catch (err) {
     console.error("[catalogo/[categoria]] error:", err);
