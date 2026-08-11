@@ -164,12 +164,10 @@ export function ProductModal({
           method: "POST",
           body: uploadFormData,
         });
-
-        if (!uploadRes.ok) {
-          throw new Error("Error al subir imagen");
-        }
-
         const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData?.error || "Error al subir imagen");
+        }
         imagenUrl = uploadData.data.url;
       } catch (err: any) {
         setError(err.message || "Error al subir imagen");

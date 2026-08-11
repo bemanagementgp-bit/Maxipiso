@@ -113,15 +113,19 @@ export async function POST(req: NextRequest) {
 
     if (productId && foundProduct) {
       const delegate = (prisma as any)[foundProduct.tableKey];
-      const hasArray = TABLES_WITH_IMAGENES_ARRAY.includes(foundProduct.tableKey);
-      if (hasArray) {
-        // Append to existing JSON array
-        const existing: string[] = (() => {
-          try { return JSON.parse((foundProduct.raw.imagenes as string) ?? "[]"); } catch { return []; }
-        })();
-        if (!existing.includes(url)) existing.push(url);
-        await delegate.update({ where: { id: productId }, data: { imagenes: JSON.stringify(existing) } });
-      }
+      const existing: string[] = (() => {
+        const rawValue = String(foundProduct.raw.imagenes ?? "").trim();
+        if (!rawValue) return [];
+        try {
+          const parsed = JSON.parse(rawValue);
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [String(parsed)];
+        } catch {
+          return [rawValue];
+        }
+      })();
+
+      const nextImages = existing.includes(url) ? existing : [...existing, url];
+      await delegate.update({ where: { id: productId }, data: { imagenes: JSON.stringify(nextImages) } });
     }
 
     return NextResponse.json({ success: true, data: { url } }, { status: 201 });

@@ -53,6 +53,8 @@ export function verifyOrigin(req: NextRequest): NextResponse | null {
     allowed.add(`https://${host}`);
     allowed.add(`http://${host}`);
   }
+  const requestUrlOrigin = new URL(req.url).origin;
+  allowed.add(requestUrlOrigin);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
   if (appUrl) {
     try {

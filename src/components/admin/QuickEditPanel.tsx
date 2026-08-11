@@ -181,11 +181,13 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       if (productId) fd.append("productId", productId);
       try {
         const res = await fetch("/api/upload", { method: "POST", body: fd });
-        if (!res.ok) throw new Error("Error al subir imagen");
         const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Error al subir imagen");
+        }
         if (!finalImages.includes(data.data.url)) finalImages.push(data.data.url);
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || "Error al subir imagen");
         return;
       }
     }

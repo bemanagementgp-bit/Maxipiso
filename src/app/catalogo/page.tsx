@@ -50,8 +50,8 @@ function CatalogoPage() {
     return Number.isNaN(value) || value < 1 ? 1 : value;
   });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("search") ?? "");
 
   const [sortBy, setSortBy] = useState("relevancia");
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
@@ -63,11 +63,13 @@ function CatalogoPage() {
   const lastPushedRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const isInitialSearchMount = useRef(true);
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
     const cat = searchParams.get("categoria") ?? "";
     const urlFilters: Record<string, string> = {};
     let pageFromUrl = 1;
+    const searchFromUrl = searchParams.get("search") ?? "";
 
     searchParams.forEach((value, k) => {
       const pageMatch = k === "page";
@@ -82,6 +84,8 @@ function CatalogoPage() {
     setSelectedCategoria(cat);
     setActiveFilters(Object.keys(urlFilters).length > 0 ? urlFilters : {});
     setPage(pageFromUrl);
+    setSearch(searchFromUrl);
+    setDebouncedSearch(searchFromUrl);
   }, [searchParams]);
 
   useEffect(() => {
@@ -148,7 +152,9 @@ function CatalogoPage() {
   const fetchData = useCallback(async () => {
     if (status === "loading") return;
     setLoading(true);
-    // Cancela cualquier petición previa en vuelo (evita renders con datos viejos)
+    setProductos([]);
+    setTotal(0);
+    const currentFetchId = ++fetchIdRef.current;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -164,15 +170,17 @@ function CatalogoPage() {
       const res = await fetch(`/api/catalogo/todos?${params}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) throw new Error();
       const json = await res.json();
+      if (fetchIdRef.current !== currentFetchId) return;
       const data = json.data;
       setProductos(data?.productos ?? []);
       setTotal(data?.total ?? 0);
       if (data?.filtros) setFiltros(data.filtros);
       if (data?.categorias) setCategorias(data.categorias);
     } catch (err) {
-      if ((err as Error)?.name === "AbortError") return; // petición cancelada: ignorar
-      setProductos([]);
-      setTotal(0);
+      if ((err as Error)?.name !== "AbortError" && fetchIdRef.current === currentFetchId) {
+        setProductos([]);
+        setTotal(0);
+      }
     } finally {
       if (abortRef.current === controller) {
         setLoading(false);
