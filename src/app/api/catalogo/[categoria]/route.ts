@@ -112,10 +112,10 @@ const BRAND_ALIASES: Record<string, string> = {
 const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
 
 const SEARCH_FIELDS: Record<string, string[]> = {
-  "pisos-flotantes": ["nombre", "sku", "marca", "linea", "descripcion"],
-  "porcellanatos":   ["nombre", "sku", "marca", "linea", "descripcion"],
+  "pisos-flotantes": ["nombre", "sku", "codigo", "marca", "linea", "descripcion"],
+  "porcellanatos":   ["nombre", "sku", "codigo", "marca", "linea", "descripcion"],
   "revestimientos":  ["nombre", "sku", "marca", "material", "descripcion"],
-  "pisos-vinilicos": ["nombre", "sku", "marca", "linea", "descripcion"],
+  "pisos-vinilicos": ["nombre", "sku", "codigo", "marca", "linea", "descripcion"],
   "pisos-madera":    ["especie", "sku", "marca", "linea", "descripcion"],
   "decks":           ["nombre", "sku", "marca", "material", "descripcion"],
   "maderas":         ["nombre", "sku", "origen", "descripcion"],

@@ -65,6 +65,17 @@ export const TABLE_CATEGORIA: Record<TableKey, string> = {
   accesorio:     "Accesorios",
 };
 
+const SEARCH_FIELDS_BY_TABLE: Record<TableKey, string[]> = {
+  pisoFlotante:  ["sku", "nombre", "codigo"],
+  porcellanato:  ["sku", "nombre", "codigo"],
+  revestimiento: ["sku", "nombre"],
+  pisoVinilico:  ["sku", "nombre", "codigo"],
+  pisoMadera:    ["sku", "nombre"],
+  deck:          ["sku", "nombre"],
+  madera:        ["sku", "nombre"],
+  accesorio:     ["sku", "nombre"],
+};
+
 /** Tables that store multiple images as a JSON array in the `imagenes` field */
 export const TABLES_WITH_IMAGENES_ARRAY: TableKey[] = [
   "pisoFlotante",
@@ -179,10 +190,8 @@ export async function getAllProducts(options?: {
       const where: Record<string, unknown> = {};
       if (options?.isActive !== undefined) where.isActive = options.isActive;
       if (options?.search) {
-        where.OR = [
-          { sku:    { contains: options.search } },
-          { nombre: { contains: options.search } },
-        ];
+        const fields = SEARCH_FIELDS_BY_TABLE[key] ?? ["sku", "nombre"];
+        where.OR = fields.map((field) => ({ [field]: { contains: options.search } }));
       }
 
       const rows = await delegate
@@ -236,16 +245,17 @@ export async function findProductsByIds(ids: string[]): Promise<Map<string, Norm
   return map;
 }
 
-/** Full-text search by SKU or nombre across all tables. */
+/** Full-text search by SKU, nombre or codigo across all tables. */
 export async function searchProducts(q: string, limit = 8): Promise<NormalizedProduct[]> {
   if (!q || q.length < 2) return [];
   const results = await Promise.all(
     TABLE_KEYS.map(async (key) => {
       const delegate = (prisma as any)[key];
       if (!delegate) return [];
+      const fields = SEARCH_FIELDS_BY_TABLE[key] ?? ["sku", "nombre"];
       const rows = await delegate
         .findMany({
-          where: { OR: [{ sku: { contains: q } }, { nombre: { contains: q } }] },
+          where: { OR: fields.map((field) => ({ [field]: { contains: q } })) },
           take: limit,
         })
         .catch(() => []);

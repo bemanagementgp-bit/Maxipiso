@@ -46,10 +46,10 @@ const TABLES = [
 ] as const;
 
 const SEARCH_FIELDS: Record<string, string[]> = {
-  "pisos-flotantes": ["nombre", "sku", "marca", "descripcion"],
-  "porcellanatos":   ["nombre", "sku", "marca", "descripcion"],
+  "pisos-flotantes": ["nombre", "sku", "codigo", "marca", "descripcion"],
+  "porcellanatos":   ["nombre", "sku", "codigo", "marca", "descripcion"],
   "revestimientos":  ["nombre", "sku", "material", "descripcion"],
-  "pisos-vinilicos": ["nombre", "sku", "marca", "descripcion"],
+  "pisos-vinilicos": ["nombre", "sku", "codigo", "marca", "descripcion"],
   "pisos-madera":    ["especie", "sku", "marca", "descripcion"],
   "decks":           ["nombre", "sku", "marca", "descripcion"],
   "maderas":         ["nombre", "sku", "origen", "descripcion"],
@@ -135,6 +135,7 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const search = sanitizeText(sp.get("search") ?? "", 100);
     const categoria = sp.get("categoria") ?? "";
+    const sortBy = sanitizeText(sp.get("sortBy") ?? "relevancia", 50);
     const skip = parseIntSafe(sp.get("skip"), 0, 0, 1_000_000);
     const take = parseIntSafe(sp.get("take"), 15, 1, 200);
 
@@ -212,7 +213,22 @@ export async function GET(req: NextRequest) {
         where.OR = fields.map((f) => ({ [f]: { contains: search } }));
       }
       const needsPrioritySort = singleTable && !!PRIORITY_TYPE[table.key];
-      const findArgs: Record<string, unknown> = { where, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] };
+      const findArgs: Record<string, unknown> = { where };
+
+      if (sortBy === "precio-menor") {
+        findArgs.orderBy = [{ precio: "asc" }];
+      } else if (sortBy === "precio-mayor") {
+        findArgs.orderBy = [{ precio: "desc" }];
+      } else if (sortBy === "nombre-az") {
+        findArgs.orderBy = [{ nombre: "asc" }];
+      } else if (sortBy === "nombre-za") {
+        findArgs.orderBy = [{ nombre: "desc" }];
+      } else if (sortBy === "recientes") {
+        findArgs.orderBy = [{ createdAt: "desc" }];
+      } else {
+        findArgs.orderBy = [{ sortOrder: "asc" }, { createdAt: "desc" }];
+      }
+
       if (singleTable && !needsPrioritySort) {
         findArgs.skip = skip;
         findArgs.take = take;

@@ -175,24 +175,27 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
   })();
 
   const normalize = (text: string) => text.trim().toLowerCase().replace(/s$/, "");
-  const filters: Record<string, string> = {};
 
-  return pathDefs
-    .filter((entry, index, arr) => {
-      if (!entry.text) return false;
-      const norm = normalize(entry.text);
-      return !arr.slice(0, index).some((prev) => prev.text && normalize(prev.text) === norm);
-    })
-    .map((entry) => {
-      if (entry.field && entry.value) {
-        filters[entry.field] = entry.value;
+  const pathEntries = pathDefs.filter((entry, index, arr) => {
+    if (!entry.text) return false;
+    const norm = normalize(entry.text);
+    return !arr.slice(0, index).some((prev) => prev.field === entry.field && prev.text && normalize(prev.text) === norm);
+  });
+
+  return pathEntries.map((entry, index) => {
+    const filters: Record<string, string> = {};
+    for (let i = 0; i <= index; i++) {
+      const current = pathEntries[i];
+      if (current.field && current.value) {
+        filters[current.field] = current.value;
       }
-      return {
-        text: entry.text,
-        href: buildCatalogHref(tableKey, filters),
-        className: "text-[11px] text-[#111111] hover:text-[#111111] transition-colors",
-      };
-    });
+    }
+    return {
+      text: entry.text,
+      href: buildCatalogHref(tableKey, filters),
+      className: "text-[11px] text-[#111111] hover:text-[#111111] transition-colors",
+    };
+  });
 }
 
 function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {

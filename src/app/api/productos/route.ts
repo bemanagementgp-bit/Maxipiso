@@ -121,10 +121,10 @@ export async function GET(req: NextRequest) {
     const isActive = estado === "activo" ? true : estado === "inactivo" ? false : undefined;
 
     const SEARCH_FIELDS: Record<string, string[]> = {
-      pisoFlotante: ["nombre", "sku", "marca"],
-      porcellanato: ["nombre", "sku", "marca"],
+      pisoFlotante: ["nombre", "sku", "codigo", "marca"],
+      porcellanato: ["nombre", "sku", "codigo", "marca"],
       revestimiento: ["nombre", "sku", "marca"],
-      pisoVinilico: ["nombre", "sku", "marca"],
+      pisoVinilico: ["nombre", "sku", "codigo", "marca"],
       pisoMadera: ["especie", "sku", "marca"],
       deck: ["nombre", "sku", "marca"],
       madera: ["nombre", "sku", "origen"],

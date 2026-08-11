@@ -45,7 +45,10 @@ function CatalogoPage() {
 
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const value = Number(searchParams.get("page") ?? "1");
+    return Number.isNaN(value) || value < 1 ? 1 : value;
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -57,27 +60,60 @@ function CatalogoPage() {
   const [filtros, setFiltros] = useState<Record<string, FilterGroup>>({});
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
+  const lastPushedRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const lastPushedRef = useRef("");
+  const isInitialSearchMount = useRef(true);
 
   useEffect(() => {
     const cat = searchParams.get("categoria") ?? "";
-    const key = searchParams.toString();
-    if (key === lastPushedRef.current) return;
     const urlFilters: Record<string, string> = {};
+    let pageFromUrl = 1;
+
     searchParams.forEach((value, k) => {
+      const pageMatch = k === "page";
+      if (pageMatch) {
+        const parsed = Number(value);
+        if (!Number.isNaN(parsed) && parsed >= 1) pageFromUrl = parsed;
+      }
       const match = k.match(/^filtros\[(.+)]$/);
       if (match) urlFilters[match[1]] = value;
     });
+
     setSelectedCategoria(cat);
     setActiveFilters(Object.keys(urlFilters).length > 0 ? urlFilters : {});
-    setPage(1);
+    setPage(pageFromUrl);
   }, [searchParams]);
 
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (!isInitialSearchMount.current) {
+        setPage(1);
+      }
+      isInitialSearchMount.current = false;
+    }, 350);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (selectedCategoria) params.set("categoria", selectedCategoria);
+    for (const [key, val] of Object.entries(activeFilters)) {
+      params.set(`filtros[${key}]`, val);
+    }
+    if (page > 1) params.set("page", String(page));
+
+    const url = params.toString() ? `/catalogo?${params.toString()}` : "/catalogo";
+    if (lastPushedRef.current !== url) {
+      lastPushedRef.current = url;
+      router.replace(url, { scroll: false });
+    }
+  }, [page, debouncedSearch, selectedCategoria, activeFilters, router]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sortBy]);
 
   const handleToggleFilter = (key: string, value: string) => {
     setActiveFilters((prev) => {
@@ -107,10 +143,6 @@ function CatalogoPage() {
     setSelectedCategoria(val);
     setActiveFilters({});
     setPage(1);
-    const params = val ? `categoria=${val}` : "";
-    lastPushedRef.current = params;
-    const url = val ? `/catalogo?${params}` : "/catalogo";
-    router.replace(url, { scroll: false });
   };
 
   const fetchData = useCallback(async () => {
@@ -122,7 +154,7 @@ function CatalogoPage() {
     abortRef.current = controller;
     try {
       const skip = (page - 1) * PAGE_SIZE;
-      const params = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(skip) });
+      const params = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(skip), sortBy });
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (selectedCategoria) params.set("categoria", selectedCategoria);
       for (const [key, val] of Object.entries(activeFilters)) {
@@ -147,7 +179,7 @@ function CatalogoPage() {
         abortRef.current = null;
       }
     }
-  }, [debouncedSearch, selectedCategoria, activeFilters, page, authTick, status]);
+  }, [debouncedSearch, selectedCategoria, activeFilters, page, authTick, status, sortBy]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -174,34 +206,11 @@ function CatalogoPage() {
     return pages;
   }, [page, totalPages]);
 
-  const sortedProductos = useMemo(() => {
-    if (sortBy === "relevancia") return productos;
-    const sorted = [...productos];
-    switch (sortBy) {
-      case "precio-menor":
-        sorted.sort((a, b) => ((a.precioM2 ?? a.precioCaja ?? a.precio ?? Infinity) as number) - ((b.precioM2 ?? b.precioCaja ?? b.precio ?? Infinity) as number));
-        break;
-      case "precio-mayor":
-        sorted.sort((a, b) => ((b.precioM2 ?? b.precioCaja ?? b.precio ?? 0) as number) - ((a.precioM2 ?? a.precioCaja ?? a.precio ?? 0) as number));
-        break;
-      case "nombre-az":
-        sorted.sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es"));
-        break;
-      case "nombre-za":
-        sorted.sort((a, b) => (b.nombre ?? "").localeCompare(a.nombre ?? "", "es"));
-        break;
-      case "recientes":
-        sorted.sort((a, b) => new Date(String(b.createdAt ?? 0)).getTime() - new Date(String(a.createdAt ?? 0)).getTime());
-        break;
-    }
-    return sorted;
-  }, [productos, sortBy]);
-
   const productGrid = useMemo(
-    () => sortedProductos.map((item) => (
+    () => productos.map((item) => (
       <ProductCard key={item.id} item={item} categorySlug="catalogo" />
     )),
-    [sortedProductos]
+    [productos]
   );
 
   return (
