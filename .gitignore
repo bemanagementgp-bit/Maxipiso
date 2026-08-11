@@ -50,3 +50,13 @@ imagenes-sku/
 # claude internal
 .claude/
 .env*.local
+
+# local/non-functional files
+CLAUDE.md
+IMPLEMENTATION_SUMMARY.md
+SETUP_INSTRUCTIONS.md
+Correcciones - Cambios (1).txt
+Diseños ABM productos.html
+Master-nueva web (12).xlsx
+Angulos (1).cdr
+scripts/
