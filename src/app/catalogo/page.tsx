@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown, FiUser } from "react-icons/fi";
@@ -35,10 +35,80 @@ export default function CatalogoPageWrapper() {
   );
 }
 
+/**
+ * Cache de resultados del catalogo, en scope de modulo.
+ *
+ * Al volver de una ficha de producto el componente se remonta y perdia todo:
+ * se veia el skeleton y se re-pedia a /api/catalogo/todos, que consulta las 8
+ * tablas y puede tardar segundos. El Map vive fuera del componente, asi que
+ * sobrevive al remonte y la vuelta atras pinta al instante mientras revalida
+ * en silencio. Ademas, tener contenido de entrada permite que el navegador
+ * restaure la posicion del scroll.
+ */
+type CatalogoSnapshot = {
+  productos: CatalogItem[];
+  total: number;
+  filtros: Record<string, FilterGroup>;
+  categorias: CategoriaOption[];
+};
+const snapshotCache = new Map<string, CatalogoSnapshot>();
+const SNAPSHOT_MAX = 40;
+
+/**
+ * Construye la URL del catalogo a partir del estado.
+ *
+ * Vive fuera del componente porque se usa en dos lugares que TIENEN que
+ * coincidir caracter por caracter: el efecto que escribe la URL y el que la
+ * lee. Si difirieran (por orden de parametros, por ejemplo) cada lectura
+ * dispararia una escritura y se ensuciaria el historial.
+ */
+type EstadoUrl = {
+  search: string;
+  categoria: string;
+  filtros: Record<string, string>;
+  orden: string;
+  page: number;
+};
+
+function construirUrl({ search, categoria, filtros, orden, page }: EstadoUrl): string {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (categoria) params.set("categoria", categoria);
+  for (const [key, val] of Object.entries(filtros)) params.set(`filtros[${key}]`, val);
+  if (orden && orden !== "relevancia") params.set("orden", orden);
+  if (page > 1) params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `/catalogo?${qs}` : "/catalogo";
+}
+
+/** Scroll de cada vista, para restaurarlo al volver atras. */
+const scrollCache = new Map<string, number>();
+
+/**
+ * Marca si la navegacion actual vino del boton atras/adelante.
+ *
+ * El listener va en scope de modulo porque `popstate` dispara ANTES de que
+ * React monte el componente de destino: si se registrara adentro, el evento ya
+ * habria pasado. El flag se consume en el montaje.
+ */
+let vinoDeHistorial = false;
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    vinoDeHistorial = true;
+  });
+}
+
+function guardarSnapshot(key: string, snap: CatalogoSnapshot) {
+  if (snapshotCache.size >= SNAPSHOT_MAX) {
+    const primero = snapshotCache.keys().next().value;
+    if (primero !== undefined) snapshotCache.delete(primero);
+  }
+  snapshotCache.set(key, snap);
+}
+
 function CatalogoPage() {
   const PAGE_SIZE = 30;
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [authTick, setAuthTick] = useState(0);
@@ -53,7 +123,7 @@ function CatalogoPage() {
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("search") ?? "");
 
-  const [sortBy, setSortBy] = useState("relevancia");
+  const [sortBy, setSortBy] = useState(() => searchParams.get("orden") ?? "relevancia");
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState(() => searchParams.get("categoria") ?? "");
 
@@ -61,15 +131,19 @@ function CatalogoPage() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const lastPushedRef = useRef<string | null>(null);
+  const estadoAnteriorRef = useRef<EstadoUrl | null>(null);
+  const scrollPendienteRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const isInitialSearchMount = useRef(true);
   const fetchIdRef = useRef(0);
 
+  // URL -> estado. Corre en el montaje y en cada atras/adelante del navegador.
   useEffect(() => {
     const cat = searchParams.get("categoria") ?? "";
     const urlFilters: Record<string, string> = {};
     let pageFromUrl = 1;
     const searchFromUrl = searchParams.get("search") ?? "";
+    const ordenFromUrl = searchParams.get("orden") ?? "relevancia";
 
     searchParams.forEach((value, k) => {
       const pageMatch = k === "page";
@@ -86,6 +160,20 @@ function CatalogoPage() {
     setPage(pageFromUrl);
     setSearch(searchFromUrl);
     setDebouncedSearch(searchFromUrl);
+    setSortBy(ordenFromUrl);
+
+    // Anotar la URL que se acaba de leer para que el efecto de escritura no la
+    // vuelva a empujar. Sin esto, volver atras agregaba una entrada nueva al
+    // historial y el boton "adelante" quedaba inutilizable.
+    const estado: EstadoUrl = {
+      search: searchFromUrl,
+      categoria: cat,
+      filtros: urlFilters,
+      orden: ordenFromUrl,
+      page: pageFromUrl,
+    };
+    lastPushedRef.current = construirUrl(estado);
+    estadoAnteriorRef.current = estado;
   }, [searchParams]);
 
   useEffect(() => {
@@ -99,23 +187,54 @@ function CatalogoPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // Estado -> URL.
+  //
+  // Paginar, filtrar, ordenar o cambiar de categoria APILA una entrada en el
+  // historial (`push`): asi el boton atras recorre las paginas del catalogo en
+  // vez de saltar afuera del sitio de una. Escribir en el buscador no apila
+  // nada (`replace`), porque cada tecleo dejaria una entrada basura.
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    if (selectedCategoria) params.set("categoria", selectedCategoria);
-    for (const [key, val] of Object.entries(activeFilters)) {
-      params.set(`filtros[${key}]`, val);
-    }
-    if (page > 1) params.set("page", String(page));
+    const estado: EstadoUrl = {
+      search: debouncedSearch,
+      categoria: selectedCategoria,
+      filtros: activeFilters,
+      orden: sortBy,
+      page,
+    };
+    const url = construirUrl(estado);
+    if (lastPushedRef.current === url) return;
 
-    const url = params.toString() ? `/catalogo?${params.toString()}` : "/catalogo";
-    if (lastPushedRef.current !== url) {
-      lastPushedRef.current = url;
-      router.replace(url, { scroll: false });
-    }
-  }, [page, debouncedSearch, selectedCategoria, activeFilters, router]);
+    const anterior = estadoAnteriorRef.current;
+    const soloCambioLaBusqueda =
+      anterior !== null &&
+      anterior.search !== estado.search &&
+      anterior.categoria === estado.categoria &&
+      anterior.orden === estado.orden &&
+      JSON.stringify(anterior.filtros) === JSON.stringify(estado.filtros);
 
+    lastPushedRef.current = url;
+    estadoAnteriorRef.current = estado;
+
+    // Se usa la History API nativa en vez de `router.push`/`router.replace`.
+    // El App Router la soporta y sincroniza `useSearchParams` solo, pero sin
+    // pedirle el RSC payload al servidor en cada click: la paginacion ya tiene
+    // los datos por fetch propio, asi que ese viaje era puro retraso.
+    if (soloCambioLaBusqueda) {
+      window.history.replaceState(null, "", url);
+    } else {
+      window.history.pushState(null, "", url);
+    }
+  }, [page, debouncedSearch, selectedCategoria, activeFilters, sortBy]);
+
+  // Volver a la pagina 1 al CAMBIAR el orden, pero no en el montaje.
+  //
+  // Sin el guard este efecto corria en el primer render y forzaba page = 1,
+  // pisando la pagina que venia en la URL: al volver desde una ficha de producto
+  // siempre aterrizabas en la pagina 1.
+  const sortByAnterior = useRef(sortBy);
   useEffect(() => {
+    if (sortByAnterior.current === sortBy) return;
+    sortByAnterior.current = sortBy;
     setPage(1);
   }, [sortBy]);
 
@@ -149,35 +268,62 @@ function CatalogoPage() {
     setPage(1);
   };
 
+  // Query que identifica esta vista. Es tambien la clave del cache: incluye si
+  // hay sesion porque la respuesta trae o no los precios.
+  const queryString = useMemo(() => {
+    const skip = (page - 1) * PAGE_SIZE;
+    const params = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(skip), sortBy });
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (selectedCategoria) params.set("categoria", selectedCategoria);
+    for (const [key, val] of Object.entries(activeFilters)) {
+      params.set(`filtros[${key}]`, val);
+    }
+    return params.toString();
+  }, [page, sortBy, debouncedSearch, selectedCategoria, activeFilters]);
+
+  const cacheKey = `${session ? "auth" : "anon"}|${queryString}`;
+
   const fetchData = useCallback(async () => {
     if (status === "loading") return;
-    setLoading(true);
-    setProductos([]);
-    setTotal(0);
+
+    // Si ya vimos esta combinacion, se pinta al instante y se revalida callado.
+    const cacheado = snapshotCache.get(cacheKey);
+    if (cacheado) {
+      setProductos(cacheado.productos);
+      setTotal(cacheado.total);
+      if (Object.keys(cacheado.filtros).length > 0) setFiltros(cacheado.filtros);
+      if (cacheado.categorias.length > 0) setCategorias(cacheado.categorias);
+      setLoading(false);
+    } else {
+      // No se blanquea la grilla: la lista anterior queda visible atenuada
+      // mientras carga, en vez de saltar al skeleton en cada click.
+      setLoading(true);
+    }
+
     const currentFetchId = ++fetchIdRef.current;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const skip = (page - 1) * PAGE_SIZE;
-      const params = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(skip), sortBy });
-      if (debouncedSearch) params.set("search", debouncedSearch);
-      if (selectedCategoria) params.set("categoria", selectedCategoria);
-      for (const [key, val] of Object.entries(activeFilters)) {
-        params.set(`filtros[${key}]`, val);
-      }
-
-      const res = await fetch(`/api/catalogo/todos?${params}`, { cache: "no-store", signal: controller.signal });
+      const res = await fetch(`/api/catalogo/todos?${queryString}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) throw new Error();
       const json = await res.json();
       if (fetchIdRef.current !== currentFetchId) return;
       const data = json.data;
-      setProductos(data?.productos ?? []);
-      setTotal(data?.total ?? 0);
+      const productosNuevos: CatalogItem[] = data?.productos ?? [];
+      const totalNuevo: number = data?.total ?? 0;
+      setProductos(productosNuevos);
+      setTotal(totalNuevo);
       if (data?.filtros) setFiltros(data.filtros);
       if (data?.categorias) setCategorias(data.categorias);
+      guardarSnapshot(cacheKey, {
+        productos: productosNuevos,
+        total: totalNuevo,
+        filtros: data?.filtros ?? {},
+        categorias: data?.categorias ?? [],
+      });
     } catch (err) {
-      if ((err as Error)?.name !== "AbortError" && fetchIdRef.current === currentFetchId) {
+      if ((err as Error)?.name !== "AbortError" && fetchIdRef.current === currentFetchId && !cacheado) {
         setProductos([]);
         setTotal(0);
       }
@@ -187,10 +333,140 @@ function CatalogoPage() {
         abortRef.current = null;
       }
     }
-  }, [debouncedSearch, selectedCategoria, activeFilters, page, authTick, status, sortBy]);
+  }, [queryString, cacheKey, authTick, status]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  /**
+   * Prefetch de la pagina siguiente.
+   *
+   * Se dispara cuando la vista actual ya termino de cargar y deja el resultado
+   * en el mismo cache que consume `fetchData`, asi "Siguiente" pinta sin
+   * esperar red. El delay evita gastar una consulta si el usuario esta
+   * paginando rapido de corrido.
+   */
+  useEffect(() => {
+    if (loading || productos.length === 0) return;
+    const siguiente = page + 1;
+    if (siguiente > Math.ceil(total / PAGE_SIZE)) return;
+
+    const params = new URLSearchParams(queryString);
+    params.set("skip", String((siguiente - 1) * PAGE_SIZE));
+    const qs = params.toString();
+    const key = `${session ? "auth" : "anon"}|${qs}`;
+    if (snapshotCache.has(key)) return;
+
+    const controller = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/catalogo/todos?${qs}`, { cache: "no-store", signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          const data = json?.data;
+          if (!data?.productos) return;
+          guardarSnapshot(key, {
+            productos: data.productos,
+            total: data.total ?? 0,
+            filtros: data.filtros ?? {},
+            categorias: data.categorias ?? [],
+          });
+        })
+        .catch(() => {});
+    }, 400);
+
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [loading, productos.length, page, total, queryString, session]);
+
+  /**
+   * Restauracion del scroll al volver atras.
+   *
+   * El navegador restaura solo, pero lo hace apenas monta el componente, cuando
+   * la grilla todavia esta vacia y la pagina mide 500px: el resultado es que
+   * volves arriba de todo. Por eso se guarda la altura de cada vista y se
+   * reaplica recien cuando hay productos pintados.
+   */
+  useEffect(() => {
+    let pendiente = false;
+    // Al hacer click en una ficha, Next lleva la pagina al tope antes de
+    // desmontar el catalogo. El evento de scroll de esa subida pisaba la altura
+    // guardada con un 0, asi que se congela el guardado apenas empieza una
+    // navegacion y se anota la altura del momento del click.
+    let congelado = false;
+    let destemporizador: ReturnType<typeof setTimeout> | null = null;
+
+    const clave = () => window.location.pathname + window.location.search;
+    const guardar = () => {
+      pendiente = false;
+      if (congelado) return;
+      scrollCache.set(clave(), window.scrollY);
+    };
+    const onScroll = () => {
+      if (congelado || pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(guardar);
+    };
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest?.("a[href]")) return;
+      scrollCache.set(clave(), window.scrollY);
+      congelado = true;
+      // Red de seguridad: si el click no termino navegando (modificadores,
+      // ancla al mismo lugar), volver a guardar el scroll normalmente.
+      if (destemporizador) clearTimeout(destemporizador);
+      destemporizador = setTimeout(() => { congelado = false; }, 2000);
+    };
+    const onPop = () => { congelado = false; };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("popstate", onPop);
+      if (destemporizador) clearTimeout(destemporizador);
+    };
+  }, []);
+
+  useEffect(() => {
+    const alturaGuardada = () => scrollCache.get(window.location.pathname + window.location.search) ?? null;
+
+    // Al montar: el popstate de la vuelta atras ya paso, lo dejo anotado el
+    // listener de modulo.
+    if (vinoDeHistorial) {
+      vinoDeHistorial = false;
+      scrollPendienteRef.current = alturaGuardada();
+    }
+
+    // Atras/adelante sin desmontar (paginar dentro del catalogo).
+    const onPop = () => { scrollPendienteRef.current = alturaGuardada() ?? 0; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    const y = scrollPendienteRef.current;
+    if (y === null || productos.length === 0) return;
+    scrollPendienteRef.current = null;
+
+    // Se reintenta unos frames en vez de un scrollTo y listo: cuando el efecto
+    // corre, la grilla recien se pinto y el documento todavia puede ser mas
+    // corto que la altura objetivo, asi que el scroll quedaria recortado. Se
+    // corta apenas queda en su lugar (o al tocar el fondo de la pagina).
+    let frames = 0;
+    let cancelado = false;
+    const intentar = () => {
+      if (cancelado) return;
+      window.scrollTo(0, y);
+      // Se insiste aunque el scroll haya quedado corto: al principio el
+      // documento todavia crece (filtros, paginacion, alto de las tarjetas) y
+      // el navegador recorta el valor al maximo de ese momento.
+      const llego = Math.abs(window.scrollY - y) < 4;
+      if (!llego && frames++ < 45) requestAnimationFrame(intentar);
+    };
+    requestAnimationFrame(intentar);
+    return () => { cancelado = true; };
+  }, [productos]);
 
   const activeCount = Object.keys(activeFilters).length;
   const hasFilters = Object.keys(filtros).length > 0;
@@ -448,7 +724,7 @@ function CatalogoPage() {
 
             {/* Sort bar */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-              {!loading ? (
+              {!loading || productos.length > 0 ? (
                 <p className="text-xs text-gray-400">{total} producto{total !== 1 ? "s" : ""}</p>
               ) : (
                 <span />
@@ -504,9 +780,17 @@ function CatalogoPage() {
               </div>
             )}
 
-            {/* Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {loading ? (
+            {/* Grid.
+                El skeleton aparece solo cuando no hay nada que mostrar. Si ya
+                habia resultados se mantienen visibles atenuados mientras llega
+                la pagina nueva: cambiar de pagina o de filtro deja de parpadear. */}
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-200 ${
+                loading && productos.length > 0 ? "opacity-50" : "opacity-100"
+              }`}
+              aria-busy={loading}
+            >
+              {loading && productos.length === 0 ? (
                 Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
               ) : productos.length === 0 ? (
                 <EmptyState label={selectedCatLabel ?? "Catálogo"} />
@@ -516,7 +800,7 @@ function CatalogoPage() {
             </div>
 
             {/* Paginación */}
-            {totalPages > 1 && !loading && (
+            {totalPages > 1 && (
               <nav className="flex items-center justify-center gap-1.5 mt-8">
                 <button
                   onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}

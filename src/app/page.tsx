@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/catalog/SafeImage";
 import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
 import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiSquare, FiColumns, FiBox } from "react-icons/fi";
@@ -59,10 +59,10 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 // /api/catalogo/todos: /catalogo las lee de la query string al montar.
 const lineas = [
   { label: "Pisos Laminados", href: "/catalogo?categoria=pisos-flotantes", img: "/14704-1.jpg",        Icon: FiGrid },
-  { label: "Pisos Vinílicos", href: "/catalogo?categoria=pisos-vinilicos", img: "/25063-1.jpg",        Icon: FiLayers },
-  { label: "Porcelanatos",    href: "/catalogo?categoria=porcellanatos",   img: "/22385-1.jpg",        Icon: FiSquare },
-  { label: "Pisos de Madera", href: "/catalogo?categoria=pisos-madera",    img: "/100001-1.jpg",       Icon: FiColumns },
-  { label: "Deck",            href: "/catalogo?categoria=decks",           img: "/deck.jpg",           Icon: FiSun },
+  { label: "Pisos Vinílicos", href: "/catalogo?categoria=pisos-vinilicos", img: "/20230-1.jpg",        Icon: FiLayers },
+  { label: "Porcelanatos",    href: "/catalogo?categoria=porcellanatos",   img: "/24803-1.jpg",        Icon: FiSquare },
+  { label: "Pisos de Madera", href: "/catalogo?categoria=pisos-madera",    img: "/23904-1.jpg",        Icon: FiColumns },
+  { label: "Deck",            href: "/catalogo?categoria=decks",           img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1787077706/66047b68324866.20305652_j52w7e.jpg", Icon: FiSun },
   { label: "Revestimientos",  href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
   { label: "Maderas",         href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiBox },
   { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "/accesorios.png",     Icon: FiTool },
@@ -619,13 +619,12 @@ export default function Home() {
                   style={{ aspectRatio: "4/3" }}
                 >
                   {/* Imagen full-background */}
-                  <Image
+                  <SafeImage
                     src={img}
                     alt={label}
                     fill
                     sizes="(max-width: 768px) 50vw, 25vw"
                     className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                    style={img === "/deck.jpg" ? { objectPosition: "center top" } : undefined}
                   />
 
                   {/* Arco blanco sobre la imagen. El viewBox acompaña el aspecto
