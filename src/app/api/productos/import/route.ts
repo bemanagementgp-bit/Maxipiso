@@ -87,15 +87,36 @@ export async function POST(req: NextRequest) {
 
   // Parsear todas las hojas
   const allRows: (ReturnType<typeof parseRowWithSchema> & { tabla: string })[] = [];
+  const warnings: string[] = [];
   for (const { ws, sheetName } of sheets) {
     const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
     if (!rawRows.length) continue;
     const headers = Object.keys(rawRows[0]);
-    const { schema } = detectSchema(headers);
-    console.log(`[import] Hoja "${sheetName}" → schema: ${schema.id} (tabla: ${schema.tabla})`);
+    const { schema, score, recognized } = detectSchema(headers);
+    if (!recognized) {
+      // Sin ninguna columna firma no sabemos a que tabla pertenece la hoja.
+      // Importarla al schema por defecto meteria los datos en la tabla equivocada.
+      console.warn(`[import] Hoja "${sheetName}" no reconocida (score ${score}) — omitida`);
+      warnings.push(
+        `Hoja "${sheetName}" omitida: no se pudo identificar la categoria por sus columnas.`,
+      );
+      continue;
+    }
+    console.log(`[import] Hoja "${sheetName}" → schema: ${schema.id} (tabla: ${schema.tabla}, score ${score})`);
     for (const row of rawRows) {
       allRows.push(parseRowWithSchema(row, schema) as any);
     }
+  }
+
+  if (!allRows.length) {
+    return NextResponse.json(
+      {
+        error:
+          "No se reconocio ninguna hoja del archivo. Descarga la plantilla de la categoria y usala como base.",
+        warnings,
+      },
+      { status: 400 },
+    );
   }
 
   if (allRows.length > MAX_ROWS)
@@ -175,6 +196,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     message: `Importacion completada: ${createdCount} creados, ${updatedCount} actualizados, ${skippedCount} omitidos`,
-    data: { createdCount, updatedCount, skippedCount },
+    data: { createdCount, updatedCount, skippedCount, warnings },
   });
 }

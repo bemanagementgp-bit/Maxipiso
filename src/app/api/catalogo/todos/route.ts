@@ -18,12 +18,22 @@ const CACHE_TTL_MS = 60_000;
 type CacheEntry = { expires: number; payload: unknown };
 const cache = new Map<string, CacheEntry>();
 
-function timeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+function timeout<T>(promise: Promise<T>, ms: number, fallback: T, label = "query"): Promise<T> {
   return new Promise<T>((resolve) => {
-    const t = setTimeout(() => resolve(fallback), ms);
+    const t = setTimeout(() => {
+      console.warn(`[catalogo/todos] timeout (${ms}ms) en ${label}`);
+      resolve(fallback);
+    }, ms);
     promise.then(
       (v) => { clearTimeout(t); resolve(v); },
-      () => { clearTimeout(t); resolve(fallback); }
+      (err) => {
+        clearTimeout(t);
+        // Un rechazo NO es un timeout: casi siempre es una query mal formada
+        // (campo inexistente en el modelo). Sin este log el sintoma es
+        // "0 productos" sin ningun error visible.
+        console.error(`[catalogo/todos] query fallo en ${label}:`, err);
+        resolve(fallback);
+      }
     );
   });
 }
@@ -33,6 +43,49 @@ const BRAND_ALIASES: Record<string, string> = {
 };
 
 const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
+
+// Campo de precio real de cada tabla. Solo `maderas` usa `precio`; el resto
+// usa `precioM2`. `accesorios` no tiene precio, asi que no se puede ordenar
+// por precio y cae al orden por defecto.
+const PRICE_FIELD_BY_TABLE: Record<string, string | null> = {
+  "pisos-flotantes": "precioM2",
+  "porcellanatos":   "precioM2",
+  "revestimientos":  "precioM2",
+  "pisos-vinilicos": "precioM2",
+  "pisos-madera":    "precioM2",
+  "decks":           "precioM2",
+  "maderas":         "precio",
+  "accesorios":      null,
+};
+
+type OrderBy = Record<string, "asc" | "desc">[];
+
+const DEFAULT_ORDER_BY: OrderBy = [{ sortOrder: "asc" }, { createdAt: "desc" }];
+
+/** Clave interna para el orden global. Nunca sale en la respuesta. */
+const SORT_PRICE_KEY = "__sortPrice";
+
+/** Traduce el `sortBy` publico al `orderBy` de Prisma para una tabla concreta. */
+function buildOrderBy(sortBy: string, tableKey: string): OrderBy {
+  if (sortBy === "precio-menor" || sortBy === "precio-mayor") {
+    const field = PRICE_FIELD_BY_TABLE[tableKey];
+    if (!field) return DEFAULT_ORDER_BY;
+    return [{ [field]: sortBy === "precio-menor" ? "asc" : "desc" }];
+  }
+  if (sortBy === "nombre-az") return [{ nombre: "asc" }];
+  if (sortBy === "nombre-za") return [{ nombre: "desc" }];
+  if (sortBy === "recientes")  return [{ createdAt: "desc" }];
+  return DEFAULT_ORDER_BY;
+}
+
+/** Precio numerico de una fila, sea cual sea la tabla. Para el orden global. */
+function rowPrice(row: Record<string, unknown>): number | null {
+  for (const field of ["precioM2", "precio", "precioCaja", "precioTabla", "precioMLineal", "precioMl"]) {
+    const v = row[field];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+  }
+  return null;
+}
 
 const TABLES = [
   { key: "pisos-flotantes", delegate: () => prisma.pisoFlotante, label: "Pisos Flotantes" },
@@ -190,7 +243,8 @@ export async function GET(req: NextRequest) {
               select: { [fd.key]: true },
             }) as Promise<Record<string, unknown>[]>,
             QUERY_TIMEOUT_MS,
-            [] as Record<string, unknown>[]
+            [] as Record<string, unknown>[],
+            `filtros ${filterTable.key}.${fd.key}`
           );
         })
       : [];
@@ -215,19 +269,7 @@ export async function GET(req: NextRequest) {
       const needsPrioritySort = singleTable && !!PRIORITY_TYPE[table.key];
       const findArgs: Record<string, unknown> = { where };
 
-      if (sortBy === "precio-menor") {
-        findArgs.orderBy = [{ precio: "asc" }];
-      } else if (sortBy === "precio-mayor") {
-        findArgs.orderBy = [{ precio: "desc" }];
-      } else if (sortBy === "nombre-az") {
-        findArgs.orderBy = [{ nombre: "asc" }];
-      } else if (sortBy === "nombre-za") {
-        findArgs.orderBy = [{ nombre: "desc" }];
-      } else if (sortBy === "recientes") {
-        findArgs.orderBy = [{ createdAt: "desc" }];
-      } else {
-        findArgs.orderBy = [{ sortOrder: "asc" }, { createdAt: "desc" }];
-      }
+      findArgs.orderBy = buildOrderBy(sortBy, table.key);
 
       if (singleTable && !needsPrioritySort) {
         findArgs.skip = skip;
@@ -239,9 +281,10 @@ export async function GET(req: NextRequest) {
         timeout(
           d.findMany(findArgs) as Promise<Record<string, unknown>[]>,
           QUERY_TIMEOUT_MS,
-          [] as Record<string, unknown>[]
+          [] as Record<string, unknown>[],
+          `findMany ${table.key}`
         ),
-        timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0),
+        timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0, `count ${table.key}`),
       ]);
       return { key: table.key, label: table.label, rows, count, needsPrioritySort };
     });
@@ -259,7 +302,11 @@ export async function GET(req: NextRequest) {
           if (!isAuthenticated && (k.startsWith("precio") || k === "stock" || k === "moneda")) continue;
           clean[k] = v;
         }
-        return formatMeasureFields(clean);
+        const formatted = formatMeasureFields(clean);
+        // Precio tomado de la fila CRUDA: hace falta para el orden global aunque
+        // el usuario anonimo no vaya a verlo. Se borra antes de responder.
+        formatted[SORT_PRICE_KEY] = rowPrice(row);
+        return formatted;
       })
     );
 
@@ -274,11 +321,37 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Cada tabla ya trajo sus primeros (skip + take) segun su propio orden, asi
+    // que los (skip + take) globales estan garantizados dentro de la union.
+    // Reordenar aca y recien despues cortar da el resultado correcto.
+    if (!singleTable && sortBy !== "relevancia") {
+      const dir = sortBy === "precio-mayor" || sortBy === "nombre-za" ? -1 : 1;
+      if (sortBy === "precio-menor" || sortBy === "precio-mayor") {
+        merged.sort((a, b) => {
+          const pa = a[SORT_PRICE_KEY] as number | null;
+          const pb = b[SORT_PRICE_KEY] as number | null;
+          if (pa === null && pb === null) return 0;
+          if (pa === null) return 1;   // sin precio siempre al final
+          if (pb === null) return -1;
+          return (pa - pb) * dir;
+        });
+      } else if (sortBy === "nombre-az" || sortBy === "nombre-za") {
+        merged.sort((a, b) =>
+          String(a.nombre ?? "").localeCompare(String(b.nombre ?? ""), "es", { numeric: true }) * dir
+        );
+      } else if (sortBy === "recientes") {
+        merged.sort(
+          (a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime()
+        );
+      }
+    }
+
     const hasPrioritySort = results.some((r) => r.needsPrioritySort);
     const allProducts = singleTable
       ? (hasPrioritySort ? merged.slice(skip, skip + take) : merged)
       : merged.slice(skip, skip + take);
     const totalMostrado = merged.length > 0 ? total : 0;
+    for (const row of allProducts) delete row[SORT_PRICE_KEY];
 
     // Build filter values
     const filtros: Record<string, { label: string; values: string[] }> = {};

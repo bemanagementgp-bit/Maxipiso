@@ -21,27 +21,40 @@ export async function GET(_req: NextRequest) {
 
   if (!logs.length) return NextResponse.json({ success: true, data: { sesiones: [] } });
 
-  // Agrupar por ventanas de 10 minutos
+  // Agrupar por ventanas de 10 minutos.
+  //
+  // Los logs vienen en orden DESCENDENTE (mas nuevo primero), asi que la ventana
+  // avanza hacia atras en el tiempo: se corta cuando un log es mas viejo que
+  // (inicio - 10 min). La version anterior comparaba `>= inicio + 10min`, que
+  // con orden descendente nunca se cumple, y colapsaba todo en una sola sesion.
+  const VENTANA_MS = 10 * 60 * 1000;
   const sesiones: { fecha: Date; cantidad: number; id: string }[] = [];
-  let ventanaInicio = logs[0].fechaCambio;
-  let ventanaFin = new Date(ventanaInicio.getTime() + 10 * 60 * 1000);
+
+  let ventanaMasReciente = logs[0].fechaCambio;
+  let ventanaCorte = new Date(ventanaMasReciente.getTime() - VENTANA_MS);
   let conteo = 0;
 
+  const cerrarVentana = () => {
+    if (conteo > 0) {
+      sesiones.push({
+        fecha: ventanaMasReciente,
+        cantidad: conteo,
+        id: ventanaMasReciente.toISOString(),
+      });
+    }
+  };
+
   for (const log of logs) {
-    if (log.fechaCambio >= ventanaFin) {
-      if (conteo > 0) {
-        sesiones.push({ fecha: ventanaInicio, cantidad: conteo, id: ventanaInicio.toISOString() });
-      }
-      ventanaInicio = log.fechaCambio;
-      ventanaFin = new Date(ventanaInicio.getTime() + 10 * 60 * 1000);
+    if (log.fechaCambio < ventanaCorte) {
+      cerrarVentana();
+      ventanaMasReciente = log.fechaCambio;
+      ventanaCorte = new Date(ventanaMasReciente.getTime() - VENTANA_MS);
       conteo = 1;
     } else {
       conteo++;
     }
   }
-  if (conteo > 0) {
-    sesiones.push({ fecha: ventanaInicio, cantidad: conteo, id: ventanaInicio.toISOString() });
-  }
+  cerrarVentana();
 
   return NextResponse.json({
     success: true,

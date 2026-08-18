@@ -118,7 +118,7 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
   const baseCategory = TABLE_CATEGORIA[tableKey] ?? "Producto";
   const categoriaPrincipal = String(raw.categoriaPrincipal ?? "").trim();
   const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();
-  const tipoProducto = String(raw.tipoProducto ?? raw.tipoDeProducto ?? "").trim();
+  const tipoProducto = String(raw.tipoProducto ?? "").trim();
   const categoriaTerciaria = String(raw.categoriaTerciaria ?? "").trim();
   const uso = String(raw.uso ?? raw.tipoDeUso ?? "").trim();
   const material = String(raw.material ?? "").trim();
@@ -132,14 +132,14 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
         return [
           { text: baseCategory },
           { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
-          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
           { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
         ];
       case "pisoVinilico":
         return [
           { text: baseCategory },
           { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
-          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
           { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
         ];
       case "porcellanato":
@@ -200,7 +200,7 @@ function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): 
 
 function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {
   const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();
-  const tipoProducto = String(raw.tipoProducto ?? raw.tipoDeProducto ?? "").trim();
+  const tipoProducto = String(raw.tipoProducto ?? "").trim();
   const categoriaTerciaria = String(raw.categoriaTerciaria ?? "").trim();
   const uso = String(raw.uso ?? raw.tipoDeUso ?? "").trim();
   const material = String(raw.material ?? "").trim();
@@ -213,11 +213,11 @@ function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): P
       case "pisoFlotante":
         return [
           { text: categoriaSecundaria, field: "categoriaSecundaria", value: categoriaSecundaria },
-          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
         ];
       case "pisoVinilico":
         return [
-          { text: tipoProducto, field: "tipoDeProducto", value: tipoProducto },
+          { text: tipoProducto, field: "tipoProducto", value: tipoProducto },
           { text: material, field: "material", value: material },
           { text: categoriaTerciaria, field: "categoriaTerciaria", value: categoriaTerciaria },
         ];

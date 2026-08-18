@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     schemaLabel: string;
     tabla: string;
     score: number;
+    recognized: boolean;
     detectedColumns: { original: string; mapsTo: string }[];
     rowCount: number;
     toCreate: number;
@@ -77,7 +78,26 @@ export async function POST(req: NextRequest) {
     if (!rawRows.length) continue;
 
     const headers = Object.keys(rawRows[0]);
-    const { schema, score } = detectSchema(headers);
+    const { schema, score, recognized } = detectSchema(headers);
+
+    // Hoja sin ninguna columna firma: el import la va a omitir, asi que el
+    // preview tiene que mostrarlo antes de que el usuario confirme.
+    if (!recognized) {
+      sheetResults.push({
+        sheetName,
+        schemaId: "",
+        schemaLabel: "No reconocida",
+        tabla: "",
+        score,
+        recognized: false,
+        detectedColumns: headers.map((h) => ({ original: h, mapsTo: "ignorado" })),
+        rowCount: rawRows.length,
+        toCreate: 0,
+        toUpdate: 0,
+        skip: rawRows.length,
+      });
+      continue;
+    }
 
     const detectedColumns = headers.map((h) => {
       const n = norm(h);
@@ -123,6 +143,7 @@ export async function POST(req: NextRequest) {
       schemaLabel: schema.label,
       tabla: schema.tabla,
       score,
+      recognized: true,
       detectedColumns,
       rowCount: rawRows.length,
       toCreate: sheetCreate,

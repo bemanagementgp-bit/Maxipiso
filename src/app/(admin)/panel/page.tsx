@@ -6,10 +6,10 @@ import {
   FiPlus, FiDownload, FiUpload,
   FiCheckCircle, FiAlertCircle, FiX,
 } from "react-icons/fi";
+import Link from "next/link";
 import { ProductTable } from "../../../components/admin/ProductTable";
 import { QuickEditPanel } from "../../../components/admin/QuickEditPanel";
 import { HistorialModal } from "../../../components/admin/HistorialModal";
-import { ImportPreviewModal } from "../../../components/admin/ImportPreviewModal";
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -73,10 +73,6 @@ export default function ProductosPage() {
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
-  const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
-  const [importPreviewData, setImportPreviewData] = useState<any>(null);
-  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [tablaFilter, setTablaFilter] = useState("pisos_flotantes");
   const [marcaFilter, setMarcaFilter] = useState("");
@@ -132,48 +128,6 @@ export default function ProductosPage() {
     }
   };
 
-  const handleImportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setIsLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/productos/import/preview", { method: "POST", body: fd });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setPendingImportFile(file);
-      setImportPreviewData(data.data);
-      setIsImportPreviewOpen(true);
-    } catch {
-      addToast("error", "No se pudo analizar el archivo");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleImportConfirm = async () => {
-    if (!pendingImportFile) return;
-    setIsLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", pendingImportFile);
-      const res = await fetch("/api/productos/import", { method: "POST", body: fd });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setIsImportPreviewOpen(false);
-      setPendingImportFile(null);
-      setImportPreviewData(null);
-      setTableRefreshKey((v) => v + 1);
-      addToast("success", `${data.data.createdCount} creados · ${data.data.updatedCount} actualizados`);
-    } catch {
-      addToast("error", "Error al importar el archivo");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="max-w-[1400px] w-full mx-auto px-6 lg:px-10 py-8 space-y-6">
 
@@ -193,11 +147,13 @@ export default function ProductosPage() {
             <FiDownload size={13} />
             Exportar
           </button>
-          <label className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#333] border border-[#888] bg-white hover:border-[#444] hover:text-[#111] transition-all rounded-sm cursor-pointer">
+          <Link
+            href="/panel/importacion"
+            className="flex items-center gap-1.5 h-8 px-3.5 text-[11px] font-medium text-[#333] border border-[#888] bg-white hover:border-[#444] hover:text-[#111] transition-all rounded-sm"
+          >
             <FiUpload size={13} />
             Importar
-            <input type="file" accept=".xlsx,.xls,.xlsm" onChange={handleImportSelect} className="hidden" disabled={isLoading} />
-          </label>
+          </Link>
           <button
             onClick={() => { setEditProductId(null); setIsNewProduct(true); setIsPanelOpen(true); }}
             className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
@@ -284,13 +240,6 @@ export default function ProductosPage() {
         isOpen={isHistorialOpen}
         onClose={() => { setIsHistorialOpen(false); setHistorialProductId(undefined); }}
         productId={historialProductId}
-      />
-      <ImportPreviewModal
-        isOpen={isImportPreviewOpen}
-        previewData={importPreviewData}
-        isLoading={isLoading}
-        onConfirm={handleImportConfirm}
-        onClose={() => { setIsImportPreviewOpen(false); setPendingImportFile(null); setImportPreviewData(null); }}
       />
 
       <ToastContainer toasts={toasts} onRemove={(id) => setToasts((p) => p.filter((t) => t.id !== id))} />

@@ -292,14 +292,24 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       dimensiones:      "dimensiones",
       colores:          "colores",
       stock:            "stock",
-      imagen:           "imagen",
+      imagen:           "imagenes",
+      imagenes:         "imagenes",
       descripcion:      "descripcion",
     },
   },
 ];
 
-// Deteccion automatica de schema por headers
-export function detectSchema(headers: string[]): { schema: SheetSchema; score: number } {
+// Deteccion automatica de schema por headers.
+//
+// `recognized` es la parte importante: con score 0 ninguna columna firma coincidio
+// y el "mejor" schema es simplemente el primero de la lista. Antes eso hacia que
+// una planilla con headers inesperados se importara entera como pisos flotantes.
+// Los callers deben rechazar u omitir la hoja cuando `recognized` es false.
+export const MIN_SCHEMA_SCORE = 1;
+
+export function detectSchema(
+  headers: string[],
+): { schema: SheetSchema; score: number; recognized: boolean } {
   const headerSet = new Set(headers.map(norm));
   let best = SHEET_SCHEMAS[0];
   let bestScore = -1;
@@ -307,7 +317,7 @@ export function detectSchema(headers: string[]): { schema: SheetSchema; score: n
     const score = schema.signatureColumns.filter((col) => headerSet.has(col)).length;
     if (score > bestScore) { bestScore = score; best = schema; }
   }
-  return { schema: best, score: bestScore };
+  return { schema: best, score: bestScore, recognized: bestScore >= MIN_SCHEMA_SCORE };
 }
 
 export type ParsedRow = Record<string, unknown> & {

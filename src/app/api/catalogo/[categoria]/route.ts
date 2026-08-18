@@ -32,7 +32,7 @@ function getDelegate(slug: string): PrismaDelegate | null {
 const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
   "pisos-flotantes": [
     { key: "categoriaSecundaria", label: "Categoría secundaria" },
-    { key: "tipoDeProducto", label: "Tipo de producto" },
+    { key: "tipoProducto", label: "Tipo de producto" },
     { key: "categoriaTerciaria", label: "Categoría terciaria" },
     { key: "marca", label: "Marca" },
     { key: "linea", label: "Línea" },
@@ -63,7 +63,7 @@ const FILTERABLE_FIELDS: Record<string, { key: string; label: string }[]> = {
   ],
   "pisos-vinilicos": [
     { key: "categoriaSecundaria", label: "Categoría secundaria" },
-    { key: "tipoDeProducto", label: "Tipo de producto" },
+    { key: "tipoProducto", label: "Tipo de producto" },
     { key: "categoriaTerciaria", label: "Categoría terciaria" },
     { key: "marca", label: "Marca" },
     { key: "linea", label: "Línea" },
@@ -149,11 +149,19 @@ export async function GET(
 
     // Parse filters from query: filtros[key]=value
     const fieldDefs = FILTERABLE_FIELDS[slug] ?? [];
-    const filterKeys = fieldDefs.map((f) => f.key);
+    const filterKeys = new Set(fieldDefs.map((f) => f.key));
     const activeFilters: Record<string, string> = {};
-    for (const fk of filterKeys) {
-      const val = sp.get(`filtros[${fk}]`);
-      if (val) activeFilters[fk] = val;
+    for (const [param, val] of sp.entries()) {
+      const match = /^filtros\[(.+)\]$/.exec(param);
+      if (!match || !val) continue;
+      const key = match[1];
+      // Solo se aceptan claves declaradas para esta categoria. Cualquier otra
+      // llegaria a Prisma como campo inexistente y tumbaria la request con 500.
+      if (!filterKeys.has(key)) {
+        console.warn(`[catalogo/${slug}] filtro desconocido ignorado: ${key}`);
+        continue;
+      }
+      activeFilters[key] = sanitizeText(val, 100);
     }
 
     // Reverse alias map: canonical → all DB variants

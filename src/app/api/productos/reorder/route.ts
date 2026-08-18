@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyOrigin } from "@/lib/security";
 
+export const runtime = "nodejs";
+
 const TABLE_MAP: Record<string, string> = {
   pisos_flotantes: "pisoFlotante",
   porcellanatos: "porcellanato",
@@ -31,8 +33,17 @@ export async function PUT(req: NextRequest) {
   }
 
   const { items, tabla } = body;
-  if (!items?.length || !tabla) {
+  if (!Array.isArray(items) || items.length === 0 || typeof tabla !== "string" || !tabla) {
     return NextResponse.json({ error: "Faltan items o tabla" }, { status: 400 });
+  }
+  if (items.length > 500) {
+    return NextResponse.json({ error: "Demasiados items" }, { status: 400 });
+  }
+  const itemsValidos = items.every(
+    (i) => i && typeof i.id === "string" && Number.isInteger(i.sortOrder) && i.sortOrder >= 0,
+  );
+  if (!itemsValidos) {
+    return NextResponse.json({ error: "Items inválidos" }, { status: 400 });
   }
 
   const normalizedTabla = tabla === "revestimientos_ext" || tabla === "revestimientos_int"
@@ -46,32 +57,55 @@ export async function PUT(req: NextRequest) {
   try {
     const delegate = (prisma as any)[delegateKey];
 
+    // ── Mover un item a una posicion concreta ────────────────────────────────
+    // Antes esto reescribia la tabla entera: un findMany() completo mas un
+    // update por cada fila. Mover un producto en una tabla de 200 disparaba
+    // 200 UPDATEs a Turso. Ahora solo se tocan las filas entre el origen y el
+    // destino, y solo si el orden guardado ya esta normalizado.
     if (items.length === 1) {
       const [item] = items;
-      const rows = await delegate.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
-      const currentIndex = rows.findIndex((row: any) => row.id === item.id);
+      const rows: { id: string; sortOrder: number }[] = await delegate.findMany({
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: { id: true, sortOrder: true },
+      });
+
+      const currentIndex = rows.findIndex((row) => row.id === item.id);
       if (currentIndex < 0) {
         return NextResponse.json({ error: "Item no encontrado" }, { status: 404 });
       }
 
       const targetIndex = Math.max(0, Math.min(item.sortOrder, rows.length - 1));
+
+      // `sortOrder` puede no ser una permutacion 0..n-1 todavia (por ejemplo si
+      // nunca se ordeno y estan todos en 0). En ese caso hay que normalizar una
+      // vez; a partir de ahi los movimientos son incrementales.
+      const yaNormalizado = rows.every((row, i) => row.sortOrder === i);
+
+      if (currentIndex === targetIndex && yaNormalizado) {
+        return NextResponse.json({ success: true });
+      }
+
       const reordered = [...rows];
       const [moved] = reordered.splice(currentIndex, 1);
       reordered.splice(targetIndex, 0, moved);
 
-      await Promise.all(
-        reordered.map((row: any, index: number) =>
-          delegate.update({
-            where: { id: row.id },
-            data: { sortOrder: index },
-          })
-        )
-      );
+      const desde = yaNormalizado ? Math.min(currentIndex, targetIndex) : 0;
+      const hasta = yaNormalizado ? Math.max(currentIndex, targetIndex) : reordered.length - 1;
 
-      return NextResponse.json({ success: true });
+      const updates = [];
+      for (let i = desde; i <= hasta; i++) {
+        const row = reordered[i];
+        if (row.sortOrder === i) continue;
+        updates.push(delegate.update({ where: { id: row.id }, data: { sortOrder: i } }));
+      }
+
+      if (updates.length > 0) await prisma.$transaction(updates);
+      return NextResponse.json({ success: true, data: { updated: updates.length } });
     }
 
-    await Promise.all(
+    // ── Reordenar un lote (drag & drop de una pagina) ────────────────────────
+    // En transaccion: si falla a la mitad, el orden no queda corrupto.
+    await prisma.$transaction(
       items.map((item) =>
         delegate.update({
           where: { id: item.id },
@@ -79,7 +113,7 @@ export async function PUT(req: NextRequest) {
         })
       )
     );
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, data: { updated: items.length } });
   } catch (error) {
     console.error("[reorder] error:", error);
     return NextResponse.json({ error: "Error al reordenar" }, { status: 500 });

@@ -369,7 +369,7 @@ const MASTER_SLOTS: SpecSlot[] = [
 // Allowed fields per table (by field name)
 const TABLE_FIELDS: Record<string, Set<string>> = {
   pisoFlotante:  new Set(["sku","tipoProducto","codigo","origen","espesor","ancho","largo","bisel","tipoDeUso","linea","mantoIncorporado","base","abrasion"]),
-  pisoVinilico:  new Set(["sku","tipoProducto","codigo","origen","espesorTotal","ancho","largo","bisel","uso","linea","material","capaDeUso","mantoIncorporado","base"]),
+  pisoVinilico:  new Set(["sku","tipoProducto","codigo","origen","espesorTotal","ancho","largo","bisel","tipoDeUso","linea","material","capaDeUso","mantoIncorporado","base"]),
   porcellanato:  new Set(["sku","tipoProducto","codigo","marca","origen","espesor","ancho","largo","tipoDeUso","linea","acabado","terminacion","base"]),
   pisoMadera:    new Set(["sku","tipoProducto","origen","espesor","ancho","largo","acabado","bisel","terminacion","calidad","base"]),
   deck:          new Set(["sku","tipoProducto","espesor","ancho","largo","linea","material","baseTabla"]),
@@ -388,7 +388,6 @@ export function buildSpecsFromRow(row: Record<string, unknown>, tableKey?: Table
   for (const slot of MASTER_SLOTS) {
     if (!allowed.has(slot.field)) continue;
     if (seenLabels.has(slot.label)) continue;
-    seenLabels.add(slot.label);
 
     const rawVal = row[slot.field];
     if (rawVal === null || rawVal === undefined || String(rawVal).trim() === "") continue;
@@ -412,6 +411,9 @@ export function buildSpecsFromRow(row: Record<string, unknown>, tableKey?: Table
       }
     }
 
+    // El label se marca como visto recien aca: si el slot no tenia valor, el
+    // siguiente slot con el mismo label todavia puede aportarlo.
+    seenLabels.add(slot.label);
     entries.push({ label: slot.label, value });
   }
 
