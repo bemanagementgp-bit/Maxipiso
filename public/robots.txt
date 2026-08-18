@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# El panel y las rutas de autenticacion no deben indexarse.
+Disallow: /panel
+Disallow: /auth
+Disallow: /api
+
+Sitemap: https://maxipiso.com.ar/sitemap.xml

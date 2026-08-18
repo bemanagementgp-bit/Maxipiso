@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT_API = 10;
+// 10/min era demasiado bajo: navegar el catalogo con busqueda debounced y
+// filtros lo supera facil y devuelve 429 a usuarios legitimos.
+// OJO: este contador vive en memoria del proceso, asi que en serverless cada
+// instancia tiene el suyo y se reinicia seguido. Para un limite real hace falta
+// un store compartido (Redis/Upstash).
+const RATE_LIMIT_API = 120;
 const buckets = new Map<string, { count: number; resetAt: number }>();
 
 function getIp(req: NextRequest): string {

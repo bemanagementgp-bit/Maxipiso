@@ -62,3 +62,6 @@ Angulos (1).cdr
 scripts/
 
 dump.sql
+
+# El ejemplo si va al repo (no tiene secretos)
+!.env.example

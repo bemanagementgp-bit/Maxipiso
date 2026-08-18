@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # `npm install` y no `npm ci`: la dependencia `xlsx` se instala desde
+      # cdn.sheetjs.com (la distribucion oficial; la de npm esta abandonada con
+      # CVEs), asi que el lockfile se puede desincronizar con facilidad.
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Generar cliente de Prisma
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          DATABASE_URL: file:./ci.db
+          NEXTAUTH_SECRET: ci-secret-de-32-caracteres-minimo-ok
+        run: npx next build

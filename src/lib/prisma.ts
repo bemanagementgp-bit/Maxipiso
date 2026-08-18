@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
+// Importado por efecto de borde: valida el entorno y loguea lo que falte.
+// Es el punto mas temprano que toca cualquier request que use la base.
+import "@/lib/env";
 
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 

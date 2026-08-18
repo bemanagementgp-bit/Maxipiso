@@ -11,15 +11,6 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
   DATABASE_AUTH_TOKEN: z.string().optional(),
 
-  // Base de datos del CRM (PostgreSQL — Neon).
-  // Opcionales aquí para no romper boot si todavía no se aprovisionó la DB del CRM;
-  // el endpoint /api/crm/leads valida y devuelve 503 si faltan.
-  CRM_DATABASE_URL: z.string().url().optional(),
-  CRM_DIRECT_URL: z.string().url().optional(),
-
-  // Sal para hashear IP en interacciones del CRM (opcional). Si falta, no se guarda hash.
-  CRM_IP_HASH_SALT: z.string().min(16).optional(),
-
   // NextAuth
   NEXTAUTH_SECRET: z
     .string()
@@ -32,6 +23,10 @@ const EnvSchema = z.object({
   // Servicios externos (opcionales — si faltan, el endpoint correspondiente devolverá 503)
   GROQ_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+
+  // Storage de archivos subidos. Sin esto, `lib/storage.ts` usa el disco local,
+  // que en Vercel es de solo lectura y efimero.
+  BLOB_READ_WRITE_TOKEN: z.string().optional(),
 
   // 2FA: clave de cifrado (32 bytes = 64 chars hex). Obligatoria en producción.
   TOTP_ENC_KEY: z
@@ -48,20 +43,30 @@ type Env = z.infer<typeof EnvSchema>;
 
 let cached: Env | null = null;
 
+/**
+ * Valida el entorno y devuelve los valores tipados.
+ *
+ * NO corta el boot: loguea el problema y sigue. La version anterior lanzaba en
+ * produccion, pero como ningun modulo importaba este archivo el chequeo nunca
+ * se ejecutaba. Ahora si se ejecuta (lo importa `lib/prisma.ts`), y hacerlo
+ * fatal de entrada podria tumbar un deploy que hoy funciona.
+ *
+ * Cuando confirmes que las variables de produccion cumplen el schema, cambiar
+ * el `console.error` por `throw new Error(message)` para tener fail-fast real.
+ */
 export function getEnv(): Env {
   if (cached) return cached;
   const parsed = EnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    // En producción: cortar el boot. En dev: warning visible.
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
       .join("\n");
-    const message = `❌ Variables de entorno inválidas:\n${issues}`;
+    const message = `Variables de entorno inválidas:\n${issues}`;
     if (process.env.NODE_ENV === "production") {
-      throw new Error(message);
+      console.error(`[env] ${message}`);
+    } else {
+      console.warn(`[env] ${message}`);
     }
-    // eslint-disable-next-line no-console
-    console.warn(message);
   }
   cached = (parsed.success ? parsed.data : (process.env as unknown as Env)) as Env;
   return cached;

@@ -10,7 +10,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-brand-gray: var(--brand-gray);
+  --color-brand-dark: var(--brand-dark);
   --color-brand-orange: var(--brand-orange);
   --font-sans: var(--font-geist-sans);
 }
