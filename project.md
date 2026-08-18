@@ -460,6 +460,32 @@ corregir tres filas a mano), revisar el total y recién ahí impactarlo en una s
 - Los pendientes sobreviven al cambio de página y de filtro: se puede editar en varias
   páginas y guardar todo junto.
 
+#### Detección de moneda
+
+Las filas sin `moneda` cargada muestran una sugerencia deducida del precio: **por encima
+de $300 es ARS, por debajo es USD**. Un piso importado ronda los 20-60 dólares el m² y el
+mismo piso en pesos está en decenas de miles, así que no hay zona gris entre las dos escalas.
+
+Dos decisiones que importan:
+
+- **Qué precio se mira.** Se usa el precio unitario, en este orden: `precioM2` → `precio` →
+  `precioTabla` → `precioMLineal` → `precioMl` → `precioCaja`. Mirar el más grande daría
+  falsos positivos: una fila puede tener `precioM2 = 50` (USD) y `precioCaja = 1200` (USD,
+  la caja rinde 24 m²). **`precioEnvioCaja` queda afuera**: es un flete, no el precio del
+  producto, y su magnitud no dice nada de la moneda.
+- **Nunca pisa una moneda elegida a mano.** Sólo completa lo vacío. Sí recalcula la que puso
+  la propia deducción: si se tipea 52000 (→ ARS) y después se corrige a 48, pasa a USD. En
+  cuanto alguien toca el select, esa fila deja de recalcularse.
+
+La sugerencia se aplica con un click en el chip de la celda, o en lote para toda la página /
+la selección. Como todo en esta pantalla, entra como cambio pendiente y no toca la base
+hasta Guardar.
+
+> El importador **ya mapea `moneda`** en las 7 categorías que la tienen (`lib/sheet-schemas.ts`),
+> y `cleanRow()` la preserva. O sea que si el Excel la trae, debería estar en la base; la
+> deducción es para las filas que quedaron sin ella. El preview de importación muestra, por
+> cada columna del archivo, a qué campo mapea o si se ignora — ahí se verifica en un vistazo.
+
 `GET /api/productos/precios` hace `select` sólo de lo que se muestra — `/api/productos`
 devuelve la fila entera y trae 2.000 registros por tabla. `PATCH` aplica hasta 500 cambios por
 request, valida campo por campo contra la config de esa tabla (el mismo chequeo que evita

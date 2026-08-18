@@ -77,6 +77,58 @@ function aTexto(valor: unknown): string {
 }
 
 const fmt = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtCorto = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
+
+/** Importe con separador de miles, para leer la grilla de un vistazo. */
+function aTextoLegible(valor: unknown): string {
+  if (valor === null || valor === undefined || valor === "") return "";
+  const n = Number(valor);
+  if (!Number.isFinite(n)) return "";
+  return fmtCorto.format(n);
+}
+
+// ─── Deteccion de moneda ─────────────────────────────────────────────────────
+
+/**
+ * Umbral para deducir la moneda a partir del precio.
+ *
+ * Un piso importado ronda los 20-60 dólares el m²; el mismo piso en pesos está
+ * en decenas de miles. No hay zona gris real entre esas dos escalas, así que
+ * alcanza con un corte: por encima de $300 es pesos, por debajo es dólares.
+ */
+const UMBRAL_ARS = 300;
+
+/**
+ * Qué precio mirar para deducir la moneda.
+ *
+ * Importa el orden: una fila puede tener `precioM2 = 50` (USD) y
+ * `precioCaja = 1200` (USD, la caja rinde 24 m²). Mirando el más grande daría
+ * "pesos" y sería falso. Se usa el precio unitario, que es el que está en la
+ * misma escala en las 8 categorías.
+ *
+ * `precioEnvioCaja` queda deliberadamente afuera: es un flete, no el precio del
+ * producto, y su magnitud no dice nada de la moneda.
+ */
+const PRIORIDAD_PRECIO = [
+  "precioM2",
+  "precio",
+  "precioTabla",
+  "precioMLineal",
+  "precioMl",
+  "precioCaja",
+];
+
+/** Devuelve "ARS" | "USD" | null si no hay ningún precio del cual deducirla. */
+function inferirMoneda(leer: (campo: string) => unknown): "ARS" | "USD" | null {
+  for (const campo of PRIORIDAD_PRECIO) {
+    const valor = leer(campo);
+    if (valor === null || valor === undefined || valor === "") continue;
+    const n = Number(valor);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    return n > UMBRAL_ARS ? "ARS" : "USD";
+  }
+  return null;
+}
 
 // ─── Redondeos ───────────────────────────────────────────────────────────────
 
@@ -103,6 +155,7 @@ export default function PriceGrid({ onNotify }: Props) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [marcas, setMarcas] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
+  const [resumen, setResumen] = useState({ sinPrecio: 0, sinStock: 0, sinMoneda: 0 });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,6 +182,15 @@ export default function PriceGrid({ onNotify }: Props) {
    * mostrarse el valor pendiente nuevo.
    */
   const [borradores, setBorradores] = useState<Map<string, string>>(new Map());
+  /**
+   * Celda con el foco puesto.
+   *
+   * Fuera de foco los importes se muestran con separador de miles (1.250.000),
+   * que es la diferencia entre poder escanear una columna de precios y no.
+   * Al entrar a editar se vuelve al número crudo, porque los puntos de miles
+   * dentro de un input que se está tipeando son un estorbo.
+   */
+  const [celdaFoco, setCeldaFoco] = useState<string | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [guardando, setGuardando] = useState(false);
 
@@ -140,6 +202,20 @@ export default function PriceGrid({ onNotify }: Props) {
   const [cotizacion, setCotizacion] = useState("");
 
   const contenedorRef = useRef<HTMLDivElement>(null);
+  // `onCelda` necesita ver los pendientes del momento, no los de la última
+  // render: si no, al tipear el primer precio de una fila leería una moneda
+  // desactualizada.
+  const pendientesRef = useRef(pendientes);
+  useEffect(() => { pendientesRef.current = pendientes; }, [pendientes]);
+
+  /**
+   * Filas cuya moneda la puso la deducción y no la persona.
+   *
+   * Importa para poder recalcularla: si tipeás 52000 (→ ARS) y después corregís
+   * a 48, la moneda tiene que pasar a USD. Una moneda elegida a mano, en
+   * cambio, no se toca nunca por más que cambie el precio.
+   */
+  const monedasAutoRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const t = setTimeout(() => { setBusquedaDebounced(busqueda); setPage(1); }, 350);
@@ -165,12 +241,14 @@ export default function PriceGrid({ onNotify }: Props) {
       if (!res.ok) throw new Error(json?.error ?? "No se pudo cargar la grilla");
       setFilas(json.data.filas);
       setTotal(json.data.total);
+      setResumen(json.data.resumen ?? { sinPrecio: 0, sinStock: 0, sinMoneda: 0 });
       setCategorias(json.data.categorias);
       setMarcas(json.data.marcas);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de red");
       setFilas([]);
       setTotal(0);
+      setResumen({ sinPrecio: 0, sinStock: 0, sinMoneda: 0 });
     } finally {
       setCargando(false);
     }
@@ -222,6 +300,28 @@ export default function PriceGrid({ onNotify }: Props) {
       return fila[campo];
     },
     [pendientes],
+  );
+
+  /**
+   * Moneda deducida del precio, para las filas que no la tienen cargada.
+   *
+   * Nunca pisa una moneda ya elegida: solo completa lo que está vacío. Se
+   * calcula sobre el valor EFECTIVO, así que si acabás de tipear un precio la
+   * sugerencia sale de ese número y no del que había guardado.
+   */
+  const monedaSugerida = useCallback(
+    (fila: Fila): "ARS" | "USD" | null => {
+      const cat = catPorTabla.get(fila._tabla);
+      if (!cat?.tieneMoneda) return null;
+      const p = pendientes.get(fila.id);
+      const actual = p && "moneda" in p ? p.moneda : fila.moneda;
+      if (String(actual ?? "").trim()) return null;
+      return inferirMoneda((campo) => {
+        if (p && campo in p) return p[campo];
+        return fila[campo];
+      });
+    },
+    [catPorTabla, pendientes],
   );
 
   const estaPendiente = useCallback(
@@ -291,8 +391,20 @@ export default function PriceGrid({ onNotify }: Props) {
 
       if (iguales) olvidar(fila.id, campo);
       else escribir(fila.id, fila._tabla, campo, parsed);
+
+      // Moneda deducida del precio recién tipeado. Solo completa lo vacío:
+      // una moneda ya elegida no se pisa nunca.
+      if (parsed !== null && PRIORIDAD_PRECIO.includes(campo) && catPorTabla.get(fila._tabla)?.tieneMoneda) {
+        const p = pendientesRef.current.get(fila.id);
+        const monedaActual = p && "moneda" in p ? p.moneda : fila.moneda;
+        const vacia = !String(monedaActual ?? "").trim();
+        if (vacia || monedasAutoRef.current.has(fila.id)) {
+          escribir(fila.id, fila._tabla, "moneda", parsed > UMBRAL_ARS ? "ARS" : "USD");
+          monedasAutoRef.current.add(fila.id);
+        }
+      }
     },
-    [escribir, olvidar],
+    [escribir, olvidar, catPorTabla],
   );
 
   // ─── Navegación con teclado ────────────────────────────────────────────────
@@ -413,6 +525,33 @@ export default function PriceGrid({ onNotify }: Props) {
     avisar(`Stock actualizado en ${tocadas} producto${tocadas === 1 ? "" : "s"}. Revisá y guardá.`);
   };
 
+  /** Completa la moneda de las filas que no la tienen, deduciéndola del precio. */
+  const completarMonedas = (objetivo: Fila[]) => {
+    let completadas = 0;
+    let sinDato = 0;
+    for (const fila of objetivo) {
+      const sugerida = monedaSugerida(fila);
+      if (!sugerida) {
+        // Sin precio cargado no hay de dónde deducirla; con moneda ya puesta,
+        // no hay nada que completar.
+        if (catPorTabla.get(fila._tabla)?.tieneMoneda && !String(valorDe(fila, "moneda") ?? "").trim()) {
+          sinDato++;
+        }
+        continue;
+      }
+      escribir(fila.id, fila._tabla, "moneda", sugerida);
+      completadas++;
+    }
+    avisar(
+      completadas === 0
+        ? "No hay monedas para completar en lo que estás viendo."
+        : `${completadas} moneda${completadas === 1 ? "" : "s"} completada${completadas === 1 ? "" : "s"} (más de $${UMBRAL_ARS} → ARS)` +
+            (sinDato > 0 ? ` · ${sinDato} sin precio, no se pudo deducir` : "") +
+            ". Revisá y guardá.",
+      completadas === 0 ? "error" : "ok",
+    );
+  };
+
   const aplicarMoneda = () => {
     if (!monedaLote) { avisar("Elegí una moneda", "error"); return; }
     const cot = cotizacion.trim() ? parsearNumero(cotizacion) : null;
@@ -460,7 +599,12 @@ export default function PriceGrid({ onNotify }: Props) {
     return n;
   }, [pendientes]);
 
-  const descartar = () => { setPendientes(new Map()); setInvalidas(new Set()); setBorradores(new Map()); };
+  const descartar = () => {
+    setPendientes(new Map());
+    setInvalidas(new Set());
+    setBorradores(new Map());
+    monedasAutoRef.current.clear();
+  };
 
   const guardar = async () => {
     if (invalidas.size > 0) { avisar("Hay celdas con valores inválidos", "error"); return; }
@@ -611,6 +755,44 @@ export default function PriceGrid({ onNotify }: Props) {
         </div>
       </div>
 
+      {/* Resumen: cuántos faltan, y acceso directo a verlos */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 text-[11px]">
+        <span className="text-[#888]">
+          <strong className="text-[#111]">{total}</strong> producto{total === 1 ? "" : "s"}
+          {hayFiltros ? " con estos filtros" : " en total"}
+        </span>
+        <span className="text-[#ddd]">·</span>
+        {([
+          { key: "precio", label: "sin precio", n: resumen.sinPrecio },
+          { key: "stock", label: "sin stock", n: resumen.sinStock },
+          { key: "moneda", label: "sin moneda", n: resumen.sinMoneda },
+        ] as const).map(({ key, label, n }) => (
+          <button
+            key={key}
+            onClick={() => { setFaltantes(faltantes === key ? "" : key); setPage(1); }}
+            disabled={n === 0 && faltantes !== key}
+            className={`px-2 py-1 border transition-colors disabled:opacity-40 disabled:cursor-default ${
+              faltantes === key
+                ? "border-[#DF8635] bg-[#FFF8F1] text-[#111] font-medium"
+                : "border-[#E0DED8] text-[#777] hover:border-[#bbb] enabled:hover:text-[#111]"
+            }`}
+            title={n === 0 ? `No hay productos ${label}` : `Ver solo los ${label}`}
+          >
+            {n} {label}
+          </button>
+        ))}
+
+        {resumen.sinMoneda > 0 && (
+          <button
+            onClick={() => completarMonedas(filas)}
+            className="ml-auto px-2.5 py-1 border border-[#111] text-[#111] hover:bg-[#111] hover:text-white transition-colors"
+            title={`Deduce la moneda del precio: más de $${UMBRAL_ARS} es ARS, menos es USD`}
+          >
+            Completar moneda de esta página
+          </button>
+        )}
+      </div>
+
       {/* Barra de operaciones masivas */}
       {seleccion.size > 0 && (
         <div className="mb-4 border border-[#DF8635]/40 bg-[#FFF8F1] p-3">
@@ -711,6 +893,13 @@ export default function PriceGrid({ onNotify }: Props) {
                 <button onClick={aplicarMoneda} className="px-3 py-1.5 text-[11px] font-medium bg-[#111] text-white hover:bg-[#333]">
                   Aplicar
                 </button>
+                <button
+                  onClick={() => completarMonedas(filasSeleccionadas)}
+                  className="px-2.5 py-1.5 text-[11px] font-medium border border-[#111] text-[#111] hover:bg-[#111] hover:text-white"
+                  title={`Solo completa las que están vacías, deduciéndolas del precio (más de $${UMBRAL_ARS} → ARS)`}
+                >
+                  Completar faltantes
+                </button>
               </div>
             </div>
           </div>
@@ -734,7 +923,7 @@ export default function PriceGrid({ onNotify }: Props) {
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-10 bg-[#FAFAF8]">
             <tr className="border-b border-[#E0DED8]">
-              <th className="w-9 px-2 py-2.5">
+              <th className="sticky left-0 z-20 bg-[#FAFAF8] w-9 px-2 py-2.5">
                 <input
                   type="checkbox"
                   checked={todosSeleccionados}
@@ -743,8 +932,8 @@ export default function PriceGrid({ onNotify }: Props) {
                   aria-label="Seleccionar todos los visibles"
                 />
               </th>
-              <th className="px-2 py-2.5 text-left text-[10px] font-semibold text-[#888] uppercase tracking-[0.06em]">SKU</th>
-              <th className="px-2 py-2.5 text-left text-[10px] font-semibold text-[#888] uppercase tracking-[0.06em]">Producto</th>
+              <th className="sticky left-9 z-20 bg-[#FAFAF8] px-2 py-2.5 text-left text-[10px] font-semibold text-[#888] uppercase tracking-[0.06em]">SKU</th>
+              <th className="sticky left-[124px] z-20 bg-[#FAFAF8] px-2 py-2.5 text-left text-[10px] font-semibold text-[#888] uppercase tracking-[0.06em]">Producto</th>
               {hayMoneda && (
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold text-[#888] uppercase tracking-[0.06em]">Moneda</th>
               )}
@@ -778,14 +967,21 @@ export default function PriceGrid({ onNotify }: Props) {
                 const seleccionada = seleccion.has(fila.id);
                 const filaPendiente = pendientes.has(fila.id);
                 const nombre = String(fila.nombre ?? fila.especie ?? fila.sku ?? "");
+                // Las celdas fijas se pintan aparte: al quedar sobre las que
+                // scrollean necesitan fondo propio o se ve el contenido debajo.
+                const fondoFila = seleccionada
+                  ? "bg-[#FFF8F1]"
+                  : filaPendiente
+                    ? "bg-[#FFFDF3]"
+                    : i % 2 === 0
+                      ? "bg-white"
+                      : "bg-[#FCFBF9]";
                 return (
                   <tr
                     key={fila.id}
-                    className={`border-b border-[#F0EEE9] transition-colors ${
-                      seleccionada ? "bg-[#FFF8F1]" : filaPendiente ? "bg-[#FFFDF3]" : "hover:bg-[#FAFAF8]"
-                    }`}
+                    className={`border-b border-[#F0EEE9] transition-colors ${fondoFila}`}
                   >
-                    <td className="px-2 py-1">
+                    <td className={`sticky left-0 z-10 px-2 py-1 ${fondoFila}`}>
                       <input
                         type="checkbox"
                         checked={seleccionada}
@@ -799,9 +995,11 @@ export default function PriceGrid({ onNotify }: Props) {
                       />
                     </td>
 
-                    <td className="px-2 py-1 text-[11px] text-[#777] font-mono whitespace-nowrap">{String(fila.sku ?? "")}</td>
+                    <td className={`sticky left-9 z-10 w-[100px] px-2 py-1 text-[11px] text-[#777] font-mono whitespace-nowrap overflow-hidden text-ellipsis ${fondoFila}`}>
+                      {String(fila.sku ?? "")}
+                    </td>
 
-                    <td className="px-2 py-1 max-w-[280px]">
+                    <td className={`sticky left-[124px] z-10 px-2 py-1 max-w-[280px] ${fondoFila}`}>
                       <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cat?.dot ?? "#ccc" }} title={cat?.label} />
                         <span className="text-[12px] text-[#111] truncate" title={nombre}>{nombre}</span>
@@ -820,6 +1018,8 @@ export default function PriceGrid({ onNotify }: Props) {
                           value={String(valorDe(fila, "moneda") ?? "")}
                           onChange={(e) => {
                             const v = e.target.value;
+                            // Elegida a mano: deja de recalcularse con el precio.
+                            monedasAutoRef.current.delete(fila.id);
                             if (v === String(fila.moneda ?? "")) olvidar(fila.id, "moneda");
                             else escribir(fila.id, fila._tabla, "moneda", v === "" ? null : v);
                           }}
@@ -836,6 +1036,22 @@ export default function PriceGrid({ onNotify }: Props) {
                       ) : (
                         <span className="text-[11px] text-[#ccc]">—</span>
                       )}
+                      {/* Sugerencia deducida del precio, a un click de aplicarse.
+                          Se muestra al lado, no dentro del select, para que se
+                          note que todavia no es el valor guardado. */}
+                      {(() => {
+                        const sugerida = monedaSugerida(fila);
+                        if (!sugerida) return null;
+                        return (
+                          <button
+                            onClick={() => escribir(fila.id, fila._tabla, "moneda", sugerida)}
+                            className="ml-1 px-1 py-0.5 text-[9px] uppercase tracking-wide text-[#b08040] border border-dashed border-[#DF8635]/50 hover:bg-[#FDEFC8] transition-colors"
+                            title={`Deducido del precio: más de $${UMBRAL_ARS} es ARS. Click para aplicarlo.`}
+                          >
+                            {sugerida}?
+                          </button>
+                        );
+                      })()}
                     </td>
                     )}
 
@@ -850,10 +1066,16 @@ export default function PriceGrid({ onNotify }: Props) {
                           {permitido ? (
                             <input
                               data-celda={`${i}|${c.key}`}
-                              value={borradores.get(clave) ?? aTexto(valorDe(fila, c.key))}
+                              value={
+                                borradores.get(clave) ??
+                                (celdaFoco === clave
+                                  ? aTexto(valorDe(fila, c.key))
+                                  : aTextoLegible(valorDe(fila, c.key)))
+                              }
                               onChange={(e) => onCelda(fila, c.key, e.target.value)}
                               onKeyDown={(e) => onTeclaCelda(e, i, c.key)}
-                              onFocus={(e) => e.target.select()}
+                              onFocus={(e) => { setCeldaFoco(clave); e.target.select(); }}
+                              onBlur={() => setCeldaFoco((f) => (f === clave ? null : f))}
                               inputMode="decimal"
                               placeholder="—"
                               className={`${celdaBase} ${

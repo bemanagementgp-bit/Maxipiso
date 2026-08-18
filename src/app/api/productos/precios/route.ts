@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     const marca = sanitizeText(sp.get("marca") ?? "", 100);
     const tablaFilter = sanitizeText(sp.get("tabla") ?? "", 60);
     const estado = sp.get("estado") ?? "todos";
-    const faltantes = sp.get("faltantes") ?? ""; // "precio" | "stock" | ""
+    const faltantes = sp.get("faltantes") ?? ""; // "precio" | "stock" | "moneda" | ""
     const skip = parseIntSafe(sp.get("skip"), 0, 0, 1_000_000);
     const take = parseIntSafe(sp.get("take"), 100, 1, 500);
 
@@ -132,9 +132,35 @@ export async function GET(req: NextRequest) {
       });
     } else if (faltantes === "stock") {
       filas = filas.filter((fila) => fila.stock === null || fila.stock === undefined || fila.stock === 0);
+    } else if (faltantes === "moneda") {
+      filas = filas.filter((fila) => {
+        const campos = getCamposDeDinero(String(fila._tabla));
+        if (!campos?.moneda) return false; // accesorios no tienen moneda
+        return !String(fila.moneda ?? "").trim();
+      });
     }
 
     const total = filas.length;
+
+    // Conteos sobre el resultado FILTRADO por categoría/marca/búsqueda, para
+    // los accesos rápidos de la grilla. Se calculan siempre sobre `filas`
+    // previo al recorte de página: son "cuántos hay", no "cuántos se ven".
+    const resumen = {
+      sinPrecio: 0,
+      sinStock: 0,
+      sinMoneda: 0,
+    };
+    for (const fila of filas) {
+      const campos = getCamposDeDinero(String(fila._tabla));
+      if (campos && campos.precios.length > 0) {
+        const vacios = campos.precios.every(
+          (c) => fila[c.key] === null || fila[c.key] === undefined,
+        );
+        if (vacios) resumen.sinPrecio++;
+      }
+      if (fila.stock === null || fila.stock === undefined || fila.stock === 0) resumen.sinStock++;
+      if (campos?.moneda && !String(fila.moneda ?? "").trim()) resumen.sinMoneda++;
+    }
 
     // Marcas presentes, para poblar el filtro sin una consulta aparte.
     const marcas = [...new Set(filas.map((f) => String(f.marca ?? "").trim()).filter(Boolean))].sort();
@@ -144,6 +170,7 @@ export async function GET(req: NextRequest) {
       data: {
         filas: filas.slice(skip, skip + take),
         total,
+        resumen,
         marcas,
         categorias: getTodasLasCategorias().map((c) => ({
           tabla: c.tabla,
