@@ -405,6 +405,40 @@ La ficha `/catalogo/[id]` es **server component**: resuelve el producto con `fin
 (recorre las 8 tablas secuencialmente hasta el primer match), arma las specs con
 `buildSpecsFromRow()` y muestra precios sólo si `getServerSession` devuelve sesión.
 
+#### Navegación y estado de la vista
+
+Toda la vista vive en la query string (`categoria`, `search`, `filtros[...]`, `orden`, `page`),
+así que cualquier combinación es compartible por link y sobrevive a un refresh. El componente
+la lee al montar y la reescribe cuando cambia el estado; `construirUrl()` está fuera del
+componente justamente para que el efecto que escribe y el que lee produzcan el mismo string
+carácter por carácter — si difirieran, cada lectura dispararía una escritura y se ensuciaría
+el historial.
+
+- **La URL se escribe con `history.pushState` / `replaceState`, no con `router.push`.** El App
+  Router soporta la History API nativa y sincroniza `useSearchParams` solo, sin pedirle el RSC
+  payload al servidor en cada click. Con `router.push` la URL directamente dejaba de
+  actualizarse en el build de producción.
+- Paginar, filtrar, ordenar o cambiar de categoría **apilan** entrada de historial: el botón
+  atrás recorre el catálogo en vez de salir del sitio de una. Escribir en el buscador usa
+  `replace`, porque si no cada tecleo dejaría una entrada basura.
+- **Caché de resultados en scope de módulo** (`snapshotCache`, tope 40 entradas, clave
+  `auth|anon` + query). Al volver de una ficha el componente se remonta y perdía todo: se veía
+  el skeleton y se reconsultaban las 8 tablas. Ahora se pinta desde el snapshot al instante y
+  se revalida en silencio.
+- **Prefetch de la página siguiente** sobre ese mismo caché, 400 ms después de que la vista
+  actual terminó de cargar. "Siguiente" pinta sin esperar red.
+- La grilla **no se blanquea** al paginar o filtrar: queda atenuada con `aria-busy` mientras
+  llega la respuesta. El skeleton aparece sólo cuando no hay nada previo que mostrar.
+- **Restauración de scroll.** La altura se anota en el `click` sobre la ficha, no en el evento
+  de scroll: Next sube la página al tope antes de desmontar el catálogo, y ese scroll pisaba el
+  valor guardado con un 0. Se reaplica recién cuando la grilla ya está pintada, reintentando
+  unos frames porque el documento todavía está creciendo.
+
+> El bug original —"volvés de un producto y estás de nuevo en la página 1"— no era el caché ni
+> el scroll: era un `useEffect` que forzaba `page = 1` al cambiar el orden y que **también
+> corría en el montaje**, pisando la página que traía la URL. El guard con `useRef` es el fix;
+> lo demás es lo que hace que la vuelta se sienta instantánea.
+
 ### 8.2 ABM de productos
 
 `/panel` → `ProductTable` (listado + drag & drop de orden) + `QuickEditPanel` (formulario
@@ -545,6 +579,24 @@ el video de fallback y el cambio no altera nada visible.
 
 Si en algún momento se quiere un hero administrable, hacerlo sobre `lib/storage.ts` con un
 blob store configurado (§8.5).
+
+#### Las 8 cards de líneas de producto
+
+Debajo del hero, la home lista las 8 líneas en una grilla de 4 + 4 (`grid-cols-2 md:grid-cols-4`,
+`aspect-ratio 4/3`). El array `lineas` en `src/app/page.tsx` es la única fuente: cada entrada
+lleva `label`, `href` con el slug de categoría **tal como lo espera `/api/catalogo/todos`**,
+`img` e icono. Si se agrega una categoría, el slug tiene que coincidir con el del endpoint o la
+card lleva a un catálogo vacío.
+
+Las portadas usan `SafeImage`, no `next/image` pelado: eso les da el loader de Cloudinary
+(`f_auto,q_auto` por cada ancho del srcset) y un placeholder si la URL falla, que es lo que se
+ve hoy en Deck cuando no hay red hacia `res.cloudinary.com`. Las demás son archivos locales de
+`public/` y siguen el camino normal del optimizador de Next.
+
+La portada de Deck apunta a un asset de la cuenta de Cloudinary del proyecto. **Es una foto
+tomada de un sitio de terceros (Construex/Polyarq) y re-alojada**; queda anotado acá porque el
+riesgo de derechos no desaparece por haberla copiado a un CDN propio. Reemplazarla por una foto
+propia o con licencia cuando haya una.
 
 ### 8.7 Chatbot "Nacho"
 
@@ -800,6 +852,9 @@ lockfile no se puede regenerar en esos entornos (§9.8).
 | — | **27 columnas no eran editables** desde el panel: las 8 unidades de medida (`*Um`) en las 6 categorías que las tienen, más `nombre` en pisos_madera. El backend las descartaba en silencio porque no estaban en `category-fields.ts` |
 | — | Las imágenes solo se podían cambiar subiendo un archivo, que en producción falla. Ahora se pueden agregar por ruta o URL, validadas contra la misma lista de hosts que usa `next/image` |
 | 2 | **Uploads a un blob store**: se implementó el driver de Cloudinary sobre la cuenta que ya existía, con upload firmado y transformaciones `f_auto,q_auto` (§8.5). Falta solo cargar las credenciales en Vercel |
+| — | **Volver atrás desde una ficha te devolvía a la página 1** del catálogo: un `useEffect` forzaba `page = 1` al cambiar el orden y también corría en el montaje, pisando la página de la URL (§8.1) |
+| — | El catálogo reconsultaba las 8 tablas y mostraba el skeleton en cada vuelta atrás; ahora pinta desde un caché de módulo y revalida en silencio, con prefetch de la página siguiente y restauración de scroll (§8.1) |
+| — | Paginar no dejaba entrada en el historial: el botón atrás sacaba del sitio de una en vez de recorrer las páginas (§8.1) |
 
 ### 🟠 Abierto — P1
 
