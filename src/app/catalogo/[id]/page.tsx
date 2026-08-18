@@ -178,7 +178,7 @@ function getProductCatalogPath(tableKey: TableKey, raw: Record<string, unknown>)
   const pathEntries = pathDefs.filter((entry, index, arr) => {
     if (!entry.text) return false;
     const norm = normalize(entry.text);
-    return !arr.slice(0, index).some((prev) => prev.field === entry.field && prev.text && normalize(prev.text) === norm);
+    return !arr.slice(0, index).some((prev) => prev.text && normalize(prev.text) === norm);
   });
 
   return pathEntries.map((entry, index) => {
@@ -370,20 +370,23 @@ export default async function ProductPage({
       {/* Header negro */}
       <div className="w-full bg-[#111]">
         <div className="max-w-[1260px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <nav className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-            <Link href="/" className="hover:text-white transition-colors">Inicio</Link>
-            <FiChevronRight size={12} />
-            <Link href="/catalogo" className="hover:text-white transition-colors">Catálogo</Link>
-            {productCatalogPath.length > 0 && productCatalogPath.map((segment, index) => (
-              <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-1">
-                <FiChevronRight size={12} />
-                <Link href={segment.href} className="hover:text-white transition-colors">
+          <h1 className="text-xl font-bold text-white tracking-tight">Detalle de producto</h1>
+          <nav
+            aria-label="Migas de pan"
+            className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm md:text-[15px] text-gray-200"
+          >
+            <Link href="/" className="hover:text-[#DF8635] transition-colors">Inicio</Link>
+            <FiChevronRight size={14} className="text-gray-500 shrink-0" />
+            <Link href="/catalogo" className="hover:text-[#DF8635] transition-colors">Catálogo</Link>
+            {productCatalogPath.map((segment, index) => (
+              <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-2">
+                <FiChevronRight size={14} className="text-gray-500 shrink-0" />
+                <Link href={segment.href} className="hover:text-[#DF8635] transition-colors">
                   {segment.text}
                 </Link>
               </span>
             ))}
           </nav>
-          <h1 className="text-xl font-bold text-white tracking-tight">Detalle de producto</h1>
         </div>
       </div>
 

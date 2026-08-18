@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import Image from "next/image";
 import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
-import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiShoppingBag } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiSquare, FiColumns, FiBox } from "react-icons/fi";
 import HeroCarousel from "@/components/home/HeroCarousel";
 import { articles as novedadesArticles } from "@/data/novedades";
 
@@ -54,13 +55,17 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
+// Los `categoria` tienen que coincidir con las claves de TABLES en
+// /api/catalogo/todos: /catalogo las lee de la query string al montar.
 const lineas = [
-  { label: "Pisos",          href: "/catalogo?categoria=pisos-flotantes", img: "/pisos.png",          Icon: FiGrid },
-  { label: "Maderas",        href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiLayers },
-  { label: "Deck WPC",       href: "/catalogo?categoria=decks",           img: "/deck.jpg",           Icon: FiSun },
-  { label: "Revestimientos", href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
-  { label: "Accesorios",     href: "/catalogo?categoria=accesorios",      img: "/accesorios.png",     Icon: FiTool },
-  { label: "Otros",          href: "/catalogo",                           img: "/adhesivos.jpg",      Icon: FiShoppingBag },
+  { label: "Pisos Laminados", href: "/catalogo?categoria=pisos-flotantes", img: "/14704-1.jpg",        Icon: FiGrid },
+  { label: "Pisos Vinílicos", href: "/catalogo?categoria=pisos-vinilicos", img: "/25063-1.jpg",        Icon: FiLayers },
+  { label: "Porcelanatos",    href: "/catalogo?categoria=porcellanatos",   img: "/22385-1.jpg",        Icon: FiSquare },
+  { label: "Pisos de Madera", href: "/catalogo?categoria=pisos-madera",    img: "/100001-1.jpg",       Icon: FiColumns },
+  { label: "Deck",            href: "/catalogo?categoria=decks",           img: "/deck.jpg",           Icon: FiSun },
+  { label: "Revestimientos",  href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
+  { label: "Maderas",         href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiBox },
+  { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "/accesorios.png",     Icon: FiTool },
 ];
 
 const stats = [
@@ -605,48 +610,55 @@ export default function Home() {
               La mayor variedad en importación, en un solo lugar
             </p>
           </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {lineas.map(({ label, href, img, Icon }, i) => (
               <Reveal key={label} delay={i * 0.08}>
                 <Link
                   href={href}
                   className="group relative overflow-hidden rounded-3xl block bg-[#FAFAF8] border border-gray-100"
-                  style={{ aspectRatio: "2/5" }}
+                  style={{ aspectRatio: "4/3" }}
                 >
                   {/* Imagen full-background */}
-                  <img
+                  <Image
                     src={img}
                     alt={label}
-                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
                     style={img === "/deck.jpg" ? { objectPosition: "center top" } : undefined}
                   />
 
-                  {/* Arco blanco — cubre la parte superior, igual que en la referencia */}
+                  {/* Arco blanco sobre la imagen. El viewBox acompaña el aspecto
+                      4/3 de la card: sin esto la curva queda aplastada. */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
                     <svg
-                      viewBox="0 0 300 500"
+                      viewBox="0 0 400 300"
                       preserveAspectRatio="none"
                       className="w-full h-full"
                       style={{ overflow: "visible" }}
                     >
-                      {/* derecha 29% (y=145), izquierda 50% (y=250), control arriba = curva suave hacia arriba */}
+                      {/* derecha ~32% (y=95), izquierda ~55% (y=165), control por
+                          encima del borde alto = curva suave hacia arriba */}
                       <path
-                        d="M-10,-10 L310,-10 L310,145 Q155,125 -10,250 Z"
+                        d="M-10,-10 L410,-10 L410,95 Q205,85 -10,165 Z"
                         fill="#FAFAF8"
                       />
                     </svg>
                   </div>
 
                   {/* Contenido encima del SVG */}
-                  <div className="absolute top-0 left-0 z-20 px-5 pt-6 flex items-center gap-3">
-                    <div className="text-[#666] group-hover:text-[#DF8635] transition-colors duration-300">
-                      <Icon size={22} strokeWidth={1.5} />
+                  {/* `inset-x-0` en vez de `left-0`: sin un ancho definido este
+                      bloque absoluto se dimensiona al contenido y en mobile los
+                      labels largos ("PORCELANATOS") se desbordaban de la card. */}
+                  <div className="absolute inset-x-0 top-0 z-20 px-4 sm:px-5 pt-4 sm:pt-5 flex items-start gap-2 sm:gap-3">
+                    <div className="text-[#666] group-hover:text-[#DF8635] transition-colors duration-300 shrink-0">
+                      <Icon className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px]" strokeWidth={1.5} />
                     </div>
-                    <div>
-                      <p className="font-black text-[#1a1a1a] uppercase text-sm lg:text-base xl:text-lg leading-snug tracking-[0.08em] mt-2">
+                    <div className="min-w-0">
+                      <p className="font-black text-[#1a1a1a] uppercase text-[10px] sm:text-sm lg:text-base leading-tight sm:leading-snug tracking-normal sm:tracking-[0.06em] break-words">
                         {label}
                       </p>
-                      <div className="w-5 h-px bg-[#DF8635] mt-2" />
+                      <div className="w-5 h-px bg-[#DF8635] mt-1.5 sm:mt-2" />
                     </div>
                   </div>
                 </Link>

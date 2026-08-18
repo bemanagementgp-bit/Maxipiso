@@ -65,3 +65,7 @@ dump.sql
 
 # El ejemplo si va al repo (no tiene secretos)
 !.env.example
+
+# base local de desarrollo
+*.db
+*.db-journal
