@@ -439,6 +439,35 @@ el historial.
 > corría en el montaje**, pisando la página que traía la URL. El guard con `useRef` es el fix;
 > lo demás es lo que hace que la vuelta se sienta instantánea.
 
+### 8.2 bis Precios y stock — `/panel/precios`
+
+Grilla editable para actualizar listas de precios sin abrir producto por producto.
+La regla de fondo: **nada toca la base hasta que se aprieta Guardar.** Editar una celda,
+aplicar un aumento del 12% o redondear escribe en un buffer de cambios pendientes que se ve
+en amarillo sobre la grilla, así se pueden encadenar operaciones (aumentar → redondear →
+corregir tres filas a mano), revisar el total y recién ahí impactarlo en una sola request.
+
+- Edición inline con teclado (Enter y flechas mueven entre filas, Escape revierte la celda).
+  Se acepta coma o punto como separador decimal, porque en la práctica se pega de planillas.
+- **Las columnas se arman según las categorías visibles**, y cada celda se habilita sólo
+  donde la columna existe. Las 8 tablas no comparten los campos: `maderas` tiene `precio` a
+  secas, `revestimientos` usa `precioMl` y `decks` `precioMLineal` para lo mismo, y
+  **`accesorios` no tiene ningún precio ni moneda, sólo `stock`**. Todo eso se deriva de
+  `lib/price-fields.ts`, que lo saca de `CATEGORY_CONFIGS` en vez de repetir la lista.
+- Operaciones en lote sobre la selección: porcentaje, redondeo (entero / decena / centena /
+  millar / terminación 99), fijar o sumar stock, y cambiar moneda con conversión opcional por
+  cotización. Las categorías sin campos de precio se omiten con aviso de cuántas fueron.
+- Los pendientes sobreviven al cambio de página y de filtro: se puede editar en varias
+  páginas y guardar todo junto.
+
+`GET /api/productos/precios` hace `select` sólo de lo que se muestra — `/api/productos`
+devuelve la fila entera y trae 2.000 registros por tabla. `PATCH` aplica hasta 500 cambios por
+request, valida campo por campo contra la config de esa tabla (el mismo chequeo que evita
+mandarle a Prisma una columna inexistente, §9.x `garantia`), acota importes y stock, redondea
+a dos decimales y escribe un `changeLog` por campo — que es lo que alimenta el reporte de
+precio histórico. Devuelve el detalle de lo que falló, y esos productos quedan pendientes en
+pantalla en vez de perderse.
+
 ### 8.2 ABM de productos
 
 `/panel` → `ProductTable` (listado + drag & drop de orden) + `QuickEditPanel` (formulario
@@ -852,6 +881,7 @@ lockfile no se puede regenerar en esos entornos (§9.8).
 | — | **27 columnas no eran editables** desde el panel: las 8 unidades de medida (`*Um`) en las 6 categorías que las tienen, más `nombre` en pisos_madera. El backend las descartaba en silencio porque no estaban en `category-fields.ts` |
 | — | Las imágenes solo se podían cambiar subiendo un archivo, que en producción falla. Ahora se pueden agregar por ruta o URL, validadas contra la misma lista de hosts que usa `next/image` |
 | 2 | **Uploads a un blob store**: se implementó el driver de Cloudinary sobre la cuenta que ya existía, con upload firmado y transformaciones `f_auto,q_auto` (§8.5). Falta solo cargar las credenciales en Vercel |
+| — | Actualizar precios exigía abrir producto por producto en el ABM: un formulario de 30 campos por número y un `PUT` por producto. Ahora hay una grilla dedicada con edición inline y operaciones en lote (§8.2 bis) |
 | — | **Volver atrás desde una ficha te devolvía a la página 1** del catálogo: un `useEffect` forzaba `page = 1` al cambiar el orden y también corría en el montaje, pisando la página de la URL (§8.1) |
 | — | El catálogo reconsultaba las 8 tablas y mostraba el skeleton en cada vuelta atrás; ahora pinta desde un caché de módulo y revalida en silencio, con prefetch de la página siguiente y restauración de scroll (§8.1) |
 | — | Paginar no dejaba entrada en el historial: el botón atrás sacaba del sitio de una en vez de recorrer las páginas (§8.1) |
