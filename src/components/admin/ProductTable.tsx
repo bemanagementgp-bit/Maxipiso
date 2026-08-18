@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -112,12 +111,59 @@ function SkeletonRow({ cols = 8 }: { cols?: number }) {
   );
 }
 
+/** Fila tal como la devuelve /api/productos (normalizada para el panel). */
+export type AdminProductRow = {
+  id: string;
+  sku: string;
+  nombre: string;
+  marca: string | null;
+  precioM2: number | null;
+  moneda: string | null;
+  stock: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  descripcion: string | null;
+  imagen: string | null;
+  sortOrder?: number;
+  _tabla: string;
+  _tablaLabel: string;
+  [key: string]: unknown;
+};
+
+export interface ProductTableProps {
+  onEdit: (product: AdminProductRow) => void;
+  onDelete: (productId: string) => void;
+  onViewHistory: (productId: string) => void;
+  searchTerm?: string;
+  tablaFilter?: string;
+  marcaFilter?: string;
+  estadoFilter?: string;
+  refreshKey?: number;
+}
+
+/** Primera URL de un campo `imagenes` que puede venir como JSON array o CSV. */
+function parseFirstImage(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const raw = value.trim();
+  if (raw.startsWith("[")) {
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) && typeof arr[0] === "string" ? arr[0] : null;
+    } catch {
+      return null;
+    }
+  }
+  const first = raw.split(/[;,]/)[0]?.trim();
+  return first || null;
+}
+
 export function ProductTable({
   onEdit, onDelete, onViewHistory,
   searchTerm = "", tablaFilter = "", marcaFilter = "",
   estadoFilter = "activo", refreshKey = 0,
-}: any) {
-  const [productos, setProductos]         = useState<any[]>([]);
+}: ProductTableProps) {
+  const [productos, setProductos]         = useState<AdminProductRow[]>([]);
   const [isLoading, setIsLoading]         = useState(true);
   const [error, setError]                 = useState("");
   const [page, setPage]                   = useState(1);
@@ -391,8 +437,8 @@ export function ProductTable({
                   ) : (
                     productos.map((p, rowIdx) => {
                   const isHovered = hoveredRow === p.id;
-                  const imgSrc = p.imagenes ? (() => { try { const arr = JSON.parse(p.imagenes); return Array.isArray(arr) ? arr[0] : null; } catch { return null; } })() : null;
-                  const nombre = p.nombre ?? p.especie ?? p.sku;
+                  const imgSrc = parseFirstImage(p.imagenes) ?? p.imagen ?? null;
+                  const nombre = p.nombre ?? String(p.especie ?? "") ?? p.sku;
                   const isOver = overIdx === rowIdx && dragIdx !== rowIdx;
                   return (
                     <tr

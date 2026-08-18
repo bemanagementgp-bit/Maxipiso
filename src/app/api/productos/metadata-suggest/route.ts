@@ -1,23 +1,12 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 import { verifyOrigin } from "@/lib/security";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
-
-const TABLE_KEYS: Record<string, string> = {
-  pisos_flotantes: "pisoFlotante",
-  porcellanatos: "porcellanato",
-  revestimientos: "revestimiento",
-  pisos_vinilicos: "pisoVinilico",
-  pisos_madera: "pisoMadera",
-  decks: "deck",
-  maderas: "madera",
-  accesorios: "accesorio",
-};
 
 export async function POST(req: NextRequest) {
   const originErr = verifyOrigin(req);
@@ -44,13 +33,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tabla requerida" }, { status: 400 });
   }
 
-  const prismaKey = Object.prototype.hasOwnProperty.call(TABLE_KEYS, tabla)
-    ? TABLE_KEYS[tabla]
-    : undefined;
+  const prismaKey = tableKeyFromDbName(tabla);
   if (!prismaKey) return NextResponse.json({ error: "Tabla desconocida" }, { status: 400 });
 
   try {
-    const delegate = (prisma as any)[prismaKey];
+    const delegate = getDelegate(prismaKey);
     const rows = await delegate.findMany({
       where: { NOT: { metadatos: null } },
       select: { metadatos: true, updatedAt: true },
@@ -60,10 +47,12 @@ export async function POST(req: NextRequest) {
 
     const keyCount: Record<string, number> = {};
     for (const row of rows) {
+      if (typeof row.metadatos !== "string") continue;
       try {
-        const metas: { clave: string }[] = JSON.parse(row.metadatos);
+        const metas = JSON.parse(row.metadatos) as { clave?: string }[];
+        if (!Array.isArray(metas)) continue;
         for (const m of metas) {
-          const k = m.clave?.trim();
+          const k = m?.clave?.trim();
           if (k) keyCount[k] = (keyCount[k] || 0) + 1;
         }
       } catch { /* skip malformed */ }

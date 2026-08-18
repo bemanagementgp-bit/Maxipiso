@@ -1,4 +1,3 @@
-﻿// @ts-nocheck
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,7 +19,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { findProductById, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS } from "@/lib/all-products";
+import { findProductById, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS, type TableKey } from "@/lib/all-products";
 import { getFlagUrl, getCountryLabel } from "@/lib/flags";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
@@ -114,7 +113,7 @@ function buildCatalogHref(tableKey: string, filters: Record<string, string>) {
   return query ? `/catalogo?${query}` : "/catalogo";
 }
 
-function getProductCatalogPath(tableKey: string, raw: Record<string, unknown>): PathSegment[] {
+function getProductCatalogPath(tableKey: TableKey, raw: Record<string, unknown>): PathSegment[] {
   const baseCategory = TABLE_CATEGORIA[tableKey] ?? "Producto";
   const categoriaPrincipal = String(raw.categoriaPrincipal ?? "").trim();
   const categoriaSecundaria = String(raw.categoriaSecundaria ?? raw.subcategoria ?? "").trim();

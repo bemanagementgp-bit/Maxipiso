@@ -1,8 +1,8 @@
-﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 import * as XLSX from "xlsx";
 import { verifyOrigin } from "@/lib/security";
 import { norm, isSkipCol, detectSchema, parseRowWithSchema, SHEET_SCHEMAS } from "@/lib/sheet-schemas";
@@ -12,22 +12,11 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_ROWS = 2000;
 
-const TABLE_TO_KEY: Record<string, string> = {
-  pisos_flotantes: "pisoFlotante",
-  porcellanatos:   "porcellanato",
-  revestimientos:  "revestimiento",
-  pisos_vinilicos: "pisoVinilico",
-  pisos_madera:    "pisoMadera",
-  decks:           "deck",
-  maderas:         "madera",
-  accesorios:      "accesorio",
-};
-
 function pickWorksheets(workbook: XLSX.WorkBook): { ws: XLSX.WorkSheet; sheetName: string }[] {
   const valid: { ws: XLSX.WorkSheet; sheetName: string }[] = [];
   for (const name of workbook.SheetNames) {
     const ws = workbook.Sheets[name];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rows.length) continue;
     const keys = Object.keys(rows[0]).map(norm);
     if (keys.some((k) => k === "sku")) valid.push({ ws, sheetName: name });
@@ -74,7 +63,7 @@ export async function POST(req: NextRequest) {
   const globalSeenSkus = new Set<string>();
 
   for (const { ws, sheetName } of sheets) {
-    const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rawRows.length) continue;
 
     const headers = Object.keys(rawRows[0]);
@@ -119,15 +108,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Verificar existentes en la tabla correspondiente
-    const prismaKey = TABLE_TO_KEY[schema.tabla];
+    const prismaKey = tableKeyFromDbName(schema.tabla);
     let existingSkus = new Set<string>();
     if (prismaKey) {
-      const delegate = (prisma as any)[prismaKey];
-      const existing = await delegate.findMany({
+      const delegate = getDelegate(prismaKey);
+      const existing = (await delegate.findMany({
         where: { sku: { in: [...sheetSkus] } },
         select: { sku: true },
-      });
-      existingSkus = new Set(existing.map((e: any) => e.sku));
+      })) as { sku: string }[];
+      existingSkus = new Set(existing.map((e) => e.sku));
     }
 
     let sheetCreate = 0;

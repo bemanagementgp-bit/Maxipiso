@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -6,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { detectImageMime, verifyOrigin } from "@/lib/security";
 import { getStorage, StorageError } from "@/lib/storage";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { findProductById, TABLES_WITH_IMAGENES_ARRAY } from "@/lib/all-products";
+import { findProductById, getDelegate } from "@/lib/all-products";
 
 export const runtime = "nodejs";
 
@@ -96,7 +95,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (productId && foundProduct) {
-      const delegate = (prisma as any)[foundProduct.tableKey];
+      const delegate = getDelegate(foundProduct.tableKey);
       const existing: string[] = (() => {
         const rawValue = String(foundProduct.raw.imagenes ?? "").trim();
         if (!rawValue) return [];

@@ -1,4 +1,3 @@
-﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,23 +6,12 @@ import * as XLSX from "xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { verifyOrigin } from "@/lib/security";
 import { norm, detectSchema, parseRowWithSchema } from "@/lib/sheet-schemas";
+import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 
 export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_ROWS = 2000;
-
-// Mapa tabla DB → clave Prisma
-const TABLE_TO_KEY: Record<string, string> = {
-  pisos_flotantes: "pisoFlotante",
-  porcellanatos:   "porcellanato",
-  revestimientos:  "revestimiento",
-  pisos_vinilicos: "pisoVinilico",
-  pisos_madera:    "pisoMadera",
-  decks:           "deck",
-  maderas:         "madera",
-  accesorios:      "accesorio",
-};
 
 function toNumber(v: unknown): number | undefined {
   if (v === null || v === undefined || v === "") return undefined;
@@ -54,7 +42,7 @@ function pickWorksheets(workbook: XLSX.WorkBook): { ws: XLSX.WorkSheet; sheetNam
   const valid: { ws: XLSX.WorkSheet; sheetName: string }[] = [];
   for (const name of workbook.SheetNames) {
     const ws = workbook.Sheets[name];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rows.length) continue;
     const keys = Object.keys(rows[0]).map(norm);
     if (keys.some((k) => k === "sku")) valid.push({ ws, sheetName: name });
@@ -89,7 +77,7 @@ export async function POST(req: NextRequest) {
   const allRows: (ReturnType<typeof parseRowWithSchema> & { tabla: string })[] = [];
   const warnings: string[] = [];
   for (const { ws, sheetName } of sheets) {
-    const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     if (!rawRows.length) continue;
     const headers = Object.keys(rawRows[0]);
     const { schema, score, recognized } = detectSchema(headers);
@@ -143,13 +131,16 @@ export async function POST(req: NextRequest) {
 
   // Procesar cada tabla
   for (const [tablaNombre, rows] of byTabla.entries()) {
-    const prismaKey = TABLE_TO_KEY[tablaNombre];
+    const prismaKey = tableKeyFromDbName(tablaNombre);
     if (!prismaKey) { skippedCount += rows.length; continue; }
-    const delegate = (prisma as any)[prismaKey];
+    const delegate = getDelegate(prismaKey);
 
     const skus = rows.map((r) => String(r.sku));
-    const existing = await delegate.findMany({ where: { sku: { in: skus } }, select: { id: true, sku: true } });
-    const existingMap = new Map(existing.map((e: any) => [e.sku, e]));
+    const existing = (await delegate.findMany({
+      where: { sku: { in: skus } },
+      select: { id: true, sku: true },
+    })) as { id: string; sku: string }[];
+    const existingMap = new Map(existing.map((e) => [e.sku, e]));
 
     for (const row of rows) {
       const sku = String(row.sku);
@@ -173,10 +164,11 @@ export async function POST(req: NextRequest) {
           updatedCount++;
         } else {
           const created = await delegate.create({ data });
+          const createdId = String(created.id);
           await prisma.changeLog.create({
             data: {
               tablaNombre,
-              entidadId: created.id,
+              entidadId: createdId,
               usuarioId: userId,
               campo: "PRODUCTO",
               valorAnterior: null,

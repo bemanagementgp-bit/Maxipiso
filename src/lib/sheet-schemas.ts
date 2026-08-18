@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 //  Sheet Schemas — configuración de columnas por categoría
 //  Schema v2: tablas separadas, campos mapean al nuevo schema Prisma.
 // ─────────────────────────────────────────────────────────────

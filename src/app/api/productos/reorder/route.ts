@@ -2,20 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
-
-const TABLE_MAP: Record<string, string> = {
-  pisos_flotantes: "pisoFlotante",
-  porcellanatos: "porcellanato",
-  revestimientos: "revestimiento",
-  pisos_vinilicos: "pisoVinilico",
-  pisos_madera: "pisoMadera",
-  decks: "deck",
-  maderas: "madera",
-  accesorios: "accesorio",
-};
 
 export async function PUT(req: NextRequest) {
   const originErr = verifyOrigin(req);
@@ -49,13 +39,13 @@ export async function PUT(req: NextRequest) {
   const normalizedTabla = tabla === "revestimientos_ext" || tabla === "revestimientos_int"
     ? "revestimientos"
     : tabla;
-  const delegateKey = TABLE_MAP[normalizedTabla];
+  const delegateKey = tableKeyFromDbName(normalizedTabla);
   if (!delegateKey) {
     return NextResponse.json({ error: "Tabla desconocida" }, { status: 400 });
   }
 
   try {
-    const delegate = (prisma as any)[delegateKey];
+    const delegate = getDelegate(delegateKey);
 
     // ── Mover un item a una posicion concreta ────────────────────────────────
     // Antes esto reescribia la tabla entera: un findMany() completo mas un
@@ -64,10 +54,10 @@ export async function PUT(req: NextRequest) {
     // destino, y solo si el orden guardado ya esta normalizado.
     if (items.length === 1) {
       const [item] = items;
-      const rows: { id: string; sortOrder: number }[] = await delegate.findMany({
+      const rows = (await delegate.findMany({
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: { id: true, sortOrder: true },
-      });
+      })) as { id: string; sortOrder: number }[];
 
       const currentIndex = rows.findIndex((row) => row.id === item.id);
       if (currentIndex < 0) {
@@ -92,26 +82,26 @@ export async function PUT(req: NextRequest) {
       const desde = yaNormalizado ? Math.min(currentIndex, targetIndex) : 0;
       const hasta = yaNormalizado ? Math.max(currentIndex, targetIndex) : reordered.length - 1;
 
-      const updates = [];
+      const updates: Promise<unknown>[] = [];
       for (let i = desde; i <= hasta; i++) {
         const row = reordered[i];
         if (row.sortOrder === i) continue;
         updates.push(delegate.update({ where: { id: row.id }, data: { sortOrder: i } }));
       }
 
-      if (updates.length > 0) await prisma.$transaction(updates);
+      if (updates.length > 0) await prisma.$transaction(updates as never);
       return NextResponse.json({ success: true, data: { updated: updates.length } });
     }
 
     // ── Reordenar un lote (drag & drop de una pagina) ────────────────────────
     // En transaccion: si falla a la mitad, el orden no queda corrupto.
     await prisma.$transaction(
-      items.map((item) =>
+      items.map((item: { id: string; sortOrder: number }) =>
         delegate.update({
           where: { id: item.id },
           data: { sortOrder: item.sortOrder },
         })
-      )
+      ) as never
     );
     return NextResponse.json({ success: true, data: { updated: items.length } });
   } catch (error) {

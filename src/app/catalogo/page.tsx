@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown, FiUser } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
-import { ProductCard, EmptyState } from "@/components/catalog/CategoryListing";
-import type { CatalogItem } from "@/components/catalog/CategoryListing";
+import { ProductCard, EmptyState } from "@/components/catalog/ProductCard";
+import type { CatalogItem } from "@/components/catalog/ProductCard";
 import LoginModal from "@/components/catalog/LoginModal";
 
 type FilterGroup = { label: string; values: string[] };

@@ -1,8 +1,7 @@
-﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { DB_NAMES, normalizeAdminRow, TABLE_LABELS, type TableKey, TABLE_KEYS } from "@/lib/all-products";
+import { DB_NAMES, getDelegate, normalizeAdminRow, TABLE_LABELS, type TableKey, TABLE_KEYS } from "@/lib/all-products";
 import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
 import { parseIntSafe, sanitizeText, verifyOrigin } from "@/lib/security";
@@ -136,8 +135,7 @@ export async function GET(req: NextRequest) {
     // Consulta todas las tablas en paralelo
     const results = await Promise.all(
       keys.map(async (key) => {
-        const delegate = (prisma as Record<string, { findMany: Function; count: Function }>)[key];
-        if (!delegate) return [];
+        const delegate = getDelegate(key);
 
         const where: Record<string, unknown> = {};
         if (isActive !== undefined) where.isActive = isActive;
@@ -257,7 +255,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tabla desconocida" }, { status: 400 });
     }
 
-    const delegate = (prisma as Record<string, { findUnique: Function; create: Function }>)[tableKey];
+    const delegate = getDelegate(tableKey);
 
     const existing = await delegate.findUnique({ where: { sku: raw.sku as string } });
     if (existing) {
@@ -303,7 +301,7 @@ export async function POST(req: NextRequest) {
     await prisma.changeLog.create({
       data: {
         tablaNombre,
-        entidadId:    producto.id,
+        entidadId:    String(producto.id),
         usuarioId:    session.user.id,
         campo:        "PRODUCTO",
         valorAnterior: null,

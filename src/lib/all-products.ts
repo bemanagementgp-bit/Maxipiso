@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * all-products.ts
  * Utilities for querying the multi-table product schema.
@@ -76,14 +75,6 @@ const SEARCH_FIELDS_BY_TABLE: Record<TableKey, string[]> = {
   accesorio:     ["sku", "nombre"],
 };
 
-/** Tables that store multiple images as a JSON array in the `imagenes` field */
-export const TABLES_WITH_IMAGENES_ARRAY: TableKey[] = [
-  "pisoFlotante",
-  "porcellanato",
-  "pisoVinilico",
-  "pisoMadera",
-];
-
 /**
  * Price-field names that may appear in any product table.
  * Used for ChangeLog queries (campo filter).
@@ -96,6 +87,30 @@ export const PRICE_FIELDS = [
   "precioMLineal",
   "precioMl",
 ] as const;
+
+// ─── Acceso dinamico a los delegates ─────────────────────────────────────────
+// Las 8 tablas se recorren por nombre, asi que hace falta indexar el
+// PrismaClient con una TableKey. Este es el unico lugar donde se hace el cast,
+// para no repetir `(prisma as any)[key]` por toda la app.
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type ProductDelegate = {
+  findMany(args?: any): Promise<Record<string, unknown>[]>;
+  findUnique(args: any): Promise<Record<string, unknown> | null>;
+  create(args: any): Promise<Record<string, unknown>>;
+  update(args: any): Promise<Record<string, unknown>>;
+  count(args?: any): Promise<number>;
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export function getDelegate(key: TableKey): ProductDelegate {
+  return (prisma as unknown as Record<TableKey, ProductDelegate>)[key];
+}
+
+/** Traduce el nombre de tabla en DB (ej "pisos_flotantes") a su TableKey. */
+export function tableKeyFromDbName(dbName: string): TableKey | null {
+  return TABLE_KEYS.find((key) => DB_NAMES[key] === dbName) ?? null;
+}
 
 // ─── Normalised shape ─────────────────────────────────────────────────────────
 
@@ -184,8 +199,7 @@ export async function getAllProducts(options?: {
 }): Promise<NormalizedProduct[]> {
   const results = await Promise.all(
     TABLE_KEYS.map(async (key) => {
-      const delegate = (prisma as any)[key];
-      if (!delegate) return [];
+      const delegate = getDelegate(key);
 
       const where: Record<string, unknown> = {};
       if (options?.isActive !== undefined) where.isActive = options.isActive;
@@ -211,8 +225,7 @@ export async function findProductById(id: string): Promise<{
   tablaNombre: string;
 } | null> {
   for (const key of TABLE_KEYS) {
-    const delegate = (prisma as any)[key];
-    if (!delegate) continue;
+    const delegate = getDelegate(key);
     const row = await delegate.findUnique({ where: { id } }).catch(() => null);
     if (row) {
       return {
@@ -232,8 +245,7 @@ export async function findProductsByIds(ids: string[]): Promise<Map<string, Norm
   const map = new Map<string, NormalizedProduct>();
   await Promise.all(
     TABLE_KEYS.map(async (key) => {
-      const delegate = (prisma as any)[key];
-      if (!delegate) return;
+      const delegate = getDelegate(key);
       const rows = await delegate
         .findMany({ where: { id: { in: ids } } })
         .catch(() => []);
@@ -250,8 +262,7 @@ export async function searchProducts(q: string, limit = 8): Promise<NormalizedPr
   if (!q || q.length < 2) return [];
   const results = await Promise.all(
     TABLE_KEYS.map(async (key) => {
-      const delegate = (prisma as any)[key];
-      if (!delegate) return [];
+      const delegate = getDelegate(key);
       const fields = SEARCH_FIELDS_BY_TABLE[key] ?? ["sku", "nombre"];
       const rows = await delegate
         .findMany({

@@ -1,8 +1,7 @@
-﻿// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { DB_NAMES, findProductById, TABLE_KEYS } from "@/lib/all-products";
+import { findProductById, getDelegate } from "@/lib/all-products";
 import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
 import { verifyOrigin } from "@/lib/security";
@@ -127,7 +126,7 @@ export async function PUT(
     const found = await findProductById(id);
     if (!found) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-    const delegate = (prisma as any)[found.tableKey];
+    const delegate = getDelegate(found.tableKey);
     const { config, data, requiredFields } = sanitizeProductData(found.tablaNombre, raw);
 
     const merged = { ...(found.raw as Record<string, unknown>), ...data };
@@ -187,7 +186,7 @@ export async function DELETE(
     const found = await findProductById(id);
     if (!found) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-    const delegate = (prisma as any)[found.tableKey];
+    const delegate = getDelegate(found.tableKey);
     await delegate.update({ where: { id }, data: { isActive: false } });
 
     await prisma.changeLog.create({
