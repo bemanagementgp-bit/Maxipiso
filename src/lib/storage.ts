@@ -162,11 +162,15 @@ const cloudinaryDriver: StorageDriver = {
       );
       return { url: secureUrl, pathname: publicId };
     } catch (err) {
-      // El detalle real (firma, cuota, formato) va al log del servidor; al
-      // admin le llega algo accionable sin filtrar nada de la cuenta.
+      // El motivo que devuelve Cloudinary ("Invalid Signature", "Stale request")
+      // se le muestra al admin: sin eso, un error de credenciales y uno de
+      // cuota se veían exactamente igual y no había forma de saber qué tocar.
+      const motivo = (err as { cloudinaryMessage?: string })?.cloudinaryMessage;
       throw new StorageError(
         `upload a Cloudinary falló: ${err instanceof Error ? err.message : String(err)}`,
-        "No se pudo subir la imagen al almacenamiento. Revisá el log del servidor.",
+        motivo
+          ? `Cloudinary rechazó la imagen: ${motivo.slice(0, 200)}`
+          : "No se pudo subir la imagen al almacenamiento. Revisá el log del servidor.",
         502,
       );
     }

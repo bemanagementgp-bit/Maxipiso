@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2 } from "react-icons/fi";
+import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2, FiAlertCircle } from "react-icons/fi";
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
@@ -83,7 +83,7 @@ interface QuickEditPanelProps {
   isNew: boolean;
   isLoading?: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | Promise<void>;
 }
 
 const fieldClass = "w-full px-3 py-2 text-[12px] border border-[#E0DED8] bg-white focus:outline-none focus:border-[#aaa] transition-colors text-[#111] placeholder:text-[#ccc] rounded-sm";
@@ -97,6 +97,15 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const [newImagePreview, setNewImagePreview] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState("");
+  /**
+   * Fase del guardado, para que el botón deje de mentir.
+   *
+   * Antes solo existía `isLoading`, que el padre levanta recién en el `PUT`.
+   * La subida de la imagen pasa ANTES y puede tardar (o fallar), así que
+   * durante todo ese rato el botón seguía diciendo "Guardar cambios" y parecía
+   * que el click no había hecho nada.
+   */
+  const [fase, setFase] = useState<"" | "subiendo" | "guardando">("");
   const [fetching, setFetching] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [urlError, setUrlError] = useState("");
@@ -187,6 +196,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (fase) return; // ya hay un guardado en curso
 
     if (!tabla) { setError("Seleccioná una categoría"); return; }
     if (!form.sku || !(form.nombre || form.especie)) {
@@ -196,18 +206,20 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
 
     let finalImages = [...images];
     if (imageFile) {
+      setFase("subiendo");
       const fd = new FormData();
       fd.append("file", imageFile);
       if (productId) fd.append("productId", productId);
       try {
         const res = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(data?.error || "Error al subir imagen");
+          throw new Error(data?.error || `El servidor rechazó la imagen (HTTP ${res.status})`);
         }
         if (!finalImages.includes(data.data.url)) finalImages.push(data.data.url);
-      } catch (err: any) {
-        setError(err.message || "Error al subir imagen");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Error al subir imagen");
+        setFase("");
         return;
       }
     }
@@ -229,7 +241,16 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       payload.imagenes = JSON.stringify(finalImages);
     }
 
-    onSave(payload);
+    setFase("guardando");
+    try {
+      await onSave(payload);
+    } catch (err: unknown) {
+      // El padre relanza con el mensaje que devolvió la API, que es el que
+      // dice qué campo falta o por qué el storage no acepta el archivo.
+      setError(err instanceof Error ? err.message : "No se pudo guardar el producto");
+    } finally {
+      setFase("");
+    }
   };
 
   const renderField = (key: string) => {
@@ -468,7 +489,14 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         )}
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#E0DED8] flex gap-2 shrink-0">
+        <div className="border-t border-[#E0DED8] shrink-0">
+          {error && (
+            <div className="flex items-start gap-2 px-6 pt-3 text-[11px] text-red-600">
+              <FiAlertCircle size={13} className="shrink-0 mt-px" />
+              <span className="leading-relaxed">{error}</span>
+            </div>
+          )}
+        <div className="px-6 py-4 flex gap-2">
           <button
             type="button"
             onClick={onClose}
@@ -478,11 +506,19 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
           </button>
           <button
             onClick={handleSubmit as any}
-            disabled={isLoading || fetching}
-            className="flex-1 py-2 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:opacity-40 rounded-sm transition-colors"
+            disabled={isLoading || fetching || fase !== ""}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:opacity-40 rounded-sm transition-colors"
           >
-            {isLoading ? "Guardando..." : isNew ? "Crear producto" : "Guardar cambios"}
+            {(fase !== "" || isLoading) && <FiLoader size={12} className="animate-spin" />}
+            {fase === "subiendo"
+              ? "Subiendo imagen..."
+              : fase === "guardando" || isLoading
+                ? "Guardando..."
+                : isNew
+                  ? "Crear producto"
+                  : "Guardar cambios"}
           </button>
+          </div>
         </div>
       </div>
     </>

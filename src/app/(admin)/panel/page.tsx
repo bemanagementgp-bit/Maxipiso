@@ -97,14 +97,23 @@ export default function ProductosPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      if (!res.ok) throw new Error();
+      // El motivo real viene en el cuerpo ("Faltan campos requeridos: X",
+      // "Sin permisos"). Antes se descartaba y todo terminaba en el mismo
+      // "No se pudo guardar", que no dice qué corregir.
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(json?.error || `No se pudo guardar el producto (HTTP ${res.status})`);
+      }
       setIsPanelOpen(false);
       setEditProductId(null);
       setTableRefreshKey((v) => v + 1);
       addToast("success", editProductId ? "Producto actualizado" : "Producto creado");
-
-    } catch {
-      addToast("error", "No se pudo guardar el producto");
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error && err.message ? err.message : "No se pudo guardar el producto";
+      addToast("error", mensaje);
+      // Se relanza para que el panel quede abierto con el error a la vista, en
+      // vez de cerrarse y perder lo que se estaba cargando.
+      throw new Error(mensaje);
     } finally {
       setIsLoading(false);
     }

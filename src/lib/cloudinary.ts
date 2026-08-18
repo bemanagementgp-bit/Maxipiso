@@ -114,10 +114,24 @@ export async function uploadToCloudinary(
 
   const text = await res.text();
   if (!res.ok) {
-    // El cuerpo de error de Cloudinary trae el motivo real (firma inválida,
-    // cuota excedida, formato rechazado). Se loguea entero pero no se propaga
-    // al cliente.
-    throw new Error(`Cloudinary respondió ${res.status}: ${text.slice(0, 300)}`);
+    // El cuerpo de error de Cloudinary trae el motivo real: "Invalid Signature",
+    // "Stale request", cuota excedida, formato rechazado. Ese texto SÍ sirve
+    // mostrarlo: es lo único que distingue "faltan las credenciales" de "la
+    // credencial está mal copiada". No incluye la key ni el secret.
+    let detalle = "";
+    try {
+      const parsed = JSON.parse(text) as { error?: { message?: string } };
+      detalle = parsed?.error?.message ?? "";
+    } catch {
+      detalle = text.slice(0, 200);
+    }
+    const err = new Error(`Cloudinary respondió ${res.status}: ${text.slice(0, 300)}`) as Error & {
+      cloudinaryMessage?: string;
+      status?: number;
+    };
+    err.cloudinaryMessage = detalle;
+    err.status = res.status;
+    throw err;
   }
 
   let json: { secure_url?: string; public_id?: string };
