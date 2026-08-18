@@ -1,6 +1,12 @@
 import { mkdir, writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import {
+  destroyInCloudinary,
+  getCloudinaryConfig,
+  publicIdFromUrl,
+  uploadToCloudinary,
+} from "@/lib/cloudinary";
 
 /**
  * Capa de almacenamiento de archivos subidos.
@@ -126,6 +132,55 @@ const localDriver: StorageDriver = {
   },
 };
 
+// ─── Driver Cloudinary (produccion) ──────────────────────────────────────────
+
+const CLOUDINARY_FOLDER_ROOT = "maxipiso";
+
+const cloudinaryDriver: StorageDriver = {
+  name: "cloudinary",
+
+  async save(buffer, opts) {
+    assertSafeOptions(opts);
+    const config = getCloudinaryConfig();
+    if (!config) {
+      throw new StorageError(
+        "cloudinaryDriver activo sin config completa",
+        "El almacenamiento de imágenes no está configurado correctamente.",
+        503,
+      );
+    }
+
+    try {
+      const { secureUrl, publicId } = await uploadToCloudinary(
+        buffer,
+        {
+          folder: `${CLOUDINARY_FOLDER_ROOT}/${opts.folder}`,
+          contentType: opts.contentType,
+          filename: randomName(opts.ext),
+        },
+        config,
+      );
+      return { url: secureUrl, pathname: publicId };
+    } catch (err) {
+      // El detalle real (firma, cuota, formato) va al log del servidor; al
+      // admin le llega algo accionable sin filtrar nada de la cuenta.
+      throw new StorageError(
+        `upload a Cloudinary falló: ${err instanceof Error ? err.message : String(err)}`,
+        "No se pudo subir la imagen al almacenamiento. Revisá el log del servidor.",
+        502,
+      );
+    }
+  },
+
+  async remove(url) {
+    const config = getCloudinaryConfig();
+    if (!config) return;
+    const publicId = publicIdFromUrl(url);
+    if (!publicId) return; // no es una URL nuestra de Cloudinary
+    await destroyInCloudinary(publicId, config);
+  },
+};
+
 // ─── Seleccion de driver ─────────────────────────────────────────────────────
 
 let cached: StorageDriver | null = null;
@@ -133,15 +188,14 @@ let cached: StorageDriver | null = null;
 /**
  * Devuelve el driver activo.
  *
- * Para agregar un blob store, chequear acá su variable de entorno y devolver
- * el driver correspondiente antes del fallback local. Por ejemplo:
- *
- *   if (process.env.BLOB_READ_WRITE_TOKEN) return vercelBlobDriver;
- *   if (process.env.S3_BUCKET) return s3Driver;
+ * Con las tres variables de Cloudinary presentes se usa Cloudinary; si falta
+ * alguna, cae al disco local, que sirve para desarrollo. En Vercel el disco es
+ * de solo lectura, asi que sin configurar Cloudinary los uploads responden 503
+ * con un mensaje explicito en vez de un 500 mudo.
  */
 export function getStorage(): StorageDriver {
   if (cached) return cached;
-  cached = localDriver;
+  cached = getCloudinaryConfig() ? cloudinaryDriver : localDriver;
   return cached;
 }
 

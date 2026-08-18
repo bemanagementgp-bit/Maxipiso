@@ -24,9 +24,11 @@ const EnvSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
 
-  // Storage de archivos subidos. Sin esto, `lib/storage.ts` usa el disco local,
-  // que en Vercel es de solo lectura y efimero.
-  BLOB_READ_WRITE_TOKEN: z.string().optional(),
+  // Storage de imágenes (Cloudinary). Si falta alguna, `lib/storage.ts` cae al
+  // disco local, que en Vercel es de solo lectura y efímero.
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 
   // 2FA: clave de cifrado (32 bytes = 64 chars hex). Obligatoria en producción.
   TOTP_ENC_KEY: z

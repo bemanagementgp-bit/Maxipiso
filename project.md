@@ -4,7 +4,7 @@
 > leyendo el código, el schema y el historial de git, y corriendo `next build` + `tsc`.
 > Si algo no se pudo verificar, está marcado como tal.
 >
-> **Última verificación:** 2026-08-18 · commit `23caa19` · Next.js 16.2.6 · build ✅ · typecheck ✅ (0 errores, **0 `@ts-nocheck`**)
+> **Última verificación:** 2026-08-18 · Next.js 16.2.6 · build ✅ · typecheck ✅ (0 errores, **0 `@ts-nocheck`**)
 >
 > Una tanda de arreglos ya se aplicó sobre este documento. Lo que fue corregido
 > está marcado ✅ en el backlog (§12) y sacado de las trampas (§9). Lo que sigue
@@ -98,7 +98,9 @@ en entornos con la red restringida.
 | `TOTP_ENC_KEY` | **sí en prod** | 64 chars hex (32 bytes) para cifrar los secrets TOTP en AES-256-GCM |
 | `GROQ_API_KEY` | opcional | sin ella `/api/chat` devuelve 503 |
 | `RESEND_API_KEY` | opcional | sin ella `/api/contacto` devuelve 503 |
-| `BLOB_READ_WRITE_TOKEN` | **sí en Vercel** | storage de archivos subidos; sin esto se usa disco local (§8.5) |
+| `CLOUDINARY_CLOUD_NAME` | **sí en Vercel** | storage de imágenes. Valor actual: `dnaom2evd` |
+| `CLOUDINARY_API_KEY` | **sí en Vercel** | dashboard de Cloudinary → Settings → API Keys |
+| `CLOUDINARY_API_SECRET` | **sí en Vercel** | idem. Sin las tres, los uploads caen al disco local (§8.5) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | sólo para el seed | `prisma/seed.ts` |
 
 ⚠️ **Trampa con el secret.** `src/app/api/auth/[...nextauth]/route.ts:6` acepta
@@ -414,11 +416,27 @@ lateral) + `HistorialModal`.
   su tipo, cuáles se ven en la grilla (`gridVisible`) y cuáles son obligatorios.
 - El backend usa **la misma config** como whitelist: `sanitizeProductData()` en
   `productos/route.ts:22` y `productos/[id]/route.ts:22` descarta cualquier clave que no esté
-  en `config.fields`. **Si agregás una columna a Prisma y no la agregás a `category-fields.ts`,
-  el backend la va a ignorar en silencio.**
+  en `config.fields`.
+
+> ⚠️ **`category-fields.ts` tiene que coincidir exactamente con el schema, en los dos
+> sentidos.** Una columna de Prisma que falta en la config no se puede editar y el backend la
+> ignora en silencio. Y al revés: una clave en la config que **no** existe en ese modelo llega
+> a Prisma como columna inexistente y **rompe el guardado con un 500**.
+>
+> Pasaba con `garantia`: estaba dentro de `FICHA_FIELDS`, que se esparce en casi todas las
+> categorías, pero la columna solo existe en `PisoFlotante`, `Porcellanato`, `PisoVinilico` y
+> `PisoMadera`. En **revestimientos, decks y maderas** el formulario mostraba un campo
+> "Garantía" que al llenarlo tiraba el update entero. Ahora `garantia` vive aparte
+> (`GARANTIA_FIELD`) y se agrega solo a esas cuatro.
+>
+> Al tocar el schema, revisá las dos direcciones. Hoy están al día: **las 8 categorías tienen
+> el 100% de sus columnas editables y ninguna clave fantasma.**
 - Cada `PUT` genera un `ChangeLog` **por campo modificado**, en un loop de creates secuenciales
   (`[id]/route.ts:148-172`) — no está batcheado.
 - El borrado es **soft**: `isActive = false`. No hay borrado físico en ninguna parte.
+- Las **unidades de medida** (`espesorUm`, `anchoUm`, `largoUm`, `baseUm`, `baseTablUm`,
+  `espesorTotalUm`, `espesorComposicionUm`, `espesorLaminaUm`) son campos editables. Son las
+  que hacen que el catálogo muestre "12 mm" y no "12" (§5).
 - El badge de **Estado es un botón**: llama a `POST /api/productos/[id]/toggle` y activa o
   desactiva en un click, en las dos vistas de la tabla. Si el nuevo estado no entra en el
   filtro activo, la tabla recarga; si entra, se parchea la fila sin refetch.
@@ -484,9 +502,35 @@ detecta `EROFS`/`EACCES`/`EPERM`/`ENOSPC` y devuelve **503 con un mensaje accion
 lugar de un 500 mudo. Los 50 MB de `public/uploads/` commiteados al repo son el rastro de
 que hoy las imágenes se suben en local y se commitean a mano.
 
-**Para arreglarlo de verdad hace falta elegir un blob store.** Cuando esté decidido, es un
-driver nuevo y una línea en `getStorage()`; el resto de la app no se entera. Es el ítem 2
-del backlog y lo único de P0 que quedó sin cerrar.
+El destino se elige en `getStorage()`: **Cloudinary** si están las tres variables
+`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`, y disco local si
+falta alguna. En Vercel, sin configurarlas, los uploads responden **503 con un mensaje
+accionable** en lugar de un 500 mudo.
+
+**Cloudinary** (`src/lib/cloudinary.ts`) se implementó sobre `fetch`, sin el SDK oficial: la
+API de upload es un POST multipart con firma SHA-1 y evitar la dependencia mantiene chico el
+árbol de npm, que en este proyecto es frágil (§11, `xlsx` desde CDN). El upload es **firmado
+desde el servidor**, no con un unsigned preset: un preset sin firma permitiría que cualquiera
+que lo descubra suba archivos a la cuenta. Los archivos van a `maxipiso/<carpeta>/`.
+
+Se eligió Cloudinary porque **la cuenta ya existía** (`dnaom2evd`): los dos videos del home ya
+se sirven desde ahí. No hubo que dar de alta ningún proveedor.
+
+**Transformaciones.** `SafeImage` detecta las URLs de Cloudinary y les pasa un `loader` propio
+de `next/image`, que inyecta `f_auto,q_auto,c_limit,w_<ancho>` por cada entrada del srcset. El
+formato lo negocia el navegador (WebP/AVIF) y la calidad la elige Cloudinary: sobre un JPG sin
+optimizar eso recorta cerca del 90% del peso. Además no pasa por el optimizador de imágenes de
+Vercel, que se cobra aparte. Las imágenes locales de `public/` siguen el camino normal de Next.
+
+**Alta por URL.** El panel también permite agregar una imagen pegando su **ruta o URL**
+(`/14704-1.jpg`, o https de un host permitido), además de reordenarlas y quitarlas. Sirve para
+las imágenes que ya están en `public/` y no depende del storage. Los hosts válidos salen de
+**`src/lib/image-hosts.ts`**, que es la única fuente: alimenta `images.remotePatterns`, el
+`img-src` del CSP y la validación del panel, así que no puede pasar que el admin guarde una URL
+que después `next/image` rechaza.
+
+**No hay que migrar nada.** `imagenes` es un array de URLs: las nuevas van a Cloudinary y las
+viejas siguen siendo rutas de `public/`. Conviven.
 
 ### 8.6 Hero de la home — eliminado
 
@@ -596,11 +640,16 @@ El `where` del catálogo incluye `imagenes NOT NULL AND != '' AND != '[]'`. Es i
 —una tarjeta sin imagen queda mal— pero sorprende: si cargás un producto y no aparece en
 `/catalogo`, lo primero a revisar es si tiene imagen, no el filtro.
 
-### 9.7 Uploads sin blob store configurado
+### 9.7 Cloudinary necesita sus credenciales en Vercel
 
-Ver §8.5. Con el driver local, en Vercel los uploads devuelven **503 con un mensaje
-explícito**. Ya no es un 500 mudo, pero **sigue sin funcionar** hasta que se elija un
-proveedor. Es lo único de P0 que quedó abierto.
+El driver está implementado (§8.5) pero **no funciona hasta que estén las tres variables**
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en las Environment
+Variables del proyecto. Sin ellas cae al disco local y en Vercel los uploads responden 503.
+
+El round-trip real contra la API de Cloudinary **no está probado**: el sandbox donde se
+desarrolló bloquea `api.cloudinary.com`. Sí están verificados el algoritmo de firma contra su
+especificación, el parseo de `public_id` y la construcción de las URLs transformadas. La
+primera subida real desde el panel es la prueba que falta.
 
 ### 9.8 El lockfile está desincronizado a propósito
 
@@ -744,12 +793,10 @@ lockfile no se puede regenerar en esos entornos (§9.8).
 | — | El badge de Estado del panel era decorativo: `/api/productos/[id]/toggle` existía sin un solo llamador, así que activar o desactivar exigía abrir el panel de edición |
 | — | `/api/upload`, `/api/productos/import` y `/import/preview` devolvían 500 ante un multipart malformado, en vez de 400 |
 | — | El ABM de hero de `/panel/hero` no funcionaba en producción (filesystem de solo lectura); se eliminó junto con su endpoint, modelo y tabla (§8.6) |
-
-### 🔴 Abierto — P0
-
-| # | Qué | Por qué sigue abierto |
-|---|---|---|
-| 2 | **Uploads a un blob store** (§8.5, §9.7) | Hay que elegir proveedor. La abstracción ya está: es un driver nuevo y una línea en `getStorage()` |
+| — | **`garantia` rompía el guardado en revestimientos, decks y maderas**: la config del ABM ofrecía el campo pero la columna no existe en esos modelos, así que el update terminaba en 500 |
+| — | **27 columnas no eran editables** desde el panel: las 8 unidades de medida (`*Um`) en las 6 categorías que las tienen, más `nombre` en pisos_madera. El backend las descartaba en silencio porque no estaban en `category-fields.ts` |
+| — | Las imágenes solo se podían cambiar subiendo un archivo, que en producción falla. Ahora se pueden agregar por ruta o URL, validadas contra la misma lista de hosts que usa `next/image` |
+| 2 | **Uploads a un blob store**: se implementó el driver de Cloudinary sobre la cuenta que ya existía, con upload firmado y transformaciones `f_auto,q_auto` (§8.5). Falta solo cargar las credenciales en Vercel |
 
 ### 🟠 Abierto — P1
 

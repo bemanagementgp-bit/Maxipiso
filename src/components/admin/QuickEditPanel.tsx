@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2 } from "react-icons/fi";
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
+import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 
 type Meta = { clave: string; valor: string };
@@ -97,12 +98,16 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlError, setUrlError] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
     setError("");
     setImageFile(null);
     setNewImagePreview("");
+    setUrlInput("");
+    setUrlError("");
 
     if (isNew) {
       setForm({ isActive: true });
@@ -161,6 +166,22 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Alta de imagen por URL o ruta.
+  //
+  // El upload de archivos necesita un blob store configurado: en Vercel el
+  // filesystem de las funciones es de solo lectura, asi que /api/upload
+  // responde 503. Cargar la referencia a mano no depende de nada de eso y es,
+  // de hecho, como estan cargadas las imagenes actuales del catalogo (rutas de
+  // public/ y URLs de cdn.shopify.com).
+  const addImageUrl = () => {
+    const res = validateImageRef(urlInput);
+    if (!res.ok) { setUrlError(res.error); return; }
+    if (images.includes(res.url)) { setUrlError("Esa imagen ya está en la lista"); return; }
+    setImages((prev) => [...prev, res.url]);
+    setUrlInput("");
+    setUrlError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -410,9 +431,35 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
                     )}
                   </div>
                 )}
-                <label className="flex items-center justify-center gap-1.5 w-full h-12 border border-dashed border-[#E0DED8] rounded-sm hover:border-[#aaa] cursor-pointer transition-colors">
+                {/* Alta por URL o ruta: no depende del blob store, y es como
+                    están cargadas las imágenes actuales del catálogo. */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={urlInput}
+                    onChange={(e) => { setUrlInput(e.target.value); setUrlError(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
+                    placeholder="/imagen.jpg  o  https://cdn.shopify.com/…"
+                    className={fieldClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={addImageUrl}
+                    disabled={!urlInput.trim()}
+                    className="shrink-0 px-3 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:bg-gray-200 disabled:text-gray-400 rounded-sm transition-colors"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                {urlError && <p className="mt-1 text-[10px] text-red-500">{urlError}</p>}
+                <p className="mt-1 text-[9px] text-[#bbb] leading-relaxed">
+                  Rutas de la web (<code>/14704-1.jpg</code>) o URLs https de:{" "}
+                  {ALLOWED_IMAGE_HOSTS.join(", ")}
+                </p>
+
+                <label className="mt-3 flex items-center justify-center gap-1.5 w-full h-12 border border-dashed border-[#E0DED8] rounded-sm hover:border-[#aaa] cursor-pointer transition-colors">
                   <FiUpload size={13} className="text-[#ccc]" />
-                  <span className="text-[10px] text-[#ccc] uppercase tracking-[0.06em]">Agregar imagen</span>
+                  <span className="text-[10px] text-[#ccc] uppercase tracking-[0.06em]">Subir archivo</span>
                   <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 </label>
               </div>

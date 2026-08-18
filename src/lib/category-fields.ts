@@ -28,8 +28,21 @@ const COMMON_FIELDS: FieldDef[] = [
 const FICHA_FIELDS: FieldDef[] = [
   { key: "fichaTecnica",       label: "Ficha técnica",       type: "text" },
   { key: "archivoInstalacion", label: "Archivo instalación", type: "text" },
-  { key: "garantia",           label: "Garantía",            type: "text" },
 ];
+
+// `garantia` NO existe en Revestimiento, Deck, Madera ni Accesorio. Estaba
+// dentro de FICHA_FIELDS, que se esparce en casi todas las categorías, así que
+// revestimientos, decks y maderas mostraban un campo "Garantía" que al guardarse
+// llegaba a Prisma como columna inexistente y rompía el update con un 500.
+// Solo se agrega en las cuatro categorías que sí la tienen.
+const GARANTIA_FIELD: FieldDef[] = [
+  { key: "garantia", label: "Garantía", type: "text" },
+];
+
+// Cada medida tiene su columna de unidad al lado (espesor + espesorUm, etc.).
+// Sin estos campos el editor puede cambiar el número pero no la unidad, y la
+// unidad es la que el catálogo usa para mostrar "12 mm" en vez de "12".
+const UM = (key: string, label: string): FieldDef => ({ key, label, type: "text" });
 
 export const CATEGORY_CONFIGS: CategoryConfig[] = [
   {
@@ -47,12 +60,16 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "tipoDeUso",          label: "Tipo de uso",      type: "text",   gridVisible: true },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },
+      UM("espesorUm", "Ud. espesor"),
       { key: "abrasion",           label: "Abrasión",         type: "text",   gridVisible: true },
       { key: "mantoIncorporado",   label: "Manto incorporado",type: "text" },
       { key: "bisel",              label: "Bisel",            type: "text" },
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "base",               label: "Base",             type: "text" },
+      UM("baseUm", "Ud. base"),
       { key: "tablasPorCaja",      label: "Tablas x caja",    type: "number", gridVisible: true },
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioCaja",         label: "Precio x caja",    type: "number" },
@@ -61,6 +78,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "pesoPallet",         label: "Peso x pallet",    type: "number" },
       { key: "precioEnvioCaja",    label: "Envío x caja",     type: "number" },
       ...FICHA_FIELDS,
+      ...GARANTIA_FIELD,
     ],
   },
   {
@@ -79,13 +97,18 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "tipoDeUso",          label: "Tipo de uso",      type: "text",   gridVisible: true },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },
+      UM("espesorUm", "Ud. espesor"),
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "base",               label: "Base",             type: "text" },
+      UM("baseUm", "Ud. base"),
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioCaja",         label: "Precio x caja",    type: "number" },
       { key: "precioEnvioCaja",    label: "Envío x caja",     type: "number" },
       ...FICHA_FIELDS,
+      ...GARANTIA_FIELD,
     ],
   },
   {
@@ -100,9 +123,13 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "material",           label: "Material",         type: "text",   gridVisible: true },
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },
+      UM("espesorUm", "Ud. espesor"),
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "baseTabla",          label: "Base tabla",       type: "text" },
+      UM("baseTablUm", "Ud. base tabla"),
       { key: "precioTabla",        label: "Precio x tabla",   type: "number" },
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioMl",           label: "Precio x ml",      type: "number" },
@@ -126,13 +153,18 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "tipoDeUso",          label: "Tipo de uso",      type: "text",   gridVisible: true },
       { key: "espesorTotal",       label: "Espesor total",    type: "text",   gridVisible: true },
+      UM("espesorTotalUm", "Ud. espesor total"),
       { key: "espesorComposicion", label: "Espesor composición", type: "text" },
+      UM("espesorComposicionUm", "Ud. espesor comp."),
       { key: "capaDeUso",          label: "Capa de uso",      type: "text",   gridVisible: true },
       { key: "mantoIncorporado",   label: "Manto incorporado",type: "text" },
       { key: "tablasPorCaja",      label: "Tablas x caja",    type: "number" },
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "base",               label: "Base",             type: "text" },
+      UM("baseUm", "Ud. base"),
       { key: "bisel",              label: "Bisel",            type: "text" },
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioCaja",         label: "Precio x caja",    type: "number" },
@@ -141,6 +173,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "pesoPallet",         label: "Peso x pallet",    type: "number" },
       { key: "precioEnvioCaja",    label: "Envío x caja",     type: "number" },
       ...FICHA_FIELDS,
+      ...GARANTIA_FIELD,
     ],
   },
   {
@@ -150,6 +183,9 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
     fields: [
       { key: "sku",         label: "SKU",         type: "text",   gridVisible: true, required: true },
       { key: "especie",     label: "Especie",     type: "text",   gridVisible: true },
+      // El modelo tiene `nombre` además de `especie` y el catálogo usa
+      // `nombre ?? especie`, pero no había forma de editarlo desde el panel.
+      { key: "nombre",      label: "Nombre",      type: "text" },
       { key: "marca",       label: "Marca",       type: "text",   gridVisible: true },
       { key: "stock",       label: "Stock",       type: "number", gridVisible: true },
       { key: "moneda",      label: "Moneda",      type: "text" },
@@ -166,15 +202,21 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "origen",             label: "Origen",           type: "text" },
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },
+      UM("espesorUm", "Ud. espesor"),
       { key: "espesorLamina",      label: "Espesor lámina",   type: "text" },
+      UM("espesorLaminaUm", "Ud. espesor lámina"),
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "base",               label: "Base",             type: "text" },
+      UM("baseUm", "Ud. base"),
       { key: "bisel",              label: "Bisel",            type: "text" },
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioCaja",         label: "Precio x caja",    type: "number" },
       { key: "precioEnvioCaja",    label: "Envío x caja",     type: "number" },
       ...FICHA_FIELDS,
+      ...GARANTIA_FIELD,
     ],
   },
   {
@@ -188,9 +230,13 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "material",           label: "Material",         type: "text",   gridVisible: true },
       { key: "linea",              label: "Línea",            type: "text" },
       { key: "espesor",            label: "Espesor",          type: "text",   gridVisible: true },
+      UM("espesorUm", "Ud. espesor"),
       { key: "ancho",              label: "Ancho",            type: "text" },
+      UM("anchoUm", "Ud. ancho"),
       { key: "largo",              label: "Largo",            type: "text" },
+      UM("largoUm", "Ud. largo"),
       { key: "baseTabla",          label: "Base tabla",       type: "text" },
+      UM("baseTablUm", "Ud. base tabla"),
       { key: "precioTabla",        label: "Precio x tabla",   type: "number" },
       { key: "precioM2",           label: "Precio x m²",      type: "number", gridVisible: true },
       { key: "precioMLineal",      label: "Precio m lineal",  type: "number", gridVisible: true },

@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
+import Image, { type ImageLoaderProps } from "next/image";
 import { useState } from "react";
 import { FiPackage } from "react-icons/fi";
+import { cloudinaryTransform, isCloudinaryUrl } from "@/lib/cloudinary";
 
 type SafeImageProps = {
   src: string;
@@ -19,13 +20,25 @@ type SafeImageProps = {
 };
 
 /**
+ * Loader para imagenes de Cloudinary.
+ *
+ * next/image llama a esto una vez por entrada del srcset con el ancho que
+ * corresponde, asi que Cloudinary entrega cada tamano ya convertido a WebP/AVIF
+ * (`f_auto`) y con la calidad ajustada (`q_auto`). El resultado es responsive de
+ * verdad y no pasa por el optimizador de Vercel, que se cobra aparte.
+ */
+function cloudinaryLoader({ src, width, quality }: ImageLoaderProps): string {
+  return cloudinaryTransform(src, width, quality);
+}
+
+/**
  * Imagen de catalogo con placeholder si la URL falla o esta vacia.
  *
  * Usa `next/image`: antes era un `<img>` crudo, asi que el navegador se bajaba
  * el original a tamano completo (hay JPGs de hasta 4 MB en public/productos).
- * Los hosts remotos permitidos estan en `images.remotePatterns` de
- * next.config.ts; una URL de otro host tira error de runtime y cae al
- * placeholder, que es el comportamiento deseado.
+ * Los hosts remotos permitidos estan en `lib/image-hosts.ts`, que alimenta tanto
+ * `images.remotePatterns` como el CSP; una URL de otro host cae al placeholder,
+ * que es el comportamiento deseado.
  */
 export default function SafeImage({
   src,
@@ -56,6 +69,9 @@ export default function SafeImage({
     priority,
     // Sin `priority`, next/image ya hace lazy loading.
     sizes: sizes ?? (fill ? "100vw" : undefined),
+    // Solo las de Cloudinary llevan loader propio; el resto sigue el camino
+    // normal de Next (optimizacion de las locales de public/).
+    ...(isCloudinaryUrl(src) ? { loader: cloudinaryLoader } : {}),
   };
 
   if (fill) {

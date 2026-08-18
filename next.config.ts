@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { ALLOWED_IMAGE_HOSTS } from "./src/lib/image-hosts";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -13,7 +14,9 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://cdnjs.cloudflare.com https://maxipiso.com.ar https://cdn.shopify.com https://images.unsplash.com",
+  // Los hosts de imagen salen de la misma lista que `images.remotePatterns`,
+  // asi no puede pasar que Next permita optimizar un host que el CSP bloquea.
+  `img-src 'self' data: blob: https://*.tile.openstreetmap.org ${ALLOWED_IMAGE_HOSTS.map((h) => `https://${h}`).join(" ")}`,
   "media-src 'self' https://res.cloudinary.com",
   "font-src 'self' data:",
   "connect-src 'self' https://*.tile.openstreetmap.org",
@@ -48,12 +51,13 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["react-icons"],
   },
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "maxipiso.com.ar" },
-      { protocol: "https", hostname: "cdn.shopify.com" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "cdnjs.cloudflare.com" },
-    ],
+    // Derivado de src/lib/image-hosts.ts, que es lo que también valida el panel
+    // al guardar una URL de imagen. Una sola lista evita que el admin pueda
+    // guardar una URL que después next/image rechaza en runtime.
+    remotePatterns: ALLOWED_IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
     // Evitar SVG remotos (vector de XSS vía imágenes)
     dangerouslyAllowSVG: false,
   },
