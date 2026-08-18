@@ -36,9 +36,19 @@ function parseCloudinaryUrl(raw: string): CloudinaryConfig | null {
   }
   if (parsed.protocol !== "cloudinary:") return null;
 
-  // El secret puede venir percent-encoded si trae caracteres especiales.
-  const apiKey = decodeURIComponent(parsed.username);
-  const apiSecret = decodeURIComponent(parsed.password);
+  // El secret puede venir percent-encoded si trae caracteres especiales, pero
+  // `decodeURIComponent` LANZA ante un `%` suelto —y un secret pegado a mano
+  // bien puede tener uno—. Sin este resguardo, esa excepción sube sin atrapar y
+  // el upload termina en un 500 mudo en vez de un error entendible.
+  const decodificar = (valor: string) => {
+    try {
+      return decodeURIComponent(valor);
+    } catch {
+      return valor;
+    }
+  };
+  const apiKey = decodificar(parsed.username);
+  const apiSecret = decodificar(parsed.password);
   const cloudName = parsed.hostname;
   if (!cloudName || !apiKey || !apiSecret) return null;
 
