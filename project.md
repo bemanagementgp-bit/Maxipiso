@@ -98,9 +98,8 @@ en entornos con la red restringida.
 | `TOTP_ENC_KEY` | **sí en prod** | 64 chars hex (32 bytes) para cifrar los secrets TOTP en AES-256-GCM |
 | `GROQ_API_KEY` | opcional | sin ella `/api/chat` devuelve 503 |
 | `RESEND_API_KEY` | opcional | sin ella `/api/contacto` devuelve 503 |
-| `CLOUDINARY_CLOUD_NAME` | **sí en Vercel** | storage de imágenes. Valor actual: `dnaom2evd` |
-| `CLOUDINARY_API_KEY` | **sí en Vercel** | dashboard de Cloudinary → Settings → API Keys |
-| `CLOUDINARY_API_SECRET` | **sí en Vercel** | idem. Sin las tres, los uploads caen al disco local (§8.5) |
+| `CLOUDINARY_URL` | **sí en Vercel** | storage de imágenes, formato del dashboard: `cloudinary://<key>:<secret>@dnaom2evd` |
+| `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | alternativa | las tres separadas; tienen prioridad sobre `CLOUDINARY_URL`. Sin nada, los uploads caen al disco local (§8.5) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | sólo para el seed | `prisma/seed.ts` |
 
 ⚠️ **Trampa con el secret.** `src/app/api/auth/[...nextauth]/route.ts:6` acepta
@@ -502,9 +501,10 @@ detecta `EROFS`/`EACCES`/`EPERM`/`ENOSPC` y devuelve **503 con un mensaje accion
 lugar de un 500 mudo. Los 50 MB de `public/uploads/` commiteados al repo son el rastro de
 que hoy las imágenes se suben en local y se commitean a mano.
 
-El destino se elige en `getStorage()`: **Cloudinary** si están las tres variables
-`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`, y disco local si
-falta alguna. En Vercel, sin configurarlas, los uploads responden **503 con un mensaje
+El destino se elige en `getStorage()`: **Cloudinary** si hay credenciales, y disco local si
+no. Se aceptan las dos formas — `CLOUDINARY_URL` en el formato que entrega el dashboard
+(`cloudinary://<key>:<secret>@<cloud>`), o las tres variables separadas, que tienen prioridad
+para poder sobreescribir una sola. En Vercel, sin configurarlas, los uploads responden **503 con un mensaje
 accionable** en lugar de un 500 mudo.
 
 **Cloudinary** (`src/lib/cloudinary.ts`) se implementó sobre `fetch`, sin el SDK oficial: la
@@ -642,9 +642,12 @@ El `where` del catálogo incluye `imagenes NOT NULL AND != '' AND != '[]'`. Es i
 
 ### 9.7 Cloudinary necesita sus credenciales en Vercel
 
-El driver está implementado (§8.5) pero **no funciona hasta que estén las tres variables**
-`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en las Environment
-Variables del proyecto. Sin ellas cae al disco local y en Vercel los uploads responden 503.
+El driver está implementado (§8.5) pero **no funciona hasta que estén las credenciales** en
+las Environment Variables del proyecto (`CLOUDINARY_URL`, o las tres separadas). Sin ellas cae
+al disco local y en Vercel los uploads responden 503.
+
+⚠️ Vercel **no aplica variables nuevas a un deploy ya hecho**: hay que redeployar después de
+agregarlas.
 
 El round-trip real contra la API de Cloudinary **no está probado**: el sandbox donde se
 desarrolló bloquea `api.cloudinary.com`. Sí están verificados el algoritmo de firma contra su

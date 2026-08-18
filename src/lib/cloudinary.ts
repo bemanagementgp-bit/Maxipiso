@@ -21,13 +21,52 @@ export type CloudinaryConfig = {
   apiSecret: string;
 };
 
-/** Devuelve la config si las tres variables están presentes, o null. */
+/**
+ * Parsea el formato que da el dashboard de Cloudinary:
+ *   CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+ */
+function parseCloudinaryUrl(raw: string): CloudinaryConfig | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "cloudinary:") return null;
+
+  // El secret puede venir percent-encoded si trae caracteres especiales.
+  const apiKey = decodeURIComponent(parsed.username);
+  const apiSecret = decodeURIComponent(parsed.password);
+  const cloudName = parsed.hostname;
+  if (!cloudName || !apiKey || !apiSecret) return null;
+
+  return { cloudName, apiKey, apiSecret };
+}
+
+/**
+ * Config de Cloudinary, o null si no está completa.
+ *
+ * Se aceptan las dos formas:
+ *  - `CLOUDINARY_URL` en el formato que entrega el dashboard (una sola variable)
+ *  - `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET`
+ *
+ * Las tres separadas tienen prioridad, para poder sobreescribir una sola sin
+ * tocar la URL completa.
+ */
 export function getCloudinaryConfig(): CloudinaryConfig | null {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
   const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
-  if (!cloudName || !apiKey || !apiSecret) return null;
-  return { cloudName, apiKey, apiSecret };
+  if (cloudName && apiKey && apiSecret) return { cloudName, apiKey, apiSecret };
+
+  const url = process.env.CLOUDINARY_URL?.trim();
+  if (url) {
+    const fromUrl = parseCloudinaryUrl(url);
+    if (fromUrl) return fromUrl;
+    console.error("[cloudinary] CLOUDINARY_URL está seteada pero no se pudo parsear. Formato esperado: cloudinary://<api_key>:<api_secret>@<cloud_name>");
+  }
+
+  return null;
 }
 
 /**

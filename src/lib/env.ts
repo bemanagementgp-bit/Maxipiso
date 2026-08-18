@@ -24,8 +24,10 @@ const EnvSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
 
-  // Storage de imágenes (Cloudinary). Si falta alguna, `lib/storage.ts` cae al
+  // Storage de imágenes (Cloudinary). Sirve `CLOUDINARY_URL` (el formato del
+  // dashboard) o las tres separadas. Sin nada de esto, `lib/storage.ts` cae al
   // disco local, que en Vercel es de solo lectura y efímero.
+  CLOUDINARY_URL: z.string().optional(),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
