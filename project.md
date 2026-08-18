@@ -4,7 +4,11 @@
 > leyendo el código, el schema y el historial de git, y corriendo `next build` + `tsc`.
 > Si algo no se pudo verificar, está marcado como tal.
 >
-> **Última verificación:** 2026-08-18 · commit base `a4a79d8` · Next.js 16.2.6 · build ✅
+> **Última verificación:** 2026-08-18 · commit `23caa19` · Next.js 16.2.6 · build ✅ · typecheck ✅ (0 errores, **0 `@ts-nocheck`**)
+>
+> Una tanda de arreglos ya se aplicó sobre este documento. Lo que fue corregido
+> está marcado ✅ en el backlog (§12) y sacado de las trampas (§9). Lo que sigue
+> abierto está en §9 y §12.
 
 ---
 
@@ -34,13 +38,13 @@ por WhatsApp (`+54 221 438-8894`) y entran por `/catalogo/login` o por un modal 
 |---|---|---|
 | Next.js | 16.2.6 | App Router, **Turbopack**, React Server Components |
 | React | 19.2.4 | |
-| TypeScript | 5.x | `strict: true` — pero ver §9, hay 28 archivos con `@ts-nocheck` |
+| TypeScript | 5.x | `strict: true`, 0 errores, **sin ningún `@ts-nocheck`** |
 | Tailwind CSS | v4 | vía `@tailwindcss/postcss`, sin `tailwind.config` |
 | Prisma | 6.19.3 | `driverAdapters`, `engineType: library` |
 | Base de datos | Turso / libSQL | provider `sqlite`, adapter `@prisma/adapter-libsql` |
 | Auth | NextAuth v4 (`4.24.14`) | provider `credentials`, sesión **JWT**, TOTP opcional |
 | LLM del chat | Groq | `llama-3.3-70b-versatile` con fallback a `llama-3.1-8b-instant` |
-| Email | Resend | vía `fetch` a la REST API, sin SDK |
+| Email | Resend | vía `fetch` a la REST API, sin SDK (la dependencia se quitó) |
 | Excel | SheetJS `xlsx` 0.20.3 | **desde `cdn.sheetjs.com`, no desde npm** — ver §11 |
 | Mapas | Leaflet 1.9.4 | import dinámico, sin `react-leaflet` |
 | Gráficos | Recharts 3.9 | sólo en `/panel/reportes` |
@@ -62,8 +66,23 @@ npm run build        # prisma generate && next build
 npm start
 ```
 
-**No hay** `lint`, `test`, `typecheck` ni `db:seed` en `package.json`. Tampoco hay
-config de ESLint ni workflows de CI. Ver §11.
+| Comando | Qué hace |
+|---|---|
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint (flat config, `eslint.config.mjs`) |
+| `npm run check` | typecheck + lint |
+| `npm run db:push` | Aplica el schema sin migraciones (desarrollo) |
+| `npm run db:migrate` | `prisma migrate deploy` |
+| `npm run db:seed` | Crea el admin inicial |
+
+CI corre typecheck + lint + build en cada PR (`.github/workflows/ci.yml`).
+**Todavía no hay tests** — ver §12.
+
+⚠️ La primera vez hay que correr `npm install` (no `npm ci`): se agregaron
+devDependencies (ESLint, tsx) y se quitaron cuatro dependencias sin uso, así que
+`package-lock.json` quedó desincronizado a propósito. `xlsx` se resuelve desde
+`cdn.sheetjs.com`, no desde el registry de npm, y eso impide regenerar el lock
+en entornos con la red restringida.
 
 ### Variables de entorno
 
@@ -79,6 +98,7 @@ config de ESLint ni workflows de CI. Ver §11.
 | `TOTP_ENC_KEY` | **sí en prod** | 64 chars hex (32 bytes) para cifrar los secrets TOTP en AES-256-GCM |
 | `GROQ_API_KEY` | opcional | sin ella `/api/chat` devuelve 503 |
 | `RESEND_API_KEY` | opcional | sin ella `/api/contacto` devuelve 503 |
+| `BLOB_READ_WRITE_TOKEN` | **sí en Vercel** | storage de archivos subidos; sin esto se usa disco local (§8.5) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | sólo para el seed | `prisma/seed.ts` |
 
 ⚠️ **Trampa con el secret.** `src/app/api/auth/[...nextauth]/route.ts:6` acepta
@@ -87,11 +107,12 @@ config de ESLint ni workflows de CI. Ver §11.
 funcionar pero el middleware no puede decodificar el token y `/panel` redirige a login
 en loop. Usá siempre `NEXTAUTH_SECRET`.
 
-⚠️ **`src/lib/env.ts` no se usa.** Define un schema de Zod que valida todas las variables
-y corta el boot en producción si falta algo — pero **ningún módulo lo importa**. Todos leen
-`process.env` directo, así que ese fail-fast nunca se dispara. Además todavía valida
-variables del CRM (`CRM_DATABASE_URL`, `CRM_DIRECT_URL`, `CRM_IP_HASH_SALT`) que ya no
-existen en el código.
+`src/lib/env.ts` valida el entorno con Zod y ahora **sí se ejecuta**: lo importa
+`src/lib/prisma.ts` por efecto de borde. Loguea los problemas en vez de lanzar, para no
+tumbar un deploy que hoy funciona; el comentario del archivo explica cómo volverlo fatal
+una vez que verifiques que producción cumple el schema.
+
+Hay un `.env.example` en la raíz con todas las variables y sus trampas.
 
 ---
 
@@ -100,40 +121,53 @@ existen en el código.
 ```
 src/
 ├── app/
-│   ├── (admin)/                    1.749 líneas — grupo de rutas del panel
+│   ├── (admin)/                    1.695 líneas — grupo de rutas del panel
 │   │   ├── layout.tsx              shell del panel (sidebar, theme switcher)
 │   │   └── panel/                  page (ABM) · hero · importacion · reportes
-│   ├── api/                        3.279 líneas — todos los endpoints (§6)
+│   ├── api/                        3.481 líneas — todos los endpoints (§6)
 │   ├── auth/login/                 login del panel → redirige a /panel
 │   ├── catalogo/                   listado (561) · ficha [id] (537) · login (227)
 │   ├── novedades/                  índice + 3 landings estáticas + [slug] SSG
-│   ├── distribuidores/  empresa/  tienda/
+│   ├── distribuidores/  empresa/
+│   ├── tienda/                     redirect permanente a /catalogo (§8.6)
+│   ├── sitemap.ts                  sitemap de las páginas públicas estables
 │   ├── layout.tsx                  root layout: SessionProvider + ShellLayout
 │   └── globals.css
 ├── components/
-│   ├── admin/                      2.741 líneas (§10: casi la mitad es código muerto)
-│   ├── catalog/                    1.150 líneas
+│   ├── admin/                      1.465 líneas — ProductTable · QuickEditPanel
+│   │                               HistorialModal · MetadataEditor
+│   ├── catalog/                    621 líneas — ProductCard · ProductGallery
+│   │                               ProductCarousel · SafeImage · LoginModal
 │   ├── layout/                     Header · Footer · ShellLayout · ChatWidget · WhatsAppButton
 │   ├── home/HeroCarousel.tsx
 │   ├── distribuidores/DistributorMap.tsx
 │   └── providers/SessionProvider.tsx
-├── lib/                            2.197 líneas — la lógica de verdad (§5, §7)
-├── data/                           contenido hardcodeado: novedades, distribuidores, products
-├── types/                          tipos a mano (⚠️ divergen del schema, ver §9)
+├── lib/                            2.224 líneas — la lógica de verdad
+│   ├── all-products.ts             registro de las 8 tablas + acceso a delegates
+│   ├── auth.ts  audit.ts  totp.ts  password.ts     autenticación
+│   ├── category-fields.ts          define los campos del ABM por categoría
+│   ├── sheet-schemas.ts            mapeo de columnas de Excel → campos Prisma
+│   ├── storage.ts                  abstracción de archivos subidos (§8.5)
+│   ├── catalog-cache.ts            caché del catálogo público, invalidable
+│   ├── security.ts  rate-limit.ts  env.ts  prisma.ts  flags.ts
+│   └── catalog-public.ts  google-drive.ts
+├── data/                           contenido estático: novedades, distribuidores
+├── types/                          reexporta los tipos generados por Prisma
 └── proxy.ts                        middleware: rate limit + autorización por ruta
 prisma/
-├── schema.prisma                   8 tablas de producto + auth + auditoría
-├── seed.ts                         crea el admin inicial (no está cableado a npm)
-└── migrations/                     ⚠️ una sola migración, y es de PostgreSQL (§11)
+├── schema.prisma                   8 tablas de producto + auth + auditoría + leads
+├── seed.ts                         crea el admin inicial (`npm run db:seed`)
+└── migrations/00000000000000_init  baseline SQLite (14 tablas)
 ```
 
-### Archivos huérfanos en la raíz
+### Archivos que no consume el build
 
-- `image-map.json` (14 KB) — sus instrucciones apuntan a `scripts/apply-image-map.js`,
-  y `scripts/` está en `.gitignore` y ya no existe en el repo.
-- `Diseños ABM productos_files/` (8,1 MB) — assets de un HTML de diseño que sí está
-  gitignoreado. Queda el directorio sin su archivo.
-- `assets/` (47 MB) — material de origen, no lo consume el build.
+- `assets/` (47 MB) — material de origen (videos, piezas de diseño). No lo usa el
+  build; sigue en el repo por decisión pendiente (§12, ítem 23).
+
+`image-map.json` y `Diseños ABM productos_files/` ya se eliminaron: el primero
+apuntaba a `scripts/apply-image-map.js`, que no está en el repo; el segundo eran
+los assets de un HTML gitignoreado.
 
 ---
 
@@ -158,11 +192,19 @@ una madera tiene `espesoresDisponibles` y `secado`).
 
 Los tres nombres de cada tabla (modelo Prisma / nombre en DB / clave del delegate) conviven
 en todo el código y **hay que mapear entre ellos constantemente**. El registro canónico está
-en `src/lib/all-products.ts` (`TABLE_KEYS`, `DB_NAMES`, `TABLE_LABELS`, `TABLE_CATEGORIA`),
-pero varios endpoints redefinen su propio mapa local en vez de importarlo
-(`import/route.ts`, `import/preview/route.ts`, `metadata-suggest/route.ts`,
-`reorder/route.ts`, `[id]/toggle/route.ts`, `catalogo/[categoria]/route.ts`,
-`catalogo/todos/route.ts`). Si agregás una categoría, hay que tocar los ocho.
+en `src/lib/all-products.ts`:
+
+- `TABLE_KEYS`, `DB_NAMES`, `TABLE_LABELS`, `TABLE_CATEGORIA` — el registro.
+- **`getDelegate(key)`** — único lugar donde se indexa el `PrismaClient` por nombre.
+  No escribas `(prisma as any)[key]` en ningún otro lado.
+- **`tableKeyFromDbName(dbName)`** — traduce `"pisos_flotantes"` → `"pisoFlotante"`.
+
+Los cuatro mapas duplicados que había en `import`, `import/preview`,
+`metadata-suggest` y `reorder` ya se eliminaron. Los endpoints de catálogo
+(`catalogo/[categoria]`, `catalogo/todos`) todavía tienen su propio mapa slug →
+delegate, porque usan slugs públicos con guiones (`"pisos-flotantes"`) que no
+coinciden con los nombres de tabla. Si agregás una categoría, tocá esos dos más
+`all-products.ts`, `category-fields.ts` y `sheet-schemas.ts`.
 
 ### Campos comunes a las 8 tablas
 
@@ -190,6 +232,9 @@ pero varios endpoints redefinen su propio mapa local en vez de importarlo
   cualquiera de las 8 tablas. `campo` guarda o el nombre del campo (UPDATE por campo) o el
   literal `"PRODUCTO"` (CREATE / import). Sin FK — la integridad no está garantizada por la DB.
 - `HeroMedia` — imágenes y videos del carrusel del home, ordenables.
+- `Lead` — contactos que captura el chatbot antes de derivar a WhatsApp (§8.6).
+  Se deduplica por `telefonoNormalizado` (solo dígitos) y lleva un contador de
+  `interacciones` y un `estado` para seguimiento comercial.
 - `Session` — **tabla muerta**. La sesión es JWT y no se configura ningún adapter de Prisma,
   así que nunca se escribe una fila. `@next-auth/prisma-adapter` está en `package.json` sin usarse.
 
@@ -210,9 +255,11 @@ Todos bajo `src/app/api/`. La columna "Gate" indica **quién puede llegar** comb
 | `GET` | `/api/hero` | público | Items activos del carrusel del home |
 | `POST` | `/api/chat` | público | Chatbot Groq. Rate limit 20/min |
 | `POST` | `/api/contacto` | público | Formulario de contacto → Resend. Rate limit 5/10min |
+| `POST` | `/api/leads` | público | Registra un lead del chatbot antes del handoff a WhatsApp. Rate limit 10/10min, upsert por teléfono |
 
-El middleware aplica además un rate limit de **10 req/min por IP** sobre `/api/catalogo/*`
-y `/api/contacto` (`proxy.ts:38-51`).
+El middleware aplica además un rate limit de **120 req/min por IP** sobre `/api/catalogo/*`
+y `/api/contacto` (`proxy.ts`). Era 10, que lo superaba cualquiera navegando con búsqueda
+debounced y filtros. Sigue siendo un contador en memoria del proceso — ver §9.5.
 
 ### Requieren sesión
 
@@ -257,8 +304,8 @@ los llame**. Están completos y funcionan, pero hoy sólo se pueden usar con cur
   y devuelve 403 si no matchea o si faltan ambos headers.
 - Respuesta estándar: `{ success: true, data }` o `{ error: "..." }` con el status HTTP.
   No es 100% uniforme: algunos devuelven `{ ok: true }`.
-- `export const runtime = "nodejs"` está en casi todos (necesario por Prisma + libSQL).
-  **Falta en `reorder/route.ts`** — funciona porque nodejs es el default, pero rompe la convención.
+- `export const runtime = "nodejs"` está en todos (necesario por Prisma + libSQL).
+- Toda mutación de producto llama a `clearCatalogCache()` antes de responder (§9.4).
 - El rate limit por endpoint se pide con `enforceRateLimit()` de `src/lib/rate-limit.ts`.
 
 ---
@@ -325,6 +372,11 @@ pueda ejecutarse como HTML/JS.
 > **Seguridad.** Los hallazgos de la auditoría de seguridad se manejan **fuera de este
 > documento** por decisión explícita. Mientras el repositorio sea público, no agregar acá
 > detalle de vectores, rutas explotables ni pasos de reproducción.
+>
+> **Nada de esta sección se modificó en la tanda de arreglos**, también por decisión
+> explícita: el modelo de accesos (verificación de sesión, gate de precios, roles, matcher
+> del middleware, variables de secret) quedó exactamente como estaba. Los únicos cambios que
+> tocan `proxy.ts` son el valor del rate limit público y nada más.
 
 ---
 
@@ -342,10 +394,14 @@ pueda ejecutarse como HTML/JS.
   más `stock` y `moneda`.
 - Los accesorios y tipos secundarios (pastinas, adhesivos, perfiles) se empujan al final.
 - Caché en memoria de 60 s por combinación de parámetros, con la bandera de sesión incluida
-  en la clave. **No se invalida al editar** (§9).
-- `timeout()` (12 s) envuelve cada query: si Turso tarda o la query falla, esa tabla devuelve
-  `[]` y la request sigue. Es a la vez la red de seguridad y la causa de que ciertos errores
-  se manifiesten como "0 productos" en vez de como un error (§9).
+  en la clave (`lib/catalog-cache.ts`). Toda mutación de producto la invalida — con la
+  salvedad de §9.4.
+- `timeout()` (12 s) envuelve cada query: si Turso tarda, esa tabla devuelve `[]` y la
+  request sigue. Ahora **distingue timeout de rechazo** y loguea cuál tabla falló: antes
+  una query mal formada se veía como "0 productos" sin ningún error (§9.2).
+- El orden (`sortBy`) se traduce por tabla con `buildOrderBy()`, porque el campo de precio
+  no es el mismo en todas. En la vista multi-categoría el merge se reordena globalmente
+  antes de cortar la página.
 
 La ficha `/catalogo/[id]` es **server component**: resuelve el producto con `findProductById()`
 (recorre las 8 tablas secuencialmente hasta el primer match), arma las specs con
@@ -354,7 +410,7 @@ La ficha `/catalogo/[id]` es **server component**: resuelve el producto con `fin
 ### 8.2 ABM de productos
 
 `/panel` → `ProductTable` (listado + drag & drop de orden) + `QuickEditPanel` (formulario
-lateral) + `HistorialModal` + `ImportPreviewModal`.
+lateral) + `HistorialModal`.
 
 - Los campos del formulario **no están hardcodeados por página**: salen de
   `src/lib/category-fields.ts` (`CATEGORY_CONFIGS`), que define por tabla qué campos existen,
@@ -369,13 +425,14 @@ lateral) + `HistorialModal` + `ImportPreviewModal`.
 
 ### 8.3 Orden manual (`sortOrder`)
 
-Dos caminos, con costos muy distintos:
+Dos caminos:
 
 - **Drag & drop dentro de una página** → manda todos los items de esa página con su nuevo
-  `sortOrder` → el backend hace un `update` por item. Correcto.
-- **"Mover a posición N"** → manda **un solo item** → `reorder/route.ts:49-77` hace un
-  `findMany()` de **toda la tabla**, recalcula el orden completo y dispara un `update` por
-  cada fila. En una tabla de 200 productos son 200 UPDATEs a Turso en un solo request.
+  `sortOrder` → un `update` por item, en transacción.
+- **"Mover a posición N"** → manda un solo item → el backend recalcula **solo las filas
+  entre el origen y el destino**, también en transacción. Si `sortOrder` todavía no es una
+  permutación `0..n-1` (por ejemplo si están todos en 0), normaliza la tabla entera una
+  vez; a partir de ahí los movimientos son incrementales.
 
 El reorder sólo funciona con una categoría seleccionada: si el filtro es "Todas las
 categorías", `tabla` va vacío y el endpoint devuelve 400.
@@ -397,220 +454,233 @@ Cómo funciona el parseo (`src/lib/sheet-schemas.ts`):
   cae a la primera hoja del libro.
 - `detectSchema()` puntúa cada uno de los 8 esquemas contra sus `signatureColumns` y gana el
   de mayor score. **Un libro multi-hoja puede importar cada hoja a una tabla distinta.**
+  Si ninguna columna firma coincide (`score` 0), devuelve `recognized: false` y **la hoja se
+  omite**: antes se importaba entera al primer esquema de la lista, o sea a pisos flotantes.
+  El preview la muestra como "No reconocida" y el import la reporta en `warnings`.
 - `parseRow()` traduce header → campo Prisma vía `fieldMap`; lo que no está en el mapa se descarta.
 - El upsert es por `sku` **dentro de la tabla detectada**. SKUs duplicados en el mismo archivo:
   gana el primero, el resto se cuenta como omitido.
 
 ⚠️ El archivo se sube **dos veces** (una al preview, otra al import) y se re-parsea de cero.
 
+El botón "Importar" de `/panel` ahora enlaza a `/panel/importacion`. Antes abría un modal
+propio (`ImportPreviewModal`) que esperaba una forma de datos que el endpoint no devuelve,
+así que mostraba tablas vacías siempre; el `@ts-nocheck` lo ocultaba.
+
 ### 8.5 Imágenes
 
 `POST /api/upload` con `multipart/form-data` (`file` + `productId` opcional):
-valida tamaño (5 MB), MIME declarado, **y los magic bytes reales del buffer**; escribe con un
-nombre aleatorio de 16 bytes; verifica que el path resultante quede dentro del directorio de
-uploads; y si vino `productId`, hace push de la URL al array `imagenes` del producto.
+valida tamaño (5 MB), MIME declarado, **y los magic bytes reales del buffer**; y si vino
+`productId`, hace push de la URL al array `imagenes` del producto.
 
-⚠️ **Escribe en `public/uploads/productos/` con `fs.writeFile`.** En Vercel el filesystem de
-las funciones es de sólo lectura salvo `/tmp`, y además es efímero. Los 50 MB de
-`public/uploads/` commiteados al repo sugieren que hoy las imágenes se suben en local y se
-commitean a mano. Migrar a un blob store es P1 (§12).
+El guardado pasa por **`src/lib/storage.ts`**, que define una interfaz `StorageDriver`
+(`save` / `remove`) y elige el driver en `getStorage()`. Hoy hay un solo driver
+implementado, el local, que escribe en `public/uploads/<carpeta>/` con nombre aleatorio y
+verifica que el path resultante no se escape del directorio.
 
-Lo mismo aplica a `POST /api/hero`, que además acepta video (MP4/WebM hasta 50 MB) y —a
-diferencia de `/api/upload`— **valida sólo el `Content-Type` declarado por el cliente, sin
-chequear magic bytes**.
+⚠️ **En Vercel el driver local no sirve**: el filesystem de las funciones es de solo
+lectura salvo `/tmp`, y además es efímero. Ahora eso **falla de forma explícita**: el driver
+detecta `EROFS`/`EACCES`/`EPERM`/`ENOSPC` y devuelve **503 con un mensaje accionable** en
+lugar de un 500 mudo. Los 50 MB de `public/uploads/` commiteados al repo son el rastro de
+que hoy las imágenes se suben en local y se commitean a mano.
+
+**Para arreglarlo de verdad hace falta elegir un blob store.** Cuando esté decidido, es un
+driver nuevo y una línea en `getStorage()`; el resto de la app no se entera. Es el ítem 2
+del backlog y lo único de P0 que quedó sin cerrar.
+
+`POST /api/hero` usa el mismo storage y acepta además video (MP4/WebM hasta 50 MB). Las
+imágenes ahora también se validan por magic bytes; los videos siguen validándose por el
+`Content-Type` declarado, porque no hay detector propio para ellos.
 
 ### 8.6 Chatbot "Nacho"
 
 `ChatWidget` → `POST /api/chat` → Groq.
 
-- El system prompt (≈100 líneas en `chat/route.ts:22`) define personalidad, catálogo,
+- El system prompt (≈100 líneas en `chat/route.ts`) define personalidad, catálogo,
   reglas de precio/stock/reclamos y cuándo derivar. Es la especificación comercial del bot;
   editarlo cambia el comportamiento sin tocar código.
 - El body se valida con Zod (máx 30 mensajes, 2.000 chars c/u) y **se descartan los mensajes
   con `role: "system"` que mande el cliente** — defensa contra prompt injection del rol.
 - El modelo responde JSON forzado (`response_format: json_object`) con
   `{ reply, waText, storeUrl, lead }`. `waText` se convierte en un link `wa.me` prellenado.
-- `lead` (nombre / email / teléfono que el bot extrajo de la charla) se sanitiza y valida.
+- `lead` (nombre / email / teléfono que el bot extrajo de la charla) se sanitiza y valida,
+  y sirve para pre-llenar el formulario de derivación.
 
-⚠️ **Los leads no se guardan en ningún lado.** El formulario previo al handoff
-(`LeadHandoff` en `ChatWidget.tsx:357`) guarda los datos en `localStorage` y abre WhatsApp.
-El comentario del componente todavía dice "sólo abre wa.me si `/api/crm/leads` responde OK",
-pero **ese endpoint no existe**: el CRM se removió (ver `chat/route.ts:271`,
-"CRM deshabilitado — integración removida"). Los datos de contacto sólo llegan al vendedor
-dentro del texto del mensaje de WhatsApp.
+**Persistencia del lead.** Al confirmar el handoff, el widget hace `POST /api/leads` y
+recién después abre WhatsApp. Es deliberadamente **fail-open**: si el guardado falla, igual
+deriva — perder el registro es malo, perder la venta es peor. El endpoint deduplica por
+teléfono normalizado, así que un cliente que vuelve actualiza su fila e incrementa
+`interacciones` en vez de generar un duplicado.
 
-⚠️ **`storeUrl: true` deriva a `/tienda`, que siempre está vacía.** `/tienda` (269 líneas)
-lee `products` de `src/data/products.ts`, que es **`[]`**. Además `/tienda` no está enlazada
-desde el header, el footer ni ninguna página — el chatbot es su única entrada.
+> Antes de esto los datos solo viajaban dentro del texto del mensaje de WhatsApp y quedaban
+> en el `localStorage` del visitante. El comentario del componente todavía decía que llamaba
+> a `/api/crm/leads`, un endpoint que no existe desde que se removió el CRM.
 
----
+**`storeUrl`.** Cuando el bot decide mandar al catálogo online devuelve `storeUrl: true`, y
+el handler lo traduce a **`/catalogo`**. Antes apuntaba a `/tienda`, una página que leía un
+array hardcodeado vacío y cuya única entrada era justamente el chatbot: el bot mandaba gente
+a una página en blanco. `/tienda` ahora es un redirect permanente a `/catalogo`.
 
 ## 9. ⚠️ Trampas conocidas
 
-Leé esto antes de tocar nada. Son cosas que están mal hoy y que van a confundirte.
+Lo que sigue abierto hoy. Las trampas que ya se cerraron están listadas en §12 como ✅,
+con una línea de qué eran, para que nadie las reintroduzca.
 
-### 9.1 `@ts-nocheck` en 28 archivos
+### 9.1 Una sola cuenta compartida para todos los mayoristas
 
-`tsc --noEmit` da **0 errores**, pero es un espejismo: 28 archivos (todos los de
-`api/productos/*`, `api/reportes/*`, `api/hero`, `api/upload`, `lib/all-products.ts`, casi
-todo `components/admin/`, `catalogo/[id]/page.tsx` y 3 páginas del panel) empiezan con
-`// @ts-nocheck`. **Al quitarlos aparecen 16 errores reales.** Los importantes:
+El catálogo distingue dos roles: `ADMIN` (panel) y `VIEWER` (ve precios). Hoy existe **una
+única cuenta `VIEWER`** que se reparte por WhatsApp a todos los clientes mayoristas.
 
-| Archivo | Error | Consecuencia |
-|---|---|---|
-| `api/productos/export/route.ts:42` | `p.imagenes` no existe en `NormalizedProduct` (es `p.imagen`) | La columna "Imagen" del Excel exportado sale vacía |
-| `api/reportes/resumen/route.ts:29` | mismo campo fantasma | El KPI "productos con imagen" cuenta mal |
-| `components/admin/ProductModal.tsx:5` | importa `Product` de `@/types`, que no lo exporta | El componente no compilaría (hoy no se usa, §10) |
-| `catalogo/[id]/page.tsx:358` | pasa `SpecEntry[]` donde se espera `Record<string,string>` | |
-| `api/productos/import/route.ts:144` | `existingRecord.id` sobre `{}` | Sólo tipado |
+Consecuencias operativas: no se le puede cortar el acceso a un cliente puntual sin cambiarle
+la contraseña a todos, y `AuthEvent` no permite saber qué empresa entró. Migrar a una cuenta
+por cliente necesita un ABM de usuarios, que no existe. Es el ítem 6 del backlog.
 
-Regla: **no agregues `@ts-nocheck` nuevos.** Al tocar uno de esos archivos, sacalo y arreglá
-lo que salte.
+### 9.2 Errores que se manifiestan como "0 resultados"
 
-### 9.2 Campos que no existen en el schema
+`timeout()` en `catalogo/todos/route.ts` resuelve con el fallback tanto por timeout como por
+rechazo de la promesa. Ahora **loguea** el rechazo con la tabla afectada, así que el
+diagnóstico es directo — pero la request sigue devolviendo `[]` para esa tabla, de forma
+deliberada: es lo que evita que una tabla lenta tire abajo todo el catálogo.
 
-Hay tres nombres de campo usados en el código que **no existen en Prisma**:
+Si ves un catálogo vacío o incompleto, **mirá los logs del servidor antes que el frontend**.
+Busca `[catalogo/todos] query fallo en`.
 
-- **`tipoDeProducto`** (el real es `tipoProducto`). Aparece en
-  `api/catalogo/[categoria]/route.ts:35` y `:66` como filtro declarado, y en
-  `catalogo/[id]/page.tsx:135,142,216,220` construyendo links de breadcrumb.
-  En `/catalogo` el filtro se ignora en silencio; en `/api/catalogo/[categoria]` reventaría.
-- **`uso` en `pisoVinilico`** (el real es `tipoDeUso`). `all-products.ts:372`
-  (`TABLE_FIELDS.pisoVinilico`) lo lista, así que **la spec "Uso" nunca se muestra en pisos
-  vinílicos**.
-- **`imagen` en el esquema de import de accesorios** (el real es `imagenes`).
-  `sheet-schemas.ts`, bloque `accesorios`: Prisma rechaza la fila y se cuenta como omitida,
-  o sea **los accesorios importados por Excel se quedan sin imagen**.
+### 9.3 Precios promediados sin normalizar
 
-### 9.3 Los tipos de `src/types/index.ts` divergen del schema
-
-Están escritos a mano y **no se generan** desde Prisma. Divergencias detectadas:
-`Revestimiento`, `Deck`, `Madera` y `Accesorio` declaran `imagen?: string`, pero en Prisma
-las cuatro tablas tienen **`imagenes`**. Además no existe ningún tipo `Product` exportado,
-aunque `ProductModal.tsx` lo importe.
-
-**Usá los tipos generados por Prisma (`@prisma/client`), no estos.**
-
-### 9.4 Errores que se manifiestan como "0 resultados"
-
-`timeout()` en `catalogo/todos/route.ts:21` resuelve con el fallback **tanto por timeout como
-por rechazo de la promesa**. Cualquier query mal formada devuelve `[]` sin loguear nada.
-
-El caso vivo: **ordenar por precio vacía el catálogo.** `sortBy=precio-menor|precio-mayor`
-genera `orderBy: [{ precio: ... }]`, pero **sólo `Madera` tiene el campo `precio`**; las otras
-7 usan `precioM2`. Prisma rechaza esas 7 queries, `timeout()` las convierte en `[]`, y el
-usuario ve "0 productos" sin ningún error.
-
-Si estás debuggeando un catálogo vacío, empezá por acá.
-
-### 9.5 La ventana de "sesiones de importación" está invertida
-
-`api/reportes/importaciones/route.ts:26-42` ordena los logs `fechaCambio: desc` (más nuevo
-primero) pero después chequea `log.fechaCambio >= ventanaFin`, donde
-`ventanaFin = ventanaInicio + 10 min` y `ventanaInicio` es el **más nuevo**. Como todos los
-siguientes son más viejos, la condición nunca se cumple y **las 200 entradas colapsan en una
-sola "sesión"**. El panel de importación siempre muestra una única sesión con el total.
-
-### 9.6 Precios promediados sin normalizar
-
-`firstPrice()` (`all-products.ts:134`) devuelve el primer valor no-cero de
+`firstPrice()` (`all-products.ts`) devuelve el primer valor no-cero de
 `precioM2 → precioCaja → precio → precioTabla → precioMLineal → precioMl`. O sea: para un
 producto es el precio por m², para otro el precio por caja. Encima **el campo `moneda` se
 ignora**, y conviven `u$s` y pesos en la misma tabla.
 
 `/api/productos/stats` y `/api/reportes/resumen` promedian eso. **Los "precio promedio por
-categoría / por marca" del panel no son magnitudes comparables.** No tomes decisiones con esos
-números hasta normalizar por unidad y moneda.
+categoría / por marca" del panel no son magnitudes comparables.** No tomes decisiones con
+esos números hasta normalizar por unidad y moneda (ítem 8).
 
-### 9.7 Caché sin invalidación
+Ojo: esto es distinto del **orden** por precio, que sí está arreglado — `buildOrderBy()`
+usa el campo correcto de cada tabla. Lo que sigue roto es promediar valores heterogéneos.
 
-`catalogo/todos` y `catalogo/[categoria]` mantienen un `Map` en memoria con TTL de 60 s.
-No se invalida al guardar un producto, y en serverless cada instancia tiene el suyo:
-después de editar en el panel, el cambio puede tardar hasta un minuto **y aparecer distinto
-según qué instancia atienda la request**.
+### 9.4 Caché y rate limit viven en memoria del proceso
 
-### 9.8 El rate limit no funciona en producción
+`lib/catalog-cache.ts` y `lib/rate-limit.ts` usan un `Map` en scope de módulo.
 
-`src/lib/rate-limit.ts` y `src/proxy.ts` usan un `Map` en memoria del proceso. En Vercel cada
-instancia tiene el suyo y se reciclan seguido: el límite ni se comparte ni sobrevive. El
-propio archivo lo dice ("para multi-instancia usar Redis/Upstash"). Y al revés, el límite de
-10 req/min sobre `/api/catalogo` es **demasiado bajo** para navegación normal con búsqueda
-debounced y filtros — genera 429 a usuarios legítimos.
+- La caché **ya se invalida** en cada mutación de producto… pero solo en la instancia que
+  atendió la escritura. En serverless las demás esperan al TTL de 60 s.
+- El rate limit tiene el mismo problema y es peor: cada instancia cuenta por separado y se
+  recicla seguido, así que el límite real es difuso.
 
-### 9.9 Otros detalles que confunden
+Para que ambos funcionen de verdad hace falta un store compartido (Redis/Upstash). Es el
+ítem 11 y es **el mismo arreglo para los dos**.
 
-- **14 archivos tienen BOM UTF-8** (`﻿`) al inicio, antes del `// @ts-nocheck`.
-  Al editarlos, no lo borres accidentalmente ni lo agregues a archivos nuevos.
-- `globals.css:13` mapea `--color-brand-gray: var(--brand-gray)`, pero **`--brand-gray` nunca
-  se define**. La variable que sí existe es `--brand-dark`, y no está mapeada al theme.
-  `bg-brand-gray` no resuelve a nada.
-- La paginación multi-categoría de `catalogo/todos` pide `skip + take` filas **a cada una de
-  las 8 tablas** y corta en memoria. En la página 50 son 8 queries de 765 filas por request.
+### 9.5 Paginación multi-categoría cara
+
+En la vista "todas las categorías", cada una de las 8 tablas trae `skip + take` filas y el
+merge se corta en memoria. En la página 50 son 8 queries de 765 filas por request.
+
+El resultado es **correcto** (los N globales están garantizados dentro de la unión de los N
+de cada tabla), pero el costo crece con la profundidad. Si el catálogo sigue creciendo, hay
+que pasar a keyset pagination o a una vista materializada.
+
+### 9.6 Un producto sin foto es invisible
+
+El `where` del catálogo incluye `imagenes NOT NULL AND != '' AND != '[]'`. Es intencional
+—una tarjeta sin imagen queda mal— pero sorprende: si cargás un producto y no aparece en
+`/catalogo`, lo primero a revisar es si tiene imagen, no el filtro.
+
+### 9.7 Uploads sin blob store configurado
+
+Ver §8.5. Con el driver local, en Vercel los uploads devuelven **503 con un mensaje
+explícito**. Ya no es un 500 mudo, pero **sigue sin funcionar** hasta que se elija un
+proveedor. Es lo único de P0 que quedó abierto.
+
+### 9.8 El lockfile está desincronizado a propósito
+
+`package.json` cambió (se agregaron devDependencies y se quitaron 4 dependencias sin uso)
+pero `package-lock.json` no se pudo regenerar, porque `xlsx` se resuelve desde
+`cdn.sheetjs.com` y eso requiere red hacia ese host.
+
+**Corré `npm install` una vez y commiteá el lockfile actualizado.** Hasta entonces `npm ci`
+falla — por eso el workflow de CI usa `npm install`.
+
+### 9.9 Detalles menores
+
+- **Sin UI para 2FA ni cambio de contraseña.** Los cuatro endpoints
+  (`/api/auth/2fa/{setup,enable,disable}` y `/api/auth/password`) están completos y bien
+  hechos, pero ninguna pantalla los llama: hoy solo se usan con curl. Ítem 13.
+- **Trampa con el secret**: `[...nextauth]/route.ts` acepta `NEXTAUTH_SECRET || AUTH_SECRET`,
+  pero `lib/auth.ts` y `proxy.ts` leen **solo `NEXTAUTH_SECRET`**. Con solo `AUTH_SECRET`
+  configurada el login anda y `/panel` redirige en loop. Ítem 22.
+- **`next/image` consume cuota de optimización** en Vercel. El cambio de `<img>` crudo a
+  `next/image` reduce muchísimo el ancho de banda al usuario, pero mové el ojo a la factura
+  si el tráfico crece.
 - El panel arranca con `tablaFilter = "pisos_flotantes"`, no con "todas".
+- El reorder solo funciona con una categoría seleccionada: con el filtro en "Todas", `tabla`
+  va vacío y el endpoint devuelve 400.
 
 ---
 
 ## 10. Código muerto
 
-Verificado por búsqueda de referencias en todo `src/`. **~1.940 líneas** que no se ejecutan:
+Se eliminó todo el que había (~1.940 líneas) en la tanda de arreglos:
 
-| Archivo | Líneas | Por qué está muerto |
+| Archivo | Líneas | Qué era |
 |---|---|---|
-| `components/catalog/CategoryListing.tsx` | 769 | No se importa en ninguna página. Es el único consumidor de `/api/catalogo/[categoria]`, así que **ese endpoint también está huérfano** |
-| `components/admin/ProductModal.tsx` | 373 | Reemplazado por `QuickEditPanel`. Además no compilaría sin `@ts-nocheck` (§9.1) |
-| `components/admin/ImportMasivaModal.tsx` | 337 | Reemplazado por `ImportPreviewModal` + `/panel/importacion` |
+| `components/catalog/CategoryListing.tsx` | 555 de 769 | El componente `CategoryListing` no estaba montado en ninguna página. Sus exports **sí usados** (`ProductCard`, `EmptyState`, `CatalogItem`) se movieron a `components/catalog/ProductCard.tsx` |
+| `components/admin/ProductModal.tsx` | 373 | Reemplazado por `QuickEditPanel` |
+| `components/admin/ImportMasivaModal.tsx` | 337 | Reemplazado por `/panel/importacion` |
 | `components/admin/ProductDetailModal.tsx` | 304 | Sin referencias |
+| `components/admin/ImportPreviewModal.tsx` | 181 | Esperaba una forma de datos que el endpoint no devuelve (§8.4) |
 | `components/admin/PriceChart.tsx` | 124 | `/panel/reportes` usa Recharts directo |
-| `lib/auth-helpers.ts` | 33 | `requireAuth` / `requireAdminAuth` no se usan; cada handler repite el chequeo inline |
+| `lib/auth-helpers.ts` | 33 | Cada handler repite el chequeo inline |
+| `data/products.ts` | 26 | `products` era `[]` (§8.6) |
 
-Parcialmente muerto:
+También se recortó `lib/catalog-public.ts` a solo su tipo: `enrichCatalogProduct`,
+`sortCatalogProducts`, `isFeaturedSku` y un `PRODUCT_METADATA` con descripciones
+hardcodeadas de 8 SKUs no se ejecutaban nunca.
 
-- `lib/catalog-public.ts` — sólo se importa **el tipo** `CatalogPublicProduct`. Las funciones
-  (`enrichCatalogProduct`, `sortCatalogProducts`, `isFeaturedSku`), el `PRODUCT_METADATA`
-  hardcodeado de 8 SKUs y `FEATURED_PRODUCT_SKUS = []` no se ejecutan nunca.
-- `data/products.ts` — `products` es `[]`; sólo `CATEGORIES` se usa (§8.6).
-- `lib/google-drive.ts` — de sus 3 funciones sólo se usa `isRemoteImageUrl`.
-- `chat/route.ts` — `hashIp()` y `normalizePhone()` no se llaman; `getClientIp` se importa sin usar.
+Y se quitaron 4 dependencias sin un solo import: `@anthropic-ai/sdk`, `resend`,
+`@next-auth/prisma-adapter`, `react-leaflet`.
 
-Dependencias en `package.json` que no se importan en ningún lado:
-**`@anthropic-ai/sdk`**, **`resend`** (contacto usa `fetch` directo),
-**`@next-auth/prisma-adapter`** (nunca se configura adapter), **`react-leaflet`**
-(se usa `leaflet` a pelo), **`react-is`**.
+**Queda vivo pero parcial:** `lib/google-drive.ts` — de sus 3 funciones solo se usa
+`isRemoteImageUrl`. `react-is` sigue en `package.json`; probablemente sea un pin para
+resolver Recharts, así que no lo toqué.
 
 ---
 
 ## 11. Infraestructura y repo
 
-### Peso
+### Peso — sigue siendo el problema principal
 
 | Qué | Tamaño |
 |---|---|
-| `.git` | **341 MB** |
-| `public/` | **612 MB** (de los cuales `public/productos/` 249 MB y `public/uploads/` 50 MB) |
+| `.git` | **342 MB** |
+| `public/` | **612 MB** (`public/productos/` 249 MB, `public/uploads/` 50 MB) |
 | `assets/` | 47 MB |
-| Archivos trackeados | 2.783 |
 
 Hay imágenes de producto de hasta 4 MB y videos (`gente.mov` 9 MB, MP4s de WhatsApp)
-commiteados. **Y se sirven sin optimizar**: `components/catalog/SafeImage.tsx` usa un `<img>`
-crudo en vez de `next/image`, así que el navegador se baja el original a tamaño completo.
-La config de `images.remotePatterns` en `next.config.ts` casi no se aprovecha.
+commiteados. `next/image` ya evita que se sirvan a tamaño completo, pero **siguen pesando en
+el repo y en cada deploy**. Moverlos a un CDN es el ítem 23 y no lo toqué: implica decidir
+proveedor y reescribir URLs.
 
-### Migraciones de Prisma: rotas
+### Migraciones — arregladas
 
-`prisma/migrations/` tiene **una sola migración**, `20260603230221_init_crm`, y es
-**PostgreSQL puro** (`CREATE TYPE ... AS ENUM`, `UUID`, `TIMESTAMPTZ`) — restos del CRM que
-ya se removió. El datasource actual es **`sqlite`** (Turso).
+`prisma/migrations/` ahora tiene una baseline SQLite real
+(`00000000000000_init`, 14 tablas) generada con `prisma migrate diff --from-empty`.
 
-**No existe ninguna migración del schema de productos.** Las 8 tablas viven sólo en
-`schema.prisma` y se aplicaron con `prisma db push`. Consecuencias:
+Antes la única migración era `20260603230221_init_crm`: PostgreSQL puro
+(`CREATE TYPE ... AS ENUM`, `UUID`, `TIMESTAMPTZ`) sobre un datasource `sqlite`, y del CRM
+que ya se había removido. El schema de productos nunca había tenido migraciones — se venía
+aplicando con `db push`.
 
-- `prisma migrate dev` / `deploy` **no corren** contra este repo.
-- No hay historial de cambios de schema ni forma de reproducir la base desde cero.
-- `prisma/migrations` está listado en `.gitignore` **y sin embargo trackeado** (se agregó
-  antes de la regla).
+⚠️ **En una base que ya tiene datos, marcá la baseline como aplicada antes de cualquier
+`migrate deploy`:**
 
-Mientras esto siga así, los cambios de schema se aplican con `db push` y hay que coordinarlos
-a mano entre dev y producción.
+```bash
+npx prisma migrate resolve --applied 00000000000000_init
+```
+
+Está documentado también en `prisma/migrations/00000000000000_init/README.md`.
+`migration_lock.toml` ya declara `provider = "sqlite"`, y `prisma/migrations` salió de
+`.vercelignore` para que viaje al deploy.
 
 ### `xlsx` desde CDN
 
@@ -619,97 +689,98 @@ a mano entre dev y producción.
 ```
 
 Es la distribución **oficial y recomendada** por SheetJS (el paquete de npm está abandonado
-con CVEs abiertos), así que la decisión es correcta. Pero tiene costos reales:
-`npm install` falla en cualquier entorno con registry restringido o sin salida a
-`cdn.sheetjs.com` (pasa en CI y en sandboxes), la dependencia queda fuera de `npm audit`, y
-no hay verificación de integridad en el lockfile.
+con CVEs), así que la decisión es correcta. Costos reales: `npm install` falla en cualquier
+entorno sin salida a `cdn.sheetjs.com`, la dependencia queda fuera de `npm audit`, y el
+lockfile no se puede regenerar en esos entornos (§9.8).
 
-### Sin lint, sin tests, sin CI
+### Lint, CI y tests
 
-- No hay `eslint.config.*` ni `.eslintrc*`, aunque el código tiene `eslint-disable-next-line`
-  en 10 lugares (o sea: existió y se borró, o nunca se configuró).
-- `package.json` sólo tiene `dev`, `build`, `start`, `postinstall`.
-- No hay `.github/workflows/`.
-- `prisma/seed.ts` existe y funciona, pero no está declarado (`prisma.seed` en `package.json`)
-  ni tiene script. Se corre a mano con `tsx`/`ts-node`.
-
-### `.vercelignore`
-
-Excluye del deploy: `dump.sql`, `node_modules`, `imagenes-sku`, `.next`, `scripts`,
-`prisma/migrations`, `*.bak`.
+- `eslint.config.mjs` — flat config de Next 16 (`next/core-web-vitals` + `next/typescript`).
+- `.github/workflows/ci.yml` — typecheck + lint + build en cada PR y en `main`.
+- **Sigue sin haber tests.** Es el hueco más grande de tooling; ítem 30.
 
 ---
 
 ## 12. Backlog priorizado
 
-Cada item incluye dónde tocar. El orden es por relación impacto/esfuerzo.
+### ✅ Cerrado en la tanda de arreglos
 
-### P0 — rompen funcionalidad visible al usuario
+| # | Qué era |
+|---|---|
+| 1 | **Ordenar por precio vaciaba el catálogo**: solo `maderas` tiene el campo `precio`, las otras 7 usan `precioM2`. Ahora `buildOrderBy()` resuelve el campo por tabla, y la vista multi-categoría reordena el merge globalmente |
+| 3 | **Los leads del chatbot no se guardaban** en ningún lado (§8.6) |
+| 4 | **`/tienda` siempre vacía** y el bot derivaba ahí (§8.6) |
+| 5 | **Import de accesorios perdía las imágenes**: mapeaba a `imagen` en vez de `imagenes` |
+| 7 | **Campos fantasma**: `tipoDeProducto` (es `tipoProducto`) en los filtros y breadcrumbs, y `uso` en lugar de `tipoDeUso` en las specs de vinílicos |
+| 9 | **Ventana invertida** en el reporte de importaciones: colapsaba todo en una sola sesión |
+| 10 | **`detectSchema()` nunca fallaba**: una planilla desconocida se importaba entera como pisos flotantes |
+| 12 | **`reorder` de un item reescribía la tabla entera** |
+| 14 | **28 `@ts-nocheck`** que ocultaban 14 errores reales de tipos |
+| 15 | **`src/types/index.ts`** duplicaba a mano los modelos y ya había divergido del schema |
+| 16 | **Migraciones**: la única era de PostgreSQL sobre un datasource SQLite |
+| 17 | **Mapas de tabla duplicados** en 4 endpoints |
+| 18 | **`<img>` crudo** en el catálogo en vez de `next/image` |
+| 19 | **Sin ESLint ni CI** |
+| 20 | **~1.940 líneas de código muerto** y 4 dependencias sin usar |
+| 21 | **`env.ts` no lo importaba nadie**, así que nunca validaba |
+| 24 | Huérfanos `image-map.json` y `Diseños ABM productos_files/` |
+| 25 | BOM UTF-8 en 14 archivos |
+| 26 | `--brand-gray` mapeado al theme pero nunca definido |
+| 27 | `prisma/seed.ts` sin cablear a `package.json` |
+| 28 | `README.md` era el de `create-next-app` |
+| 29 | Sin `robots.txt` ni `sitemap.xml` |
+| — | El modal de import de `/panel` mostraba tablas vacías siempre (§8.4) |
+| — | El rate limit del catálogo era 10 req/min, demasiado bajo para navegación normal |
+| — | `/api/hero` no validaba magic bytes (sí lo hacía `/api/upload`) |
+
+### 🔴 Abierto — P0
+
+| # | Qué | Por qué sigue abierto |
+|---|---|---|
+| 2 | **Uploads a un blob store** (§8.5, §9.7) | Hay que elegir proveedor. La abstracción ya está: es un driver nuevo y una línea en `getStorage()` |
+
+### 🟠 Abierto — P1
 
 | # | Qué | Dónde |
 |---|---|---|
-| 1 | **Ordenar por precio vacía el catálogo.** Normalizar a un campo de orden común (columna calculada o `orderBy` por tabla) y dejar de tragar el error | `api/catalogo/todos/route.ts` (`sortBy`) + `lib/all-products.ts` (`timeout`) |
-| 2 | **Los uploads no persisten en Vercel.** Migrar a Vercel Blob / S3 / Cloudinary | `api/upload/route.ts`, `api/hero/route.ts` |
-| 3 | **Los leads del chatbot no se guardan.** Definir destino (tabla nueva, email a ventas, o CRM) y persistirlos antes de abrir WhatsApp | `components/layout/ChatWidget.tsx:357`, `api/chat/route.ts:271` |
-| 4 | **`/tienda` siempre vacía** y el bot deriva ahí. O conectarla a la DB, o sacar `storeUrl` del prompt y del handler | `data/products.ts`, `app/tienda/page.tsx`, `api/chat/route.ts:261` |
-| 5 | **Import de accesorios pierde las imágenes** (`imagen` → `imagenes`) | `lib/sheet-schemas.ts`, bloque `accesorios` |
+| 6 | **Cuentas individuales por mayorista** en vez de una `VIEWER` compartida (§9.1). Necesita un ABM de usuarios | `lib/auth.ts`, nueva pantalla en `(admin)/panel/` |
+| 8 | **Promedios de precio sin normalizar** (§9.3). Separar por moneda y unidad, o quitar el KPI | `api/productos/stats`, `api/reportes/resumen`, `lib/all-products.ts` |
+| 11 | **Caché y rate limit a Redis/Upstash** (§9.4). Un solo arreglo cubre los dos | `lib/catalog-cache.ts`, `lib/rate-limit.ts`, `proxy.ts` |
+| 13 | **UI para 2FA y cambio de contraseña** (§9.9). Los endpoints ya existen | nueva pantalla en `(admin)/panel/` |
+| 22 | **Unificar el secret** entre `[...nextauth]`, `auth.ts` y `proxy.ts` (§9.9) | 3 archivos, 1 línea cada uno |
+| 30 | **Tests.** No hay ninguno. Empezar por `sheet-schemas` (parseo de Excel), `all-products` (normalización) y `buildOrderBy` | — |
 
-### P1 — corrección de datos y operación
-
-| # | Qué | Dónde |
-|---|---|---|
-| 6 | **Cuentas individuales por mayorista** en vez de una `VIEWER` compartida. Habilita revocar acceso y auditar por cliente | `lib/auth.ts`, `prisma/schema.prisma`, ABM de usuarios (no existe) |
-| 7 | **Campos fantasma** `tipoDeProducto` y `uso` (§9.2) | `api/catalogo/[categoria]/route.ts:35,66`, `catalogo/[id]/page.tsx:135,142,216,220`, `lib/all-products.ts:372` |
-| 8 | **Promedios de precio sin normalizar** (§9.6). Como mínimo, separar por moneda y por unidad, o quitar el KPI | `api/productos/stats`, `api/reportes/resumen`, `lib/all-products.ts:134` |
-| 9 | **Ventana invertida en "sesiones de importación"** (§9.5) | `api/reportes/importaciones/route.ts:26-42` |
-| 10 | **`detectSchema()` nunca falla**: con score 0 cae a pisos flotantes y se importa todo mal. Exigir score mínimo y rechazar | `lib/sheet-schemas.ts:302` |
-| 11 | **Rate limit y caché a Redis/Upstash** (§9.7, §9.8). Y subir el límite de `/api/catalogo` | `lib/rate-limit.ts`, `proxy.ts`, `api/catalogo/*` |
-| 12 | **`reorder` de un item reescribe la tabla entera** (§8.3). Recalcular sólo el rango afectado | `api/productos/reorder/route.ts:49-77` |
-| 13 | **Sin UI para 2FA ni cambio de contraseña** (§6). Los endpoints ya existen y funcionan | falta una pantalla en `(admin)/panel/` |
-
-### P2 — deuda técnica
+### 🟡 Abierto — P2 / P3
 
 | # | Qué |
 |---|---|
-| 14 | **Sacar los 28 `@ts-nocheck`** y arreglar los 16 errores (§9.1). Hacerlo archivo por archivo, no de una |
-| 15 | **Generar los tipos desde Prisma** y borrar `src/types/index.ts` (§9.3) |
-| 16 | **Migraciones**: descartar `init_crm`, generar la baseline real del schema SQLite, sacar `prisma/migrations` del `.gitignore` (§11) |
-| 17 | **Centralizar los mapas de tabla** en `lib/all-products.ts` y borrar las 7 copias locales (§5) |
-| 18 | **`next/image` en el catálogo** en vez de `<img>` crudo, y recomprimir `public/productos/` (§11) |
-| 19 | **ESLint + `npm run typecheck` + CI** en GitHub Actions (§11) |
-| 20 | **Borrar el código muerto** (~1.940 líneas) y las 5 dependencias sin usar (§10) |
-| 21 | **Usar `lib/env.ts`** (importarlo en el arranque) o borrarlo; y limpiar las variables del CRM (§3) |
-| 22 | **Unificar el secret**: que `[...nextauth]`, `auth.ts` y `proxy.ts` lean la misma variable (§3) |
-
-### P3 — higiene
-
-| # | Qué |
-|---|---|
-| 23 | Mover `public/` (612 MB) y `assets/` (47 MB) a un CDN; sacar los videos del repo |
-| 24 | Borrar `image-map.json` y `Diseños ABM productos_files/` (huérfanos, §4) |
-| 25 | Quitar los BOM UTF-8 de los 14 archivos (§9.9) |
-| 26 | Definir `--brand-gray` o borrar el mapeo roto en `globals.css:13` |
-| 27 | Cablear `prisma/seed.ts` a `package.json` (`prisma.seed` + script) |
-| 28 | Reescribir el `README.md`, que sigue siendo el de `create-next-app` |
-| 29 | Agregar `robots.txt` y `sitemap.xml` (no existen) |
-
----
+| 23 | Mover `public/` (612 MB) y `assets/` (47 MB) a un CDN; sacar los videos del repo (§11) |
+| 31 | Paginación multi-categoría: pasar a keyset si el catálogo sigue creciendo (§9.5) |
+| 32 | Correr `npm install` y commitear el lockfile actualizado (§9.8) |
+| 33 | Volver fatal la validación de `env.ts` una vez verificado el entorno de producción |
 
 ## 13. Cómo se verificó este documento
 
 | Qué | Cómo | Resultado |
 |---|---|---|
-| Compilación | `npx next build` con env dummy | ✅ compila; 43 páginas prerenderizadas, sin warnings |
-| Tipos (estado actual) | `npx tsc --noEmit` | ✅ 0 errores |
-| Tipos (sin `@ts-nocheck`) | quitando la directiva en los 28 archivos y recompilando | ❌ **16 errores** (§9.1) |
-| Campos fantasma | `grep` cruzado contra `prisma/schema.prisma` | 3 confirmados (§9.2) |
-| Código muerto | búsqueda de referencias por basename en todo `src/` | 6 módulos + 5 deps (§10) |
+| Compilación | `npx next build` con env dummy | ✅ 45 páginas prerenderizadas, sin warnings |
+| Tipos | `npx tsc --noEmit` | ✅ **0 errores con 0 `@ts-nocheck`** |
+| Campos fantasma | `grep` cruzado contra `prisma/schema.prisma` | 3 encontrados y corregidos |
+| Código muerto | búsqueda de referencias por símbolo exportado | 8 archivos eliminados, 1 dividido |
+| Baseline de migraciones | `prisma migrate diff --from-empty` | ✅ 14 tablas |
 | Peso del repo | `du -sh` + `git ls-files \| xargs du` | §11 |
-| Bugs de lógica (§9.4, §9.5, §8.3) | lectura del código contra el schema | confirmados por inspección, **no ejecutados contra una base real** |
+| Bugs de lógica | lectura del código contra el schema | corregidos por inspección |
 
-Lo único que **no** se pudo verificar en runtime es el comportamiento contra Turso: no hubo
-acceso a una base con datos. Los bugs de §9.4, §9.5 y §8.3 están confirmados leyendo el
-código y el schema, pero no reproducidos end-to-end.
+### Lo que NO está verificado
+
+- **Nada se ejecutó contra una base con datos.** No hubo acceso a Turso ni a una copia. Los
+  arreglos de §12 están validados por typecheck y build, no por ejecución end-to-end. Antes
+  de mergear conviene probar en staging: orden por precio, import de un Excel real, reorder,
+  y el registro de un lead.
+- **ESLint no se pudo correr.** La config está escrita pero requiere `npm install` (§9.8), y
+  este entorno no tiene salida a `cdn.sheetjs.com`. La primera corrida puede sacar findings.
+- **El driver de storage remoto no existe todavía** (§9.7), así que el camino de upload en
+  Vercel no está probado — solo el fallo explícito.
 
 ### Mantenimiento de este documento
 
