@@ -19,6 +19,8 @@ export type CloudinaryConfig = {
   cloudName: string;
   apiKey: string;
   apiSecret: string;
+  /** De dónde salió la config. Solo para diagnóstico. */
+  fuente?: "vars-separadas" | "CLOUDINARY_URL";
 };
 
 /**
@@ -57,12 +59,14 @@ export function getCloudinaryConfig(): CloudinaryConfig | null {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
   const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
-  if (cloudName && apiKey && apiSecret) return { cloudName, apiKey, apiSecret };
+  if (cloudName && apiKey && apiSecret) {
+    return { cloudName, apiKey, apiSecret, fuente: "vars-separadas" };
+  }
 
   const url = process.env.CLOUDINARY_URL?.trim();
   if (url) {
     const fromUrl = parseCloudinaryUrl(url);
-    if (fromUrl) return fromUrl;
+    if (fromUrl) return { ...fromUrl, fuente: "CLOUDINARY_URL" };
     console.error("[cloudinary] CLOUDINARY_URL está seteada pero no se pudo parsear. Formato esperado: cloudinary://<api_key>:<api_secret>@<cloud_name>");
   }
 
@@ -144,6 +148,35 @@ export async function uploadToCloudinary(
     throw new Error("Cloudinary no devolvió secure_url/public_id");
   }
   return { secureUrl: json.secure_url, publicId: json.public_id };
+}
+
+/**
+ * Verifica las credenciales contra Cloudinary sin subir nada.
+ *
+ * Usa Basic auth (api_key:api_secret), no la firma, así distingue "la
+ * credencial está mal" de "la firma se arma mal". Es lo que resuelve en un
+ * paso el diagnóstico de un `Invalid Signature`.
+ */
+export async function pingCloudinary(
+  config: CloudinaryConfig,
+): Promise<{ ok: boolean; status: number; mensaje: string }> {
+  const auth = Buffer.from(`${config.apiKey}:${config.apiSecret}`).toString("base64");
+  try {
+    const res = await fetch(`${API_BASE}/${config.cloudName}/ping`, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+    const texto = await res.text();
+    let mensaje = texto.slice(0, 200);
+    try {
+      const parsed = JSON.parse(texto) as { error?: { message?: string }; status?: string };
+      mensaje = parsed?.error?.message ?? parsed?.status ?? mensaje;
+    } catch {
+      /* se queda con el texto crudo */
+    }
+    return { ok: res.ok, status: res.status, mensaje };
+  } catch (err) {
+    return { ok: false, status: 0, mensaje: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 /**

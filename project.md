@@ -595,6 +595,28 @@ que después `next/image` rechaza.
 **No hay que migrar nada.** `imagenes` es un array de URLs: las nuevas van a Cloudinary y las
 viejas siguen siendo rutas de `public/`. Conviven.
 
+#### Diagnóstico del storage
+
+`GET /api/storage/diagnostico` (sólo ADMIN) responde en un paso qué driver está
+activo, de qué variable salió la config (`CLOUDINARY_URL` o las tres separadas) y si
+las credenciales sirven, haciendo un `ping` con Basic auth contra Cloudinary.
+
+Nace de un caso real: un upload devolvía `Invalid Signature` y no había forma de saber,
+desde afuera del servidor, si el problema era la credencial, el formato de la variable o
+cómo se arma la firma. **No devuelve el `api_secret`**: de la key van los últimos 4
+dígitos y del secret sólo el largo, que alcanza para detectar el error más común, un valor
+pegado a medias.
+
+Sólo un **401** se interpreta como credencial inválida — es lo que devuelve el Basic auth
+de Cloudinary. Un `status: 0` es que la request ni salió, y cualquier otro código puede
+venir de un proxy en el medio; en esos casos se muestra la respuesta cruda en vez de
+inventar un diagnóstico.
+
+> Sobre `Invalid Signature`: el error de Cloudinary incluye la cadena que esperaba firmar.
+> Si esa cadena coincide con la que arma `sign()` —`folder=...&timestamp=...`, ordenada
+> alfabéticamente— entonces la firma se construye bien y lo que no coincide es el
+> `api_secret`. Es el atajo para no perder tiempo revisando el algoritmo.
+
 ### 8.6 Hero de la home — eliminado
 
 `HeroCarousel` renderiza un único video de fondo (`res.cloudinary.com`, hardcodeado).
