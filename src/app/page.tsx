@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { CATEGORIES } from "@/data/products";
 import { MdVerifiedUser, MdWarehouse, MdOutlineLocalShipping } from "react-icons/md";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
 import { FiArrowRight, FiCheck, FiMail, FiMapPin, FiPackage, FiSettings, FiGrid, FiLayers, FiTool, FiSun, FiLayout, FiShoppingBag } from "react-icons/fi";

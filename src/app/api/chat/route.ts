@@ -1,17 +1,11 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { sanitizeText, verifyOrigin } from "@/lib/security";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
-}
-
-function hashIp(ip: string): string {
-  let h = 0;
-  for (let i = 0; i < ip.length; i++) { h = (Math.imul(31, h) + ip.charCodeAt(i)) | 0; }
-  return Math.abs(h).toString(16);
 }
 
 export const runtime = "nodejs";
@@ -122,7 +116,7 @@ Recopilar datos de forma progresiva. No hacer muchas preguntas juntas. Lógica: 
 Siempre JSON puro, sin texto extra afuera. Tres casos:
 
 Normal: { "reply": "...", "waText": null, "storeUrl": false }
-Derivar a tienda online: { "reply": "¡Perfecto! Podés ver el catálogo completo en nuestra tienda online 🛒", "waText": null, "storeUrl": true, "lead": {} }
+Derivar al catálogo online: { "reply": "¡Perfecto! Podés ver el catálogo completo online 🛒", "waText": null, "storeUrl": true, "lead": {} }
 Derivar a asesor: { "reply": "Perfecto, te conecto con un asesor que te da precio y disponibilidad enseguida 👌", "waText": "...", "storeUrl": false, "lead": { "nombre": "...", "email": "...", "telefono": "..." } }
 
 El waText debe sonar como si lo escribiera el cliente e incluir TODO el contexto recopilado: tipo de cliente, producto, m², localidad, uso/destino, urgencia y cualquier detalle relevante. Cerrar siempre con "¿Pueden asesorarme?".
@@ -133,7 +127,7 @@ En TODA respuesta incluí el objeto 'lead' con cualquier dato personal que el us
 - nombre: si dijo "me llamo X", "soy X", "mi nombre es X", etc.
 - email: si dijo un email válido.
 - telefono: si dijo un número de WhatsApp/teléfono (con o sin +54, con o sin código de área).
-Si un campo no fue mencionado, omitilo o pone null. NO inventes datos. Estos datos los usamos para pre-llenar el formulario y registrar el lead en el CRM.
+Si un campo no fue mencionado, omitilo o pone null. NO inventes datos. Estos datos los usamos para pre-llenar el formulario de derivación y registrar el contacto.
 
 ━━ OBJETIVO COMERCIAL PRIORITARIO ━━
 Tu meta SIEMPRE es conducir la conversación hacia la derivación al asesor por WhatsApp. NO seas pesado ni insistas, pero:
@@ -258,17 +252,15 @@ export async function POST(req: NextRequest) {
       typeof parsedReply.waText === "string" && parsedReply.waText.length > 0
         ? sanitizeText(parsedReply.waText, 1500)
         : null;
-    const storeUrl = parsedReply.storeUrl === true ? "/tienda" : null;
+    const storeUrl = parsedReply.storeUrl === true ? "/catalogo" : null;
 
     const waUrl = waText ? WA_BASE + encodeURIComponent(waText) : null;
 
     // Extracción de datos del lead que Nacho identifica progresivamente.
     const leadExtracted = extractLead(parsedReply.lead);
 
-    // Si ya tenemos teléfono + nombre, persistimos el lead silenciosamente.
-    // El formulario previo al WhatsApp sigue mostrándose como confirmación,
-    // pero el dato ya queda en el CRM.
-    // CRM deshabilitado — integración removida
+    // El lead lo persiste el cliente al confirmar el handoff (POST /api/leads),
+    // no acá: recién en ese punto el usuario valida sus datos.
 
     return NextResponse.json({
       reply,

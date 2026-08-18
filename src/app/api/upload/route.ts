@@ -3,11 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import { randomBytes } from "crypto";
 import { detectImageMime, verifyOrigin } from "@/lib/security";
+import { getStorage, StorageError } from "@/lib/storage";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { findProductById, TABLES_WITH_IMAGENES_ARRAY } from "@/lib/all-products";
 
@@ -20,7 +17,6 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/webp": "webp",
 };
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "productos");
 const CUID_RE = /^c[a-z0-9]{20,30}$/i;
 
 // POST: Upload de imagen de producto
@@ -93,23 +89,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-    }
-
-    const ext = EXT_BY_MIME[detectedMime];
-    const uniqueId = randomBytes(16).toString("hex");
-    const filename = `${uniqueId}.${ext}`;
-    const filepath = join(UPLOAD_DIR, filename);
-
-    // Defensa adicional: asegurar que el path resultante esté dentro de UPLOAD_DIR
-    if (!filepath.startsWith(UPLOAD_DIR + (process.platform === "win32" ? "\\" : "/"))) {
-      return NextResponse.json({ error: "Ruta inválida" }, { status: 400 });
-    }
-
-    await writeFile(filepath, buffer);
-
-    const url = `/uploads/productos/${filename}`;
+    const { url } = await getStorage().save(buffer, {
+      folder: "productos",
+      ext: EXT_BY_MIME[detectedMime],
+      contentType: detectedMime,
+    });
 
     if (productId && foundProduct) {
       const delegate = (prisma as any)[foundProduct.tableKey];
@@ -130,6 +114,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: { url } }, { status: 201 });
   } catch (error) {
+    if (error instanceof StorageError) {
+      console.error("[upload] storage:", error.message);
+      return NextResponse.json({ error: error.userMessage }, { status: error.status });
+    }
     console.error("[upload] error:", error);
     return NextResponse.json({ error: "Error al subir imagen" }, { status: 500 });
   }

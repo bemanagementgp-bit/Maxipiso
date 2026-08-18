@@ -471,3 +471,35 @@ model HeroMedia {
   @@index([isActive, sortOrder])
   @@map("hero_media")
 }
+
+// ==================== LEADS DEL CHATBOT ====================
+// Antes de esto los datos que "Nacho" recolectaba (nombre, WhatsApp, email)
+// solo viajaban dentro del texto del mensaje de WhatsApp y quedaban en el
+// localStorage del visitante: no se guardaba nada del lado del servidor.
+
+model Lead {
+  id                  String     @id @default(cuid())
+  nombre              String
+  email               String?
+  telefono            String
+  telefonoNormalizado String     @unique
+  mensaje             String?
+  origenUrl           String?
+  userAgent           String?
+  interacciones       Int        @default(1)
+  estado              LeadEstado @default(NUEVO)
+  notas               String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([estado])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+enum LeadEstado {
+  NUEVO
+  EN_CONTACTO
+  COMPRO
+  DESCARTADO
+}

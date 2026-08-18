@@ -3,11 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir, unlink } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import { randomBytes } from "crypto";
-import { verifyOrigin } from "@/lib/security";
+import { detectImageMime, verifyOrigin } from "@/lib/security";
+import { getStorage, StorageError } from "@/lib/storage";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -23,7 +20,6 @@ const EXT_MAP: Record<string, string> = {
 };
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "hero");
 
 export async function GET() {
   try {
@@ -68,17 +64,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Archivo demasiado grande (máx ${maxSize / 1024 / 1024}MB)` }, { status: 400 });
     }
 
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true });
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Las imagenes se validan por magic bytes, igual que en /api/upload: el
+    // Content-Type que manda el cliente no es prueba de nada. Los videos se
+    // quedan con la validacion por MIME declarado (no hay detector propio),
+    // pero igual se guardan con nombre aleatorio y se sirven con sandbox.
+    if (isImage) {
+      const detected = detectImageMime(buffer);
+      if (!detected || detected !== mime) {
+        return NextResponse.json(
+          { error: "El contenido del archivo no coincide con una imagen válida" },
+          { status: 400 },
+        );
+      }
     }
 
-    const ext = EXT_MAP[mime];
-    const filename = `${randomBytes(16).toString("hex")}.${ext}`;
-    const filepath = join(UPLOAD_DIR, filename);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filepath, buffer);
-
-    const url = `/uploads/hero/${filename}`;
+    const { url } = await getStorage().save(buffer, {
+      folder: "hero",
+      ext: EXT_MAP[mime],
+      contentType: mime,
+    });
     const alt = (formData.get("alt") as string) ?? "";
 
     const maxOrder = await prisma.heroMedia.aggregate({ _max: { sortOrder: true } });
@@ -96,6 +102,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: item }, { status: 201 });
   } catch (err) {
+    if (err instanceof StorageError) {
+      console.error("[hero] storage:", err.message);
+      return NextResponse.json({ success: false, error: err.userMessage }, { status: err.status });
+    }
     console.error("[hero] POST error:", err);
     return NextResponse.json({ success: false, error: "Error al subir archivo" }, { status: 500 });
   }
@@ -146,11 +156,8 @@ export async function DELETE(req: NextRequest) {
     const item = await prisma.heroMedia.findUnique({ where: { id } });
     if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-    // Delete file from disk if it's a local upload
-    if (item.url.startsWith("/uploads/")) {
-      const filepath = join(process.cwd(), "public", item.url);
-      try { await unlink(filepath); } catch {}
-    }
+    // Borrar el archivo del store (no-op si ya no existe).
+    await getStorage().remove(item.url);
 
     await prisma.heroMedia.delete({ where: { id } });
     return NextResponse.json({ success: true });

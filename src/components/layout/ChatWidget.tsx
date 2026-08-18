@@ -435,6 +435,29 @@ function LeadHandoff({
         telefono: telTrim,
         email: emailTrim,
       });
+
+      // Registrar el lead del lado del servidor. Es deliberadamente fail-open:
+      // si el guardado falla, igual derivamos a WhatsApp — perder el registro es
+      // malo, perder la venta es peor.
+      try {
+        const res = await fetch("/api/leads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: nombreTrim,
+            telefono: telTrim,
+            email: emailTrim,
+            mensaje: mensajeInicial,
+            origenUrl: typeof window !== "undefined" ? window.location.href : "",
+          }),
+        });
+        if (!res.ok) {
+          console.warn("[chat] no se pudo registrar el lead:", res.status);
+        }
+      } catch (err) {
+        console.warn("[chat] no se pudo registrar el lead:", err);
+      }
+
       onSent();
       window.open(waUrl, "_blank", "noopener,noreferrer");
     } catch {
