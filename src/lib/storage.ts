@@ -27,7 +27,7 @@ export type StoredFile = {
 };
 
 export type SaveOptions = {
-  /** Carpeta logica, sin barras (ej: "productos", "hero"). */
+  /** Carpeta logica, sin barras (ej: "productos"). */
   folder: string;
   /** Extension sin punto (ej: "jpg"). */
   ext: string;

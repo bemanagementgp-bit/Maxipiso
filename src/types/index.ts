@@ -18,7 +18,6 @@ export type {
   User,
   ChangeLog,
   AuthEvent,
-  HeroMedia,
   Lead,
 } from "@prisma/client";
 

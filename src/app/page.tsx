@@ -535,7 +535,7 @@ function ContactSection() {
 export default function Home() {
   return (
     <>
-      {/* Hero — dynamic carousel */}
+      {/* Hero */}
       <section className="relative overflow-hidden h-[86vh] min-h-[560px] flex items-center">
         <HeroCarousel />
         {/* Overlay */}

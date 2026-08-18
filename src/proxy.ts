@@ -75,8 +75,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/api/productos/plantilla") ||
       pathname.startsWith("/api/productos/stats") ||
       pathname.startsWith("/api/productos/metadata-suggest") ||
-      pathname.startsWith("/api/reportes") ||
-      (pathname.startsWith("/api/hero") && request.method !== "GET")) &&
+      pathname.startsWith("/api/reportes")) &&
     !isAdmin
   ) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });

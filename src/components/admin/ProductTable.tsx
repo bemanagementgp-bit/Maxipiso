@@ -135,6 +135,9 @@ export interface ProductTableProps {
   onEdit: (product: AdminProductRow) => void;
   onDelete: (productId: string) => void;
   onViewHistory: (productId: string) => void;
+  /** Avisos hacia los toasts de la pagina. La vista general no tiene barra
+   *  propia donde mostrar `saveMsg`, asi que sin esto el toggle era silencioso. */
+  onNotify?: (type: "success" | "error", message: string) => void;
   searchTerm?: string;
   tablaFilter?: string;
   marcaFilter?: string;
@@ -159,7 +162,7 @@ function parseFirstImage(value: unknown): string | null {
 }
 
 export function ProductTable({
-  onEdit, onDelete, onViewHistory,
+  onEdit, onDelete, onViewHistory, onNotify,
   searchTerm = "", tablaFilter = "", marcaFilter = "",
   estadoFilter = "activo", refreshKey = 0,
 }: ProductTableProps) {
@@ -331,6 +334,46 @@ export function ProductTable({
 
   useEffect(() => { setPage(1); fetchProductos(0); }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, refreshKey]);
 
+  // El endpoint /api/productos/[id]/toggle existia desde siempre pero ningun
+  // componente lo llamaba: el badge de estado era solo decorativo y la unica
+  // forma de activar o desactivar un producto era abrir el panel de edicion.
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleToggleActivo = async (productId: string) => {
+    if (togglingId) return;
+    setTogglingId(productId);
+    try {
+      const res = await fetch(`/api/productos/${productId}/toggle`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      const nuevoEstado = Boolean(json?.data?.isActive);
+
+      // Si el filtro de estado excluye el nuevo valor, la fila deja de
+      // corresponder a la vista y hay que recargar en vez de parchear.
+      const saleDelFiltro =
+        (estadoFilter === "activo" && !nuevoEstado) ||
+        (estadoFilter === "inactivo" && nuevoEstado);
+
+      if (saleDelFiltro) {
+        fetchProductos((page - 1) * PER_PAGE);
+      } else {
+        setProductos((prev) =>
+          prev.map((row) => (row.id === productId ? { ...row, isActive: nuevoEstado } : row)),
+        );
+      }
+      const msg = nuevoEstado ? "Producto activado" : "Producto desactivado";
+      setSaveMsg(msg);
+      setTimeout(() => setSaveMsg(null), 2500);
+      onNotify?.("success", msg);
+    } catch {
+      setSaveMsg("No se pudo cambiar el estado");
+      setTimeout(() => setSaveMsg(null), 3000);
+      onNotify?.("error", "No se pudo cambiar el estado");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleDelete = async (productId: string) => {
     try {
       const res = await fetch(`/api/productos/${productId}`, { method: "DELETE" });
@@ -483,14 +526,20 @@ export function ProductTable({
                         </td>
                       ))}
                       <td className="px-3 py-2.5 text-center">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                          p.isActive
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-gray-50 text-gray-400 border-gray-200"
-                        }`}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActivo(p.id)}
+                          disabled={togglingId === p.id}
+                          title={p.isActive ? "Desactivar producto" : "Activar producto"}
+                          className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors disabled:opacity-50 ${
+                            p.isActive
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300"
+                              : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100 hover:text-gray-600 hover:border-gray-300"
+                          }`}
+                        >
                           <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? "bg-emerald-500" : "bg-gray-300"}`} />
-                          {p.isActive ? "Activo" : "Inactivo"}
-                        </span>
+                          {togglingId === p.id ? "..." : p.isActive ? "Activo" : "Inactivo"}
+                        </button>
                       </td>
                       <td className="px-3 py-2.5">
                         <div className={`flex items-center justify-center gap-0.5 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-25"}`}>
@@ -660,14 +709,20 @@ export function ProductTable({
                       <StockCell stock={p.stock} />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
-                        p.isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-gray-50 text-gray-400 border-gray-200"
-                      }`}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActivo(p.id)}
+                        disabled={togglingId === p.id}
+                        title={p.isActive ? "Desactivar producto" : "Activar producto"}
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${
+                          p.isActive
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300"
+                            : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100 hover:text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
                         <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? "bg-emerald-500" : "bg-gray-300"}`} />
-                        {p.isActive ? "Activo" : "Inactivo"}
-                      </span>
+                        {togglingId === p.id ? "..." : p.isActive ? "Activo" : "Inactivo"}
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className={`flex items-center justify-center gap-0.5 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-25"}`}>

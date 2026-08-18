@@ -123,13 +123,13 @@ src/
 ├── app/
 │   ├── (admin)/                    1.695 líneas — grupo de rutas del panel
 │   │   ├── layout.tsx              shell del panel (sidebar, theme switcher)
-│   │   └── panel/                  page (ABM) · hero · importacion · reportes
+│   │   └── panel/                  page (ABM) · importacion · reportes
 │   ├── api/                        3.481 líneas — todos los endpoints (§6)
 │   ├── auth/login/                 login del panel → redirige a /panel
 │   ├── catalogo/                   listado (561) · ficha [id] (537) · login (227)
 │   ├── novedades/                  índice + 3 landings estáticas + [slug] SSG
 │   ├── distribuidores/  empresa/
-│   ├── tienda/                     redirect permanente a /catalogo (§8.6)
+│   ├── tienda/                     redirect permanente a /catalogo (§8.7)
 │   ├── sitemap.ts                  sitemap de las páginas públicas estables
 │   ├── layout.tsx                  root layout: SessionProvider + ShellLayout
 │   └── globals.css
@@ -157,7 +157,7 @@ src/
 prisma/
 ├── schema.prisma                   8 tablas de producto + auth + auditoría + leads
 ├── seed.ts                         crea el admin inicial (`npm run db:seed`)
-└── migrations/00000000000000_init  baseline SQLite (14 tablas)
+└── migrations/                     baseline SQLite + drop de hero_media
 ```
 
 ### Archivos que no consume el build
@@ -231,8 +231,7 @@ coinciden con los nombres de tabla. Si agregás una categoría, tocá esos dos m
 - `ChangeLog` — auditoría **polimórfica** de productos: `tablaNombre` + `entidadId` apuntan a
   cualquiera de las 8 tablas. `campo` guarda o el nombre del campo (UPDATE por campo) o el
   literal `"PRODUCTO"` (CREATE / import). Sin FK — la integridad no está garantizada por la DB.
-- `HeroMedia` — imágenes y videos del carrusel del home, ordenables.
-- `Lead` — contactos que captura el chatbot antes de derivar a WhatsApp (§8.6).
+- `Lead` — contactos que captura el chatbot antes de derivar a WhatsApp (§8.7).
   Se deduplica por `telefonoNormalizado` (solo dígitos) y lleva un contador de
   `interacciones` y un `estado` para seguimiento comercial.
 - `Session` — **tabla muerta**. La sesión es JWT y no se configura ningún adapter de Prisma,
@@ -252,7 +251,6 @@ Todos bajo `src/app/api/`. La columna "Gate" indica **quién puede llegar** comb
 | `GET` | `/api/catalogo` | público | Conteo de productos activos por categoría (hub) |
 | `GET` | `/api/catalogo/todos` | público | **Endpoint principal del catálogo.** Búsqueda + filtros + orden + paginación sobre las 8 tablas. Filtra campos de precio si no hay sesión |
 | `GET` | `/api/catalogo/[categoria]` | público | Listado por categoría. ⚠️ **Sólo lo consume `CategoryListing.tsx`, que no está montado en ninguna página** (§10) |
-| `GET` | `/api/hero` | público | Items activos del carrusel del home |
 | `POST` | `/api/chat` | público | Chatbot Groq. Rate limit 20/min |
 | `POST` | `/api/contacto` | público | Formulario de contacto → Resend. Rate limit 5/10min |
 | `POST` | `/api/leads` | público | Registra un lead del chatbot antes del handoff a WhatsApp. Rate limit 10/10min, upsert por teléfono |
@@ -295,7 +293,6 @@ los llame**. Están completos y funcionan, pero hoy sólo se pueden usar con cur
 | `GET` | `/api/reportes/precio-historico` | Serie temporal de precio de un producto |
 | `GET` | `/api/reportes/importaciones` | Últimas "sesiones" de importación |
 | `POST` | `/api/upload` | Sube imagen de producto |
-| `POST` `PUT` `DELETE` | `/api/hero` | ABM del carrusel |
 
 ### Convenciones de los handlers
 
@@ -354,8 +351,8 @@ El middleware corre sobre `/catalogo/:path*`, `/panel/:path*` y `/api/:path*`:
 - `/api/auth/*` (menos `password` y `2fa`) pasa sin tocar.
 - `/api/catalogo/*` y `/api/contacto` → rate limit por IP, sin auth.
 - `/panel/*` → redirige a `/auth/login` si el rol no es `ADMIN`.
-- `/api/upload`, `/api/productos/{import,export,plantilla,stats,metadata-suggest}`,
-  `/api/reportes/*` y `/api/hero` no-GET → 401 si no es `ADMIN`.
+- `/api/upload`, `/api/productos/{import,export,plantilla,stats,metadata-suggest}`
+  y `/api/reportes/*` → 401 si no es `ADMIN`.
 - `/api/productos*` y `/api/auth/{password,2fa}` → 401 si no hay sesión.
 
 **El middleware no reemplaza los chequeos del handler.** Cada route handler vuelve a llamar
@@ -422,6 +419,9 @@ lateral) + `HistorialModal`.
 - Cada `PUT` genera un `ChangeLog` **por campo modificado**, en un loop de creates secuenciales
   (`[id]/route.ts:148-172`) — no está batcheado.
 - El borrado es **soft**: `isActive = false`. No hay borrado físico en ninguna parte.
+- El badge de **Estado es un botón**: llama a `POST /api/productos/[id]/toggle` y activa o
+  desactiva en un click, en las dos vistas de la tabla. Si el nuevo estado no entra en el
+  filtro activo, la tabla recarga; si entra, se parchea la fila sin refetch.
 
 ### 8.3 Orden manual (`sortOrder`)
 
@@ -488,11 +488,21 @@ que hoy las imágenes se suben en local y se commitean a mano.
 driver nuevo y una línea en `getStorage()`; el resto de la app no se entera. Es el ítem 2
 del backlog y lo único de P0 que quedó sin cerrar.
 
-`POST /api/hero` usa el mismo storage y acepta además video (MP4/WebM hasta 50 MB). Las
-imágenes ahora también se validan por magic bytes; los videos siguen validándose por el
-`Content-Type` declarado, porque no hay detector propio para ellos.
+### 8.6 Hero de la home — eliminado
 
-### 8.6 Chatbot "Nacho"
+`HeroCarousel` renderiza un único video de fondo (`res.cloudinary.com`, hardcodeado).
+
+Antes era un carrusel administrable: leía `hero_media` vía `GET /api/hero` y se cargaba
+desde `/panel/hero`. Se eliminó por completo — página del panel, entrada del nav, endpoint,
+modelo Prisma y la tabla. **El motivo es que nunca funcionó en producción**: el upload
+escribía con `fs.writeFile` sobre `public/uploads/hero`, que en Vercel es de solo lectura.
+No hay un solo archivo en `public/uploads/hero` en el repo, así que la home siempre mostró
+el video de fallback y el cambio no altera nada visible.
+
+Si en algún momento se quiere un hero administrable, hacerlo sobre `lib/storage.ts` con un
+blob store configurado (§8.5).
+
+### 8.7 Chatbot "Nacho"
 
 `ChatWidget` → `POST /api/chat` → Groq.
 
@@ -631,7 +641,7 @@ Se eliminó todo el que había (~1.940 líneas) en la tanda de arreglos:
 | `components/admin/ImportPreviewModal.tsx` | 181 | Esperaba una forma de datos que el endpoint no devuelve (§8.4) |
 | `components/admin/PriceChart.tsx` | 124 | `/panel/reportes` usa Recharts directo |
 | `lib/auth-helpers.ts` | 33 | Cada handler repite el chequeo inline |
-| `data/products.ts` | 26 | `products` era `[]` (§8.6) |
+| `data/products.ts` | 26 | `products` era `[]` (§8.7) |
 
 También se recortó `lib/catalog-public.ts` a solo su tipo: `enrichCatalogProduct`,
 `sortCatalogProducts`, `isFeaturedSku` y un `PRODUCT_METADATA` con descripciones
@@ -708,8 +718,8 @@ lockfile no se puede regenerar en esos entornos (§9.8).
 | # | Qué era |
 |---|---|
 | 1 | **Ordenar por precio vaciaba el catálogo**: solo `maderas` tiene el campo `precio`, las otras 7 usan `precioM2`. Ahora `buildOrderBy()` resuelve el campo por tabla, y la vista multi-categoría reordena el merge globalmente |
-| 3 | **Los leads del chatbot no se guardaban** en ningún lado (§8.6) |
-| 4 | **`/tienda` siempre vacía** y el bot derivaba ahí (§8.6) |
+| 3 | **Los leads del chatbot no se guardaban** en ningún lado (§8.7) |
+| 4 | **`/tienda` siempre vacía** y el bot derivaba ahí (§8.7) |
 | 5 | **Import de accesorios perdía las imágenes**: mapeaba a `imagen` en vez de `imagenes` |
 | 7 | **Campos fantasma**: `tipoDeProducto` (es `tipoProducto`) en los filtros y breadcrumbs, y `uso` en lugar de `tipoDeUso` en las specs de vinílicos |
 | 9 | **Ventana invertida** en el reporte de importaciones: colapsaba todo en una sola sesión |
@@ -731,7 +741,9 @@ lockfile no se puede regenerar en esos entornos (§9.8).
 | 29 | Sin `robots.txt` ni `sitemap.xml` |
 | — | El modal de import de `/panel` mostraba tablas vacías siempre (§8.4) |
 | — | El rate limit del catálogo era 10 req/min, demasiado bajo para navegación normal |
-| — | `/api/hero` no validaba magic bytes (sí lo hacía `/api/upload`) |
+| — | El badge de Estado del panel era decorativo: `/api/productos/[id]/toggle` existía sin un solo llamador, así que activar o desactivar exigía abrir el panel de edición |
+| — | `/api/upload`, `/api/productos/import` y `/import/preview` devolvían 500 ante un multipart malformado, en vez de 400 |
+| — | El ABM de hero de `/panel/hero` no funcionaba en producción (filesystem de solo lectura); se eliminó junto con su endpoint, modelo y tabla (§8.6) |
 
 ### 🔴 Abierto — P0
 

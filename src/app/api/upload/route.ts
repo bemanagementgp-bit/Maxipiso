@@ -43,7 +43,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const formData = await req.formData();
+    // Un multipart malformado hacia que formData() tirara y el catch generico
+    // respondiera 500. Es entrada invalida del cliente: corresponde 400.
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return NextResponse.json({ error: "Cuerpo multipart inválido" }, { status: 400 });
+    }
     const file = formData.get("file");
     const productIdRaw = formData.get("productId");
 

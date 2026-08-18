@@ -218,6 +218,7 @@ export default function ProductosPage() {
             addToast("success", "Producto eliminado");
           }}
           onViewHistory={(productId) => { setHistorialProductId(productId); setIsHistorialOpen(true); }}
+          onNotify={addToast}
           searchTerm={searchTerm}
           tablaFilter={tablaFilter}
           marcaFilter={marcaFilter}

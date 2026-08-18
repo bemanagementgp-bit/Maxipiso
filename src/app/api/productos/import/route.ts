@@ -64,7 +64,12 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Cuerpo multipart inválido" }, { status: 400 });
+  }
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0 || file.size > MAX_FILE_SIZE)
     return NextResponse.json({ error: "Archivo invalido o demasiado grande" }, { status: 400 });
