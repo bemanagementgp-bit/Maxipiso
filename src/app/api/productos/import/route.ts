@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import * as XLSX from "xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { verifyOrigin } from "@/lib/security";
@@ -185,6 +186,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  clearCatalogCache();
   return NextResponse.json({
     success: true,
     message: `Importacion completada: ${createdCount} creados, ${updatedCount} actualizados, ${skippedCount} omitidos`,

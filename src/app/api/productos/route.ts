@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { DB_NAMES, getDelegate, normalizeAdminRow, TABLE_LABELS, type TableKey, TABLE_KEYS } from "@/lib/all-products";
 import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import { parseIntSafe, sanitizeText, verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
@@ -310,6 +311,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    clearCatalogCache();
     return NextResponse.json({ success: true, data: producto }, { status: 201 });
   } catch (error) {
     console.error("[productos POST] error:", error);

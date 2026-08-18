@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import { detectImageMime, verifyOrigin } from "@/lib/security";
 import { getStorage, StorageError } from "@/lib/storage";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
       await delegate.update({ where: { id: productId }, data: { imagenes: JSON.stringify(nextImages) } });
     }
 
+    clearCatalogCache();
     return NextResponse.json({ success: true, data: { url } }, { status: 201 });
   } catch (error) {
     if (error instanceof StorageError) {

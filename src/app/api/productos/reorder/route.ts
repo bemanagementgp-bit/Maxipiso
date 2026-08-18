@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 import { verifyOrigin } from "@/lib/security";
 
@@ -90,6 +91,7 @@ export async function PUT(req: NextRequest) {
       }
 
       if (updates.length > 0) await prisma.$transaction(updates as never);
+      clearCatalogCache();
       return NextResponse.json({ success: true, data: { updated: updates.length } });
     }
 
@@ -103,6 +105,7 @@ export async function PUT(req: NextRequest) {
         })
       ) as never
     );
+    clearCatalogCache();
     return NextResponse.json({ success: true, data: { updated: items.length } });
   } catch (error) {
     console.error("[reorder] error:", error);

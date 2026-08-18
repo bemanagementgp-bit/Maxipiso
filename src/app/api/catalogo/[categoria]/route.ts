@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCached, setCached } from "@/lib/catalog-cache";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-const CACHE_TTL_MS = 60_000;
-type CacheEntry = { expires: number; payload: unknown };
-const cache = new Map<string, CacheEntry>();
 
 type PrismaDelegate = {
   findMany: (args: object) => Promise<unknown[]>;
@@ -173,10 +171,8 @@ export async function GET(
 
     // Cache lookup
     const cacheKey = JSON.stringify({ slug, search, skip, take, activeFilters, auth: isAuthenticated });
-    const cached = cache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
-      return NextResponse.json(cached.payload);
-    }
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     // Build WHERE (expand aliased brand values, use contains for multi-value fields)
     const where: Record<string, unknown> = { isActive: true, AND: [{ imagenes: { not: null } }, { imagenes: { not: "" } }, { imagenes: { not: "[]" } }] };
@@ -263,9 +259,7 @@ export async function GET(
     });
 
     const payload = { success: true, data: { productos, total, skip, take, filtros } };
-    if (productos.length > 0) {
-      cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, payload });
-    }
+    if (productos.length > 0) setCached(cacheKey, payload);
 
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "private, no-store, max-age=0" },

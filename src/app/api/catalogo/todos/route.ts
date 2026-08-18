@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCached, setCached } from "@/lib/catalog-cache";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
 
@@ -12,11 +13,6 @@ export const runtime = "nodejs";
 // Turso esté degradado, sin llegar a colgar la request más de ~12s.
 const QUERY_TIMEOUT_MS = 12_000;
 
-// Caché en memoria del resultado (los productos cambian poco). La primera carga
-// paga la latencia; las siguientes son instantáneas mientras el TTL sea válido.
-const CACHE_TTL_MS = 60_000;
-type CacheEntry = { expires: number; payload: unknown };
-const cache = new Map<string, CacheEntry>();
 
 function timeout<T>(promise: Promise<T>, ms: number, fallback: T, label = "query"): Promise<T> {
   return new Promise<T>((resolve) => {
@@ -213,10 +209,8 @@ export async function GET(req: NextRequest) {
 
     // Clave de caché por combinación de parámetros
     const cacheKey = JSON.stringify({ search, categoria, skip, take, activeFilters, auth: isAuthenticated });
-    const cached = cache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
-      return NextResponse.json(cached.payload);
-    }
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     // Determine which tables to query
     const tablesToQuery = categoria
@@ -388,9 +382,7 @@ export async function GET(req: NextRequest) {
 
     // Guardar en caché solo respuestas con datos (no cachear resultados vacíos
     // provocados por timeouts, para reintentar en la próxima carga).
-    if (allProducts.length > 0) {
-      cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, payload });
-    }
+    if (allProducts.length > 0) setCached(cacheKey, payload);
 
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "private, no-store, max-age=0" },

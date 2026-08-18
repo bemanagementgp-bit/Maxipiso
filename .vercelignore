@@ -2,5 +2,4 @@ node_modules
 imagenes-sku
 .next
 scripts
-prisma/migrations
 *.bak

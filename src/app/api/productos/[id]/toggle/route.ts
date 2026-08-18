@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
+    clearCatalogCache();
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("[toggle] error:", error);

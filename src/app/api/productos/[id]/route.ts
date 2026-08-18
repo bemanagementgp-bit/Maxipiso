@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { findProductById, getDelegate } from "@/lib/all-products";
 import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
+import { clearCatalogCache } from "@/lib/catalog-cache";
 import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
@@ -162,6 +163,7 @@ export async function PUT(
       }
     }
 
+    clearCatalogCache();
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("[producto PUT] error:", error);
@@ -201,6 +203,7 @@ export async function DELETE(
       },
     });
 
+    clearCatalogCache();
     return NextResponse.json({ success: true, message: "Producto eliminado" });
   } catch (error) {
     console.error("[producto DELETE] error:", error);
