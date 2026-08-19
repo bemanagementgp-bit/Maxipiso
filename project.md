@@ -458,12 +458,20 @@ producto los referenciaba: eran 50 MB que viajaban en cada clone y cada build. O
 borrarlos **no achicó el `.git`** — los blobs siguen en el historial, y bajar esos 344 MB
 requiere reescribirlo entero.
 
-Los archivos se nombran por el **sha256 de su contenido**, no al azar. Con el nombre
-aleatorio anterior, subir la misma foto dos veces creaba dos archivos: así fue como
-`public/uploads` terminó con 23 archivos de los cuales sólo 3 son imágenes distintas
-(~44 MB de copias). En Cloudinary además hace falta mandar `public_id`, porque si no ignora
-el nombre del archivo y genera uno aleatorio — sin eso el dedupe no serviría justamente en
-el storage que se usa en producción.
+**Los archivos conservan su nombre**, porque en este catálogo el nombre del archivo *es* el
+SKU (`14704-1.jpg`, `20308-2.jpg`): así la imagen queda ubicable en Cloudinary por el mismo
+código con el que se busca el producto. El nombre llega del cliente, así que
+`nombreSeguro()` lo trata como entrada no confiable: descarta cualquier componente de
+directorio, saca los acentos y reemplaza todo lo que no sea letra, número, guion o guion
+bajo — eso elimina de raíz las barras (que en Cloudinary crearían carpetas) y los puntos
+(que darían `..`). Si no queda nada utilizable, cae al sha256 del contenido.
+
+**Subir un archivo con el mismo nombre reemplaza la imagen anterior.** Es lo esperable
+cuando el nombre identifica al producto, y de paso resuelve el problema que había: antes
+cada subida generaba un nombre al azar, así que subir la misma foto dos veces creaba dos
+archivos. Así fue como `public/uploads` terminó con 23 archivos de los cuales sólo 3 eran
+imágenes distintas. En Cloudinary hace falta mandar `public_id` explícito, porque si no
+ignora el nombre del archivo y genera uno aleatorio.
 
 #### Sugerencias en los campos de texto
 

@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
       folder: "productos",
       ext: EXT_BY_MIME[detectedMime],
       contentType: detectedMime,
+      // El nombre del archivo es el SKU en este catalogo, asi que se conserva
+      // para poder ubicar la imagen en Cloudinary. `lib/storage.ts` lo limpia
+      // antes de usarlo: llega del cliente, no se confia.
+      originalName: file.name,
     });
 
     if (productId && foundProduct) {

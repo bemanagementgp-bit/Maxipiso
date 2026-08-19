@@ -38,6 +38,15 @@ export type SaveOptions = {
   /** Extension sin punto (ej: "jpg"). */
   ext: string;
   contentType: string;
+  /**
+   * Nombre del archivo tal como lo mando el navegador.
+   *
+   * En este catalogo los archivos se nombran por SKU (`14704-1.jpg`), asi que
+   * conservarlo hace que la imagen sea ubicable en Cloudinary por el mismo
+   * codigo con el que se busca el producto. Es entrada NO confiable: pasa por
+   * `nombreSeguro()` antes de tocar nada.
+   */
+  originalName?: string;
 };
 
 export interface StorageDriver {
@@ -71,21 +80,40 @@ function assertSafeOptions(opts: SaveOptions) {
 }
 
 /**
- * Nombre derivado del CONTENIDO del archivo, no del azar ni del nombre original.
+ * Base del nombre a usar, a partir del que mando el cliente.
  *
- * Dos motivos:
- *  - Nunca se usa el nombre que manda el cliente, que es entrada no confiable.
- *  - Subir la misma imagen dos veces da el mismo nombre, asi que no se duplica.
- *    Con el nombre aleatorio anterior, `public/uploads` termino con 23 archivos
- *    de los cuales solo 3 eran imagenes distintas: 20 copias del mismo JPG de
- *    2,2 MB, subidas probando el ABM. Son ~44 MB versionados de mas.
+ * Se conserva porque en este catalogo el nombre del archivo ES el SKU
+ * (`14704-1.jpg`), y con eso la imagen queda ubicable en Cloudinary por el
+ * mismo codigo con el que se busca el producto.
  *
- * 32 chars hex (128 bits de sha256) alcanzan de sobra: no hay colision posible
- * en un catalogo de miles de fotos.
+ * Es entrada no confiable, asi que se lo trata como tal: se descarta cualquier
+ * componente de directorio, se sacan los acentos y se reemplaza todo lo que no
+ * sea letra, numero, guion o guion bajo. Eso elimina de raiz las barras (que en
+ * Cloudinary crearian carpetas) y los puntos (que darian `..`).
+ *
+ * Si despues de limpiarlo no queda nada utilizable, se cae al hash del
+ * contenido.
  */
-function contentName(buffer: Buffer, ext: string): string {
-  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 32);
-  return `${hash}.${ext}`;
+function nombreSeguro(originalName: string | undefined, buffer: Buffer): string {
+  const hashDelContenido = () => createHash("sha256").update(buffer).digest("hex").slice(0, 32);
+
+  if (!originalName) return hashDelContenido();
+
+  // Solo el nombre del archivo: nada de rutas.
+  const base = originalName.split(/[\\/]/).pop() ?? "";
+  // Sin la extension: la real se deduce de los magic bytes, no de lo que diga
+  // el nombre.
+  const sinExtension = base.replace(/\.[^.]*$/, "");
+
+  const limpio = sinExtension
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+
+  return limpio || hashDelContenido();
 }
 
 // ─── Driver local (desarrollo y hosts con disco persistente) ──────────────────
@@ -103,7 +131,7 @@ const localDriver: StorageDriver = {
     assertSafeOptions(opts);
 
     const dir = join(PUBLIC_DIR, UPLOADS_ROOT, opts.folder);
-    const filename = contentName(buffer, opts.ext);
+    const filename = `${nombreSeguro(opts.originalName, buffer)}.${opts.ext}`;
     const filepath = join(dir, filename);
 
     // Defensa en profundidad: el path final tiene que quedar dentro de public/.
@@ -164,15 +192,18 @@ const cloudinaryDriver: StorageDriver = {
     }
 
     try {
-      const nombre = contentName(buffer, opts.ext);
+      const nombre = nombreSeguro(opts.originalName, buffer);
       const { secureUrl, publicId } = await uploadToCloudinary(
         buffer,
         {
           folder: `${CLOUDINARY_FOLDER_ROOT}/${opts.folder}`,
           contentType: opts.contentType,
-          filename: nombre,
-          // Sin extension: Cloudinary la agrega segun el formato que detecta.
-          publicId: nombre.replace(/\.[a-z0-9]+$/i, ""),
+          filename: `${nombre}.${opts.ext}`,
+          // El public_id va sin extension: Cloudinary la agrega segun el
+          // formato que detecta. Subir otra vez un archivo con el mismo nombre
+          // REEMPLAZA la imagen anterior, que es lo esperable cuando el nombre
+          // identifica al producto.
+          publicId: nombre,
         },
         config,
       );
