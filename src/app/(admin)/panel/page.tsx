@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiPlus, FiDownload, FiUpload,
   FiCheckCircle, FiAlertCircle, FiX,
@@ -81,6 +81,9 @@ export default function ProductosPage() {
   /** "" | "con" | "sin". El catalogo esconde los productos sin imagen, asi que
    *  este filtro es el que deja ver cuales estan invisibles para el cliente. */
   const [imagenFilter, setImagenFilter] = useState("");
+  /** Filtros por caracteristica, segun la categoria elegida. */
+  const [filtrosExtra, setFiltrosExtra] = useState<Record<string, string>>({});
+  const [camposFiltrables, setCamposFiltrables] = useState<{ key: string; label: string; valores: string[] }[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
@@ -91,6 +94,60 @@ export default function ProductosPage() {
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
+
+  /**
+   * Que campos se ofrecen como filtro, y en que orden.
+   *
+   * No se ofrecen todos los campos de texto: la mayoria son datos de ficha
+   * (bisel, manto incorporado, unidades de medida) que nadie usa para buscar y
+   * solo llenarian la barra. Estos son los que separan el catalogo en grupos
+   * con los que se trabaja.
+   */
+  const CAMPOS_FILTRABLES = [
+    { key: "categoriaPrincipal",  label: "Cat. principal" },
+    { key: "categoriaSecundaria", label: "Cat. secundaria" },
+    { key: "categoriaTerciaria",  label: "Cat. terciaria" },
+    { key: "tipoProducto",        label: "Tipo de producto" },
+    { key: "subtipo",             label: "Subtipo" },
+    { key: "linea",               label: "Línea" },
+    { key: "tipoDeUso",           label: "Tipo de uso" },
+    { key: "material",            label: "Material" },
+    { key: "acabado",             label: "Acabado" },
+    { key: "terminacion",         label: "Terminación" },
+    { key: "origen",              label: "Origen" },
+    { key: "espesor",             label: "Espesor" },
+  ];
+
+  /**
+   * Cuantos valores distintos tiene que tener un campo para que valga como
+   * filtro. Con uno solo no separa nada, y con demasiados el desplegable deja
+   * de ser util: es un campo libre disfrazado.
+   */
+  const MIN_VALORES = 2;
+  const MAX_VALORES = 40;
+
+  // Los valores salen del mismo endpoint que alimenta las sugerencias del ABM.
+  useEffect(() => {
+    if (!tablaFilter) { setCamposFiltrables([]); return; }
+
+    let cancelado = false;
+    fetch(`/api/productos/valores?tabla=${encodeURIComponent(tablaFilter)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelado) return;
+        const valores: Record<string, string[]> = d?.data?.valores ?? {};
+        setCamposFiltrables(
+          CAMPOS_FILTRABLES.filter((c) => {
+            const v = valores[c.key];
+            return v && v.length >= MIN_VALORES && v.length <= MAX_VALORES;
+          }).map((c) => ({ ...c, valores: valores[c.key] })),
+        );
+      })
+      // Sin valores simplemente no hay filtros extra: la barra queda como antes.
+      .catch(() => { if (!cancelado) setCamposFiltrables([]); });
+
+    return () => { cancelado = true; };
+  }, [tablaFilter]);
 
   const handleSaveProduct = async (formData: any) => {
     setIsLoading(true);
@@ -192,7 +249,10 @@ export default function ProductosPage() {
           />
         </div>
 
-        <FilterSelect value={tablaFilter} onChange={setTablaFilter}>
+        <FilterSelect
+          value={tablaFilter}
+          onChange={(v) => { setTablaFilter(v); setFiltrosExtra({}); }}
+        >
           <option value="">Todas las categorias</option>
           {TABLAS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </FilterSelect>
@@ -217,9 +277,29 @@ export default function ProductosPage() {
           <option value="con">Con imagen</option>
         </FilterSelect>
 
-        {(tablaFilter || marcaFilter || estadoFilter !== "activo" || imagenFilter || searchTerm) && (
+        {camposFiltrables.map((campo) => (
+          <FilterSelect
+            key={campo.key}
+            value={filtrosExtra[campo.key] ?? ""}
+            onChange={(v) =>
+              setFiltrosExtra((prev) => {
+                const next = { ...prev };
+                if (v) next[campo.key] = v;
+                else delete next[campo.key];
+                return next;
+              })
+            }
+          >
+            <option value="">{campo.label}: todos</option>
+            {campo.valores.map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </FilterSelect>
+        ))}
+
+        {(tablaFilter || marcaFilter || estadoFilter !== "activo" || imagenFilter || searchTerm || Object.keys(filtrosExtra).length > 0) && (
           <button
-            onClick={() => { setTablaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setImagenFilter(""); setSearchTerm(""); }}
+            onClick={() => { setTablaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setImagenFilter(""); setFiltrosExtra({}); setSearchTerm(""); }}
             className="flex items-center gap-1 h-8 px-3 text-[10px] uppercase tracking-[0.06em] text-[#bbb] hover:text-[#666] transition-colors"
           >
             <FiX size={11} />
@@ -245,6 +325,7 @@ export default function ProductosPage() {
           marcaFilter={marcaFilter}
           estadoFilter={estadoFilter}
           imagenFilter={imagenFilter}
+          filtrosExtra={filtrosExtra}
         />
       </div>
 

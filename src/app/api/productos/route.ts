@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
     // "con" | "sin" | "" — el catalogo publico esconde los productos sin
     // imagen, asi que este filtro es el que muestra cuales estan invisibles.
     const imagen     = sp.get("imagen") ?? "";
+
     const skip       = parseIntSafe(sp.get("skip"),  0,  0, 1_000_000);
     const take       = parseIntSafe(sp.get("take"), 10,  1, 200);
 
@@ -119,6 +120,23 @@ export async function GET(req: NextRequest) {
     const keys: TableKey[] = effectiveTabla
       ? TABLE_KEYS.filter((k) => DB_NAMES[k] === effectiveTabla || k === effectiveTabla)
       : TABLE_KEYS;
+
+    // Filtros por caracteristica (linea, origen, tipo de uso...). Solo aplican
+    // dentro de una categoria: cada tabla tiene sus columnas, y un `where` con
+    // un campo que la tabla no tiene revienta la consulta.
+    //
+    // Se valida contra `effectiveTabla` y no contra `tablaFilter` para que las
+    // vistas de revestimientos exteriores e interiores tambien los acepten:
+    // esos dos valores no son categorias reales.
+    const filtrosExtra: Record<string, string> = {};
+    if (effectiveTabla) {
+      const configFiltros = getCategoryConfig(effectiveTabla);
+      for (const campo of configFiltros?.fields ?? []) {
+        if (campo.type !== "text") continue;
+        const valor = sanitizeText(sp.get(`filtros[${campo.key}]`) ?? "", 120);
+        if (valor) filtrosExtra[campo.key] = valor;
+      }
+    }
 
     // Construye filtros comunes
     const isActive = estado === "activo" ? true : estado === "inactivo" ? false : undefined;
@@ -170,6 +188,12 @@ export async function GET(req: NextRequest) {
         if (search) {
           const searchFields = SEARCH_FIELDS[key] ?? ["nombre", "sku"];
           condiciones.push({ OR: searchFields.map((f) => ({ [f]: { contains: search } })) });
+        }
+
+        // Los campos vienen validados contra la config de ESA categoria, asi
+        // que a esta altura ya se sabe que existen en la tabla.
+        for (const [campo, valor] of Object.entries(filtrosExtra)) {
+          condiciones.push({ [campo]: valor });
         }
 
         if (condiciones.length > 0) where.AND = condiciones;

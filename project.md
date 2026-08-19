@@ -510,6 +510,29 @@ marcas y el filtro queda inservible. Se descartan los campos propios de cada pro
 `nombre`, `especie`, `codigo`, `descripcion`, fichas) y los que superan 200 valores distintos,
 que son campos libres disfrazados. Cache de 60 s por tabla.
 
+#### Filtros del panel
+
+Además de categoría, marca, estado y búsqueda, el listado filtra por:
+
+- **Con / sin imagen.** Usa el mismo criterio que el catálogo (`imagenes` en null, vacío o
+  `[]` cuenta como sin foto), porque el catálogo público **esconde los productos sin imagen**:
+  este filtro es el que muestra cuáles están invisibles para el cliente.
+- **Por característica, según la categoría elegida** (tipo de producto, línea, material,
+  categorías, tipo de uso, origen, espesor…). Los valores salen del mismo
+  `GET /api/productos/valores` que alimenta las sugerencias del ABM. Sólo se ofrece un campo
+  si tiene **entre 2 y 40 valores distintos**: con uno solo no separa nada, y con demasiados
+  el desplegable deja de ser útil. Eso deja 3–6 filtros por categoría en vez de los veintipico
+  campos de texto que tiene cada tabla.
+
+Los filtros por característica sólo existen dentro de una categoría — cada tabla tiene sus
+columnas, y un `where` con un campo que la tabla no tiene revienta la consulta. Se validan
+contra `effectiveTabla` (no contra el filtro crudo) para que las vistas de revestimientos
+exteriores e interiores también los acepten.
+
+> Ojo con `where.OR` en `/api/productos`: la búsqueda lo usaba y el filtro "sin imagen"
+> también lo necesita. Asignando los dos, el segundo pisaba al primero **sin ningún aviso**.
+> Ahora todas las condiciones se acumulan en un `AND`, que es lo que permite combinarlas.
+
 ### 8.2 bis Precios y stock — `/panel/precios`
 
 Grilla editable para actualizar listas de precios sin abrir producto por producto.

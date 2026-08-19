@@ -146,6 +146,8 @@ export interface ProductTableProps {
   estadoFilter?: string;
   /** "" | "con" | "sin" */
   imagenFilter?: string;
+  /** Filtros por caracteristica de la categoria elegida: { linea: "Prime" }. */
+  filtrosExtra?: Record<string, string>;
   refreshKey?: number;
 }
 
@@ -168,7 +170,7 @@ function parseFirstImage(value: unknown): string | null {
 export function ProductTable({
   onEdit, onDelete, onViewHistory, onDuplicate, onNotify,
   searchTerm = "", tablaFilter = "", marcaFilter = "",
-  estadoFilter = "activo", imagenFilter = "", refreshKey = 0,
+  estadoFilter = "activo", imagenFilter = "", filtrosExtra, refreshKey = 0,
 }: ProductTableProps) {
   const [productos, setProductos]         = useState<AdminProductRow[]>([]);
   const [isLoading, setIsLoading]         = useState(true);
@@ -318,6 +320,9 @@ export function ProductTable({
       if (tablaFilter) params.set("tabla", tablaFilter);
       if (marcaFilter) params.set("marca", marcaFilter);
       if (imagenFilter) params.set("imagen", imagenFilter);
+      for (const [campo, valor] of Object.entries(filtrosExtra ?? {})) {
+        if (valor) params.set(`filtros[${campo}]`, valor);
+      }
       const res = await fetch(`/api/productos?${params}`);
       if (!res.ok) {
         if (res.status === 401) { router.push("/auth/login"); return; }
@@ -337,7 +342,13 @@ export function ProductTable({
     }
   };
 
-  useEffect(() => { setPage(1); fetchProductos(0); }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, imagenFilter, refreshKey]);
+  // `filtrosExtra` es un objeto: se compara serializado, porque su identidad
+  // cambia en cada render del padre y dispararia una consulta por render.
+  const filtrosExtraKey = JSON.stringify(filtrosExtra ?? {});
+  useEffect(() => {
+    setPage(1);
+    fetchProductos(0);
+  }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, imagenFilter, filtrosExtraKey, refreshKey]);
 
   // El endpoint /api/productos/[id]/toggle existia desde siempre pero ningun
   // componente lo llamaba: el badge de estado era solo decorativo y la unica
