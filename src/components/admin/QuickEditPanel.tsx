@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2, FiAlertCircle } from "react-icons/fi";
+import { useState, useEffect, useRef } from "react";
+import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2, FiAlertCircle, FiStar } from "react-icons/fi";
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
@@ -75,6 +75,16 @@ const NUMBER_FIELDS = new Set([
   "tablasPorCaja", "cajasPallet", "stock",
 ]);
 
+/** Una imagen ya guardada (URL) o un archivo elegido que todavia no se subio. */
+type ImagenItem =
+  | { tipo: "url"; clave: string; url: string }
+  | { tipo: "archivo"; clave: string; file: File; preview: string };
+
+/** URL para mostrar en la grilla, venga de donde venga. */
+function previewDe(item: ImagenItem): string {
+  return item.tipo === "url" ? item.url : item.preview;
+}
+
 const HIDDEN_FIELDS = new Set(["id", "imagenes", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
 
 interface QuickEditPanelProps {
@@ -93,9 +103,21 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const [form, setForm] = useState<Record<string, any>>({});
   const [tabla, setTabla] = useState("");
   const [metadatos, setMetadatos] = useState<Meta[]>([]);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [newImagePreview, setNewImagePreview] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  /**
+   * Imagenes del producto, guardadas y pendientes, en una sola lista ordenada.
+   *
+   * Antes la imagen nueva vivia en un estado aparte (`imageFile`), separada de
+   * la lista de las ya guardadas. Eso traia dos limitaciones que se sentian como
+   * bugs: solo se podia sumar UNA imagen por guardado, y la nueva no se podia
+   * mover, asi que para dejarla como principal habia que guardar, cerrar el
+   * popup, volver a abrirlo y recien ahi reordenar.
+   *
+   * Con la lista unificada, mover, quitar y elegir portada funcionan igual sobre
+   * una imagen ya guardada que sobre uno de los archivos que todavia no se
+   * subieron. El orden final es el que se ve en pantalla.
+   */
+  const [imagenes, setImagenes] = useState<ImagenItem[]>([]);
+  const claveRef = useRef(0);
   const [error, setError] = useState("");
   /**
    * Fase del guardado, para que el botón deje de mentir.
@@ -106,6 +128,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
    * que el click no había hecho nada.
    */
   const [fase, setFase] = useState<"" | "subiendo" | "guardando">("");
+  /** Cual de los archivos pendientes se esta subiendo, para el boton. */
+  const [subiendo, setSubiendo] = useState<{ actual: number; total: number } | null>(null);
   const [fetching, setFetching] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [urlError, setUrlError] = useState("");
@@ -113,8 +137,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   useEffect(() => {
     if (!isOpen) return;
     setError("");
-    setImageFile(null);
-    setNewImagePreview("");
+    setImagenes([]);
     setUrlInput("");
     setUrlError("");
 
@@ -122,7 +145,6 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       setForm({ isActive: true });
       setTabla("");
       setMetadatos([]);
-      setImages([]);
       return;
     }
 
@@ -135,7 +157,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         setForm(p);
         setTabla(p._tabla ?? "");
         const imgs = (() => { try { const arr = JSON.parse(p.imagenes); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
-        setImages(imgs);
+        setImagenes(
+          imgs.map((url: string) => ({ tipo: "url" as const, clave: `u${claveRef.current++}`, url })),
+        );
         try { setMetadatos(p.metadatos ? JSON.parse(p.metadatos) : []); } catch { setMetadatos([]); }
       })
       .catch(() => setError("No se pudo cargar el producto"))
@@ -154,17 +178,28 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     }));
   };
 
+  /** Suma los archivos elegidos al final de la lista. Acepta varios de una. */
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setNewImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagenes((prev) => [
+          ...prev,
+          { tipo: "archivo", clave: `a${claveRef.current++}`, file, preview: reader.result as string },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Permite volver a elegir el MISMO archivo despues de quitarlo: sin esto el
+    // input no dispara change porque su value no cambio.
+    e.target.value = "";
   };
 
   const moveImage = (index: number, dir: -1 | 1) => {
-    setImages((prev) => {
+    setImagenes((prev) => {
       const target = index + dir;
       if (target < 0 || target >= prev.length) return prev;
       const next = [...prev];
@@ -173,8 +208,19 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     });
   };
 
+  /** Manda una imagen al frente: la primera es la portada del catalogo. */
+  const hacerPrincipal = (index: number) => {
+    setImagenes((prev) => {
+      if (index <= 0 || index >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+  };
+
   const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagenes((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Alta de imagen por URL o ruta.
@@ -187,8 +233,11 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const addImageUrl = () => {
     const res = validateImageRef(urlInput);
     if (!res.ok) { setUrlError(res.error); return; }
-    if (images.includes(res.url)) { setUrlError("Esa imagen ya está en la lista"); return; }
-    setImages((prev) => [...prev, res.url]);
+    if (imagenes.some((i) => i.tipo === "url" && i.url === res.url)) {
+      setUrlError("Esa imagen ya está en la lista");
+      return;
+    }
+    setImagenes((prev) => [...prev, { tipo: "url", clave: `u${claveRef.current++}`, url: res.url }]);
     setUrlInput("");
     setUrlError("");
   };
@@ -204,11 +253,25 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       return;
     }
 
-    let finalImages = [...images];
-    if (imageFile) {
-      setFase("subiendo");
+    // Se suben los archivos pendientes en el orden en que estan en pantalla, y
+    // cada uno reemplaza su lugar en la lista. Asi el orden que se ve es el que
+    // termina guardado, sin importar si una imagen venia de antes o se acaba de
+    // agregar.
+    const pendientes = imagenes.filter((i) => i.tipo === "archivo");
+    const finalImages: string[] = [];
+
+    if (pendientes.length > 0) setFase("subiendo");
+    let subidas = 0;
+
+    for (const item of imagenes) {
+      if (item.tipo === "url") {
+        if (!finalImages.includes(item.url)) finalImages.push(item.url);
+        continue;
+      }
+
+      setSubiendo({ actual: subidas + 1, total: pendientes.length });
       const fd = new FormData();
-      fd.append("file", imageFile);
+      fd.append("file", item.file);
       if (productId) fd.append("productId", productId);
       try {
         const res = await fetch("/api/upload", { method: "POST", body: fd });
@@ -217,12 +280,20 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
           throw new Error(data?.error || `El servidor rechazó la imagen (HTTP ${res.status})`);
         }
         if (!finalImages.includes(data.data.url)) finalImages.push(data.data.url);
+        subidas++;
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Error al subir imagen");
+        const detalle = err instanceof Error ? err.message : "Error al subir imagen";
+        setError(
+          pendientes.length > 1
+            ? `${detalle} (falló "${item.file.name}"; las anteriores no se guardaron)`
+            : detalle,
+        );
         setFase("");
+        setSubiendo(null);
         return;
       }
     }
+    setSubiendo(null);
 
     const metaFiltrados = metadatos.filter((m) => m.clave.trim() && m.valor.trim());
 
@@ -298,8 +369,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0DED8] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            {images[0] || newImagePreview ? (
-              <img src={images[0] || newImagePreview} alt="" className="w-11 h-11 rounded-md object-cover border border-[#E0DED8] shrink-0" referrerPolicy="no-referrer" />
+            {imagenes[0] ? (
+              <img src={previewDe(imagenes[0])} alt="" className="w-11 h-11 rounded-md object-cover border border-[#E0DED8] shrink-0" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-11 h-11 rounded-md bg-[#F5F4F0] border border-[#E0DED8] flex items-center justify-center shrink-0">
                 <FiPackage size={16} className="text-[#ccc]" />
@@ -398,15 +469,36 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
             {tabla && (
               <div>
                 <label className={labelClass}>Imágenes</label>
-                {(images.length > 0 || newImagePreview) && (
+                {imagenes.length > 0 && (
                   <div className="flex flex-wrap gap-3 mb-3">
-                    {images.map((img, i) => (
-                      <div key={`${img}-${i}`} className="relative group">
-                        <img src={img} alt={`imagen ${i + 1}`} className="w-20 h-20 object-cover border border-[#E0DED8] rounded-sm" referrerPolicy="no-referrer" />
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 text-[9px] font-medium bg-black/60 text-white rounded-sm">
-                          {i + 1}{i === 0 ? " · principal" : ""}
+                    {imagenes.map((item, i) => (
+                      <div key={item.clave} className="relative group">
+                        <img
+                          src={previewDe(item)}
+                          alt={`imagen ${i + 1}`}
+                          className={`w-24 h-24 object-cover rounded-sm ${
+                            item.tipo === "archivo"
+                              ? "border border-dashed border-emerald-400"
+                              : "border border-[#E0DED8]"
+                          }`}
+                          referrerPolicy="no-referrer"
+                        />
+                        <span
+                          className={`absolute top-1 left-1 px-1.5 py-0.5 text-[9px] font-medium text-white rounded-sm ${
+                            i === 0 ? "bg-[#DF8635]" : "bg-black/60"
+                          }`}
+                        >
+                          {i === 0 ? "principal" : i + 1}
                         </span>
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-sm">
+                        {item.tipo === "archivo" && (
+                          // Abajo y no arriba: en la primera miniatura chocaba
+                          // con la etiqueta "principal".
+                          <span className="absolute bottom-1 left-1 px-1 py-0.5 text-[9px] font-medium bg-emerald-600/85 text-white rounded-sm group-hover:opacity-0 transition-opacity">
+                            sin subir
+                          </span>
+                        )}
+
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 py-1 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-sm">
                           <button
                             type="button"
                             onClick={() => moveImage(i, -1)}
@@ -415,6 +507,16 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
                             className="p-1 text-white hover:text-emerald-300 disabled:opacity-30 disabled:hover:text-white"
                           >
                             <FiArrowLeft size={12} />
+                          </button>
+                          {/* Atajo: mandar a la portada sin ir moviendo de a uno. */}
+                          <button
+                            type="button"
+                            onClick={() => hacerPrincipal(i)}
+                            disabled={i === 0}
+                            title="Usar como principal"
+                            className="p-1 text-white hover:text-[#DF8635] disabled:opacity-30 disabled:hover:text-white"
+                          >
+                            <FiStar size={12} />
                           </button>
                           <button
                             type="button"
@@ -427,7 +529,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
                           <button
                             type="button"
                             onClick={() => moveImage(i, 1)}
-                            disabled={i === images.length - 1}
+                            disabled={i === imagenes.length - 1}
                             title="Mover a la derecha"
                             className="p-1 text-white hover:text-emerald-300 disabled:opacity-30 disabled:hover:text-white"
                           >
@@ -436,22 +538,12 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
                         </div>
                       </div>
                     ))}
-                    {newImagePreview && (
-                      <div className="relative">
-                        <img src={newImagePreview} alt="nueva imagen" className="w-20 h-20 object-cover border border-dashed border-emerald-300 rounded-sm" referrerPolicy="no-referrer" />
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 text-[9px] font-medium bg-emerald-600/80 text-white rounded-sm">nueva</span>
-                        <button
-                          type="button"
-                          onClick={() => { setImageFile(null); setNewImagePreview(""); }}
-                          title="Descartar"
-                          className="absolute top-1 right-1 p-0.5 bg-black/60 text-white rounded-sm hover:bg-black/80"
-                        >
-                          <FiX size={10} />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
+                <p className="mb-2 text-[9px] text-[#bbb] leading-relaxed">
+                  La primera es la portada del catálogo. Pasá el mouse por encima para moverlas,
+                  quitarlas o marcar cuál va primero — también las que todavía no subiste.
+                </p>
                 {/* Alta por URL o ruta: no depende del blob store, y es como
                     están cargadas las imágenes actuales del catálogo. */}
                 <div className="flex gap-2">
@@ -480,8 +572,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
 
                 <label className="mt-3 flex items-center justify-center gap-1.5 w-full h-12 border border-dashed border-[#E0DED8] rounded-sm hover:border-[#aaa] cursor-pointer transition-colors">
                   <FiUpload size={13} className="text-[#ccc]" />
-                  <span className="text-[10px] text-[#ccc] uppercase tracking-[0.06em]">Subir archivo</span>
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  <span className="text-[10px] text-[#ccc] uppercase tracking-[0.06em]">Subir archivos</span>
+                  <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
                 </label>
               </div>
             )}
@@ -511,7 +603,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
           >
             {(fase !== "" || isLoading) && <FiLoader size={12} className="animate-spin" />}
             {fase === "subiendo"
-              ? "Subiendo imagen..."
+              ? subiendo && subiendo.total > 1
+                ? `Subiendo imagen ${subiendo.actual} de ${subiendo.total}...`
+                : "Subiendo imagen..."
               : fase === "guardando" || isLoading
                 ? "Guardando..."
                 : isNew
