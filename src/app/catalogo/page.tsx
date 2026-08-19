@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown, FiUser } from "react-icons/fi";
@@ -70,6 +70,37 @@ type EstadoUrl = {
   page: number;
 };
 
+/**
+ * Lee el estado completo de la query string.
+ *
+ * Lo usan tanto los valores iniciales como el efecto que escucha los cambios de
+ * URL. Que sea la MISMA funcion es lo que garantiza que el primer render ya
+ * refleje la URL entera: si algun campo arrancara en blanco, el efecto que
+ * escribe la URL publicaria una version incompleta antes de que el otro alcance
+ * a leerla.
+ */
+function leerEstadoDeUrl(searchParams: URLSearchParams | ReadonlyURLSearchParams): EstadoUrl {
+  const filtros: Record<string, string> = {};
+  let page = 1;
+
+  searchParams.forEach((value, k) => {
+    if (k === "page") {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed) && parsed >= 1) page = parsed;
+    }
+    const match = k.match(/^filtros\[(.+)]$/);
+    if (match) filtros[match[1]] = value;
+  });
+
+  return {
+    search: searchParams.get("search") ?? "",
+    categoria: searchParams.get("categoria") ?? "",
+    filtros,
+    orden: searchParams.get("orden") ?? "relevancia",
+    page,
+  };
+}
+
 function construirUrl({ search, categoria, filtros, orden, page }: EstadoUrl): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
@@ -115,63 +146,49 @@ function CatalogoPage() {
 
   const [productos, setProductos] = useState<CatalogItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(() => {
-    const value = Number(searchParams.get("page") ?? "1");
-    return Number.isNaN(value) || value < 1 ? 1 : value;
-  });
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("search") ?? "");
+  // Una sola lectura de la URL alimenta TODOS los valores iniciales.
+  const estadoInicial = useRef<EstadoUrl | null>(null);
+  if (estadoInicial.current === null) estadoInicial.current = leerEstadoDeUrl(searchParams);
+  const inicial = estadoInicial.current;
 
-  const [sortBy, setSortBy] = useState(() => searchParams.get("orden") ?? "relevancia");
+  const [page, setPage] = useState(inicial.page);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState(inicial.search);
+  const [debouncedSearch, setDebouncedSearch] = useState(inicial.search);
+
+  const [sortBy, setSortBy] = useState(inicial.orden);
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
-  const [selectedCategoria, setSelectedCategoria] = useState(() => searchParams.get("categoria") ?? "");
+  const [selectedCategoria, setSelectedCategoria] = useState(inicial.categoria);
 
   const [filtros, setFiltros] = useState<Record<string, FilterGroup>>({});
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  // Arrancaba en `{}` mientras el resto del estado si leia la URL. Por eso el
+  // primer render era "sin filtros": el efecto que escribe la URL publicaba esa
+  // version incompleta, y recien despues el que lee la URL los restauraba y
+  // volvia a publicar. Un click en el breadcrumb terminaba en cinco entradas de
+  // historial y tres consultas, con el filtro apareciendo y desapareciendo.
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>(inicial.filtros);
 
-  const lastPushedRef = useRef<string | null>(null);
-  const estadoAnteriorRef = useRef<EstadoUrl | null>(null);
+  const lastPushedRef = useRef<string | null>(construirUrl(inicial));
+  const estadoAnteriorRef = useRef<EstadoUrl | null>(inicial);
   const scrollPendienteRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const isInitialSearchMount = useRef(true);
   const fetchIdRef = useRef(0);
 
-  // URL -> estado. Corre en el montaje y en cada atras/adelante del navegador.
+  // URL -> estado. Corre en cada atras/adelante del navegador.
   useEffect(() => {
-    const cat = searchParams.get("categoria") ?? "";
-    const urlFilters: Record<string, string> = {};
-    let pageFromUrl = 1;
-    const searchFromUrl = searchParams.get("search") ?? "";
-    const ordenFromUrl = searchParams.get("orden") ?? "relevancia";
+    const estado = leerEstadoDeUrl(searchParams);
 
-    searchParams.forEach((value, k) => {
-      const pageMatch = k === "page";
-      if (pageMatch) {
-        const parsed = Number(value);
-        if (!Number.isNaN(parsed) && parsed >= 1) pageFromUrl = parsed;
-      }
-      const match = k.match(/^filtros\[(.+)]$/);
-      if (match) urlFilters[match[1]] = value;
-    });
-
-    setSelectedCategoria(cat);
-    setActiveFilters(Object.keys(urlFilters).length > 0 ? urlFilters : {});
-    setPage(pageFromUrl);
-    setSearch(searchFromUrl);
-    setDebouncedSearch(searchFromUrl);
-    setSortBy(ordenFromUrl);
+    setSelectedCategoria(estado.categoria);
+    setActiveFilters(estado.filtros);
+    setPage(estado.page);
+    setSearch(estado.search);
+    setDebouncedSearch(estado.search);
+    setSortBy(estado.orden);
 
     // Anotar la URL que se acaba de leer para que el efecto de escritura no la
     // vuelva a empujar. Sin esto, volver atras agregaba una entrada nueva al
     // historial y el boton "adelante" quedaba inutilizable.
-    const estado: EstadoUrl = {
-      search: searchFromUrl,
-      categoria: cat,
-      filtros: urlFilters,
-      orden: ordenFromUrl,
-      page: pageFromUrl,
-    };
     lastPushedRef.current = construirUrl(estado);
     estadoAnteriorRef.current = estado;
   }, [searchParams]);
@@ -283,8 +300,29 @@ function CatalogoPage() {
 
   const cacheKey = `${session ? "auth" : "anon"}|${queryString}`;
 
+  /**
+   * Espera acotada a que resuelva la sesion.
+   *
+   * El catalogo es PUBLICO: la sesion solo decide si la respuesta trae los
+   * precios. Aun asi, la carga estaba condicionada a `status !== "loading"`, asi
+   * que si `/api/auth/session` tardaba o no respondia —un cold start, un pico de
+   * rate limit, la red del cliente— la grilla se quedaba en el skeleton para
+   * siempre, sin llegar a pedir un solo producto.
+   *
+   * Ahora se le da un margen corto: si la sesion resuelve a tiempo (el caso
+   * normal) no cambia nada, y si no, el catalogo carga igual en su version
+   * publica y vuelve a pedir los datos cuando la sesion aparezca.
+   */
+  const [esperandoSesion, setEsperandoSesion] = useState(status === "loading");
+  useEffect(() => {
+    if (status !== "loading") { setEsperandoSesion(false); return; }
+    setEsperandoSesion(true);
+    const t = setTimeout(() => setEsperandoSesion(false), 1500);
+    return () => clearTimeout(t);
+  }, [status]);
+
   const fetchData = useCallback(async () => {
-    if (status === "loading") return;
+    if (esperandoSesion) return;
 
     // Si ya vimos esta combinacion, se pinta al instante y se revalida callado.
     const cacheado = snapshotCache.get(cacheKey);
@@ -333,7 +371,7 @@ function CatalogoPage() {
         abortRef.current = null;
       }
     }
-  }, [queryString, cacheKey, authTick, status]);
+  }, [queryString, cacheKey, authTick, esperandoSesion]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => () => abortRef.current?.abort(), []);
