@@ -5,6 +5,7 @@ import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
+import Combobox from "./Combobox";
 
 type Meta = { clave: string; valor: string };
 
@@ -133,6 +134,13 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
   const [fetching, setFetching] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [urlError, setUrlError] = useState("");
+  /**
+   * Valores ya usados en cada campo de esa categoría, para las sugerencias.
+   *
+   * Se piden por categoría y no de una vez: cada tabla tiene sus columnas, y
+   * traer las 8 para mostrar una sería tirar el resto.
+   */
+  const [sugerencias, setSugerencias] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,6 +173,18 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
   }, [isOpen, productId, isNew]);
+
+  useEffect(() => {
+    if (!isOpen || !tabla) { setSugerencias({}); return; }
+    let cancelado = false;
+    fetch(`/api/productos/valores?tabla=${encodeURIComponent(tabla)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelado) setSugerencias(d?.data?.valores ?? {}); })
+      // Que no haya sugerencias no rompe nada: los campos quedan como texto
+      // libre, que es como funcionaban antes.
+      .catch(() => { if (!cancelado) setSugerencias({}); });
+    return () => { cancelado = true; };
+  }, [isOpen, tabla]);
 
   const config = CATEGORY_CONFIGS.find((c) => c.tabla === tabla);
   const availableKeys = config
@@ -331,6 +351,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     const isNum = NUMBER_FIELDS.has(key);
     const isTextarea = key === "descripcion";
     const val = form[key] ?? "";
+    // El SKU bloqueado (edición) sigue siendo un input plano: no se toca.
+    const bloqueado = key === "sku" && !isNew;
+    const opciones = isNum || isTextarea || bloqueado ? [] : (sugerencias[key] ?? []);
 
     return (
       <div key={key}>
@@ -341,6 +364,13 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
             onChange={(e) => handleChange(key, e.target.value)}
             rows={2}
             className={`${fieldClass} resize-none`}
+          />
+        ) : opciones.length > 0 ? (
+          <Combobox
+            value={String(val)}
+            onChange={(v) => handleChange(key, v)}
+            opciones={opciones}
+            className={fieldClass}
           />
         ) : (
           <input
