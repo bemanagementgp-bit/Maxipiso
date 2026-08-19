@@ -1,6 +1,6 @@
 import { mkdir, writeFile, unlink } from "fs/promises";
 import { join } from "path";
-import { randomBytes } from "crypto";
+import { createHash } from "crypto";
 import {
   destroyInCloudinary,
   getCloudinaryConfig,
@@ -70,9 +70,22 @@ function assertSafeOptions(opts: SaveOptions) {
   }
 }
 
-/** Nombre aleatorio: nunca se usa el nombre original que mando el cliente. */
-function randomName(ext: string): string {
-  return `${randomBytes(16).toString("hex")}.${ext}`;
+/**
+ * Nombre derivado del CONTENIDO del archivo, no del azar ni del nombre original.
+ *
+ * Dos motivos:
+ *  - Nunca se usa el nombre que manda el cliente, que es entrada no confiable.
+ *  - Subir la misma imagen dos veces da el mismo nombre, asi que no se duplica.
+ *    Con el nombre aleatorio anterior, `public/uploads` termino con 23 archivos
+ *    de los cuales solo 3 eran imagenes distintas: 20 copias del mismo JPG de
+ *    2,2 MB, subidas probando el ABM. Son ~44 MB versionados de mas.
+ *
+ * 32 chars hex (128 bits de sha256) alcanzan de sobra: no hay colision posible
+ * en un catalogo de miles de fotos.
+ */
+function contentName(buffer: Buffer, ext: string): string {
+  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 32);
+  return `${hash}.${ext}`;
 }
 
 // ─── Driver local (desarrollo y hosts con disco persistente) ──────────────────
@@ -90,7 +103,7 @@ const localDriver: StorageDriver = {
     assertSafeOptions(opts);
 
     const dir = join(PUBLIC_DIR, UPLOADS_ROOT, opts.folder);
-    const filename = randomName(opts.ext);
+    const filename = contentName(buffer, opts.ext);
     const filepath = join(dir, filename);
 
     // Defensa en profundidad: el path final tiene que quedar dentro de public/.
@@ -151,12 +164,15 @@ const cloudinaryDriver: StorageDriver = {
     }
 
     try {
+      const nombre = contentName(buffer, opts.ext);
       const { secureUrl, publicId } = await uploadToCloudinary(
         buffer,
         {
           folder: `${CLOUDINARY_FOLDER_ROOT}/${opts.folder}`,
           contentType: opts.contentType,
-          filename: randomName(opts.ext),
+          filename: nombre,
+          // Sin extension: Cloudinary la agrega segun el formato que detecta.
+          publicId: nombre.replace(/\.[a-z0-9]+$/i, ""),
         },
         config,
       );

@@ -104,7 +104,7 @@ export type CloudinaryUploadResult = {
 /** Sube un buffer y devuelve la URL https definitiva y su public_id. */
 export async function uploadToCloudinary(
   buffer: Buffer,
-  opts: { folder: string; contentType: string; filename: string },
+  opts: { folder: string; contentType: string; filename: string; publicId?: string },
   config: CloudinaryConfig,
 ): Promise<CloudinaryUploadResult> {
   const resourceType = opts.contentType.startsWith("video/") ? "video" : "image";
@@ -114,6 +114,15 @@ export async function uploadToCloudinary(
     folder: opts.folder,
     timestamp,
   };
+
+  // Sin `public_id` Cloudinary ignora el nombre del archivo y genera uno al
+  // azar, asi que subir dos veces la misma imagen crearia dos assets. Pasando
+  // el hash del contenido como id, la segunda subida sobreescribe la primera y
+  // devuelve la misma URL: no se duplica y no se paga almacenamiento de mas.
+  if (opts.publicId) {
+    signed.public_id = opts.publicId;
+    signed.overwrite = "true";
+  }
 
   const form = new FormData();
   form.append("file", new Blob([new Uint8Array(buffer)], { type: opts.contentType }), opts.filename);
