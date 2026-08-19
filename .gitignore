@@ -69,3 +69,9 @@ dump.sql
 # base local de desarrollo
 *.db
 *.db-journal
+
+# Imagenes subidas desde el ABM en desarrollo.
+# En produccion los uploads van a Cloudinary; el driver local solo se usa
+# corriendo en tu maquina, y esos archivos son descartables. Versionarlos dejo
+# 23 archivos de 50 MB en el repo, de los cuales solo 3 eran imagenes distintas.
+public/uploads/
