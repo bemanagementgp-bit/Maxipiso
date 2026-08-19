@@ -144,6 +144,8 @@ export interface ProductTableProps {
   tablaFilter?: string;
   marcaFilter?: string;
   estadoFilter?: string;
+  /** "" | "con" | "sin" */
+  imagenFilter?: string;
   refreshKey?: number;
 }
 
@@ -166,7 +168,7 @@ function parseFirstImage(value: unknown): string | null {
 export function ProductTable({
   onEdit, onDelete, onViewHistory, onDuplicate, onNotify,
   searchTerm = "", tablaFilter = "", marcaFilter = "",
-  estadoFilter = "activo", refreshKey = 0,
+  estadoFilter = "activo", imagenFilter = "", refreshKey = 0,
 }: ProductTableProps) {
   const [productos, setProductos]         = useState<AdminProductRow[]>([]);
   const [isLoading, setIsLoading]         = useState(true);
@@ -315,6 +317,7 @@ export function ProductTable({
       if (searchTerm)  params.set("search", searchTerm);
       if (tablaFilter) params.set("tabla", tablaFilter);
       if (marcaFilter) params.set("marca", marcaFilter);
+      if (imagenFilter) params.set("imagen", imagenFilter);
       const res = await fetch(`/api/productos?${params}`);
       if (!res.ok) {
         if (res.status === 401) { router.push("/auth/login"); return; }
@@ -334,7 +337,7 @@ export function ProductTable({
     }
   };
 
-  useEffect(() => { setPage(1); fetchProductos(0); }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, refreshKey]);
+  useEffect(() => { setPage(1); fetchProductos(0); }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, imagenFilter, refreshKey]);
 
   // El endpoint /api/productos/[id]/toggle existia desde siempre pero ningun
   // componente lo llamaba: el badge de estado era solo decorativo y la unica

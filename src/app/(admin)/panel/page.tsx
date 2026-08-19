@@ -78,6 +78,9 @@ export default function ProductosPage() {
   const [tablaFilter, setTablaFilter] = useState("pisos_flotantes");
   const [marcaFilter, setMarcaFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("activo");
+  /** "" | "con" | "sin". El catalogo esconde los productos sin imagen, asi que
+   *  este filtro es el que deja ver cuales estan invisibles para el cliente. */
+  const [imagenFilter, setImagenFilter] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
@@ -208,9 +211,15 @@ export default function ProductosPage() {
           <option value="todos">Todos los estados</option>
         </FilterSelect>
 
-        {(tablaFilter || marcaFilter || estadoFilter !== "activo" || searchTerm) && (
+        <FilterSelect value={imagenFilter} onChange={setImagenFilter}>
+          <option value="">Con y sin imagen</option>
+          <option value="sin">Sin imagen</option>
+          <option value="con">Con imagen</option>
+        </FilterSelect>
+
+        {(tablaFilter || marcaFilter || estadoFilter !== "activo" || imagenFilter || searchTerm) && (
           <button
-            onClick={() => { setTablaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setSearchTerm(""); }}
+            onClick={() => { setTablaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setImagenFilter(""); setSearchTerm(""); }}
             className="flex items-center gap-1 h-8 px-3 text-[10px] uppercase tracking-[0.06em] text-[#bbb] hover:text-[#666] transition-colors"
           >
             <FiX size={11} />
@@ -235,6 +244,7 @@ export default function ProductosPage() {
           tablaFilter={tablaFilter}
           marcaFilter={marcaFilter}
           estadoFilter={estadoFilter}
+          imagenFilter={imagenFilter}
         />
       </div>
 

@@ -99,6 +99,9 @@ export async function GET(req: NextRequest) {
     const marca      = sanitizeText(sp.get("marca")   ?? "", 100);
     const tablaFilter = sanitizeText(sp.get("tabla")  ?? "", 60);
     const estado     = sp.get("estado") ?? "activo";
+    // "con" | "sin" | "" — el catalogo publico esconde los productos sin
+    // imagen, asi que este filtro es el que muestra cuales estan invisibles.
+    const imagen     = sp.get("imagen") ?? "";
     const skip       = parseIntSafe(sp.get("skip"),  0,  0, 1_000_000);
     const take       = parseIntSafe(sp.get("take"), 10,  1, 200);
 
@@ -141,12 +144,35 @@ export async function GET(req: NextRequest) {
         const where: Record<string, unknown> = {};
         if (isActive !== undefined) where.isActive = isActive;
         if (marca && tablesWithMarca.has(key)) where.marca = marca;
+
+        // Las condiciones que necesitan OR van todas dentro de un AND, no
+        // sueltas en `where`: busqueda y "sin imagen" usan OR las dos, y
+        // asignando `where.OR` la segunda pisaba a la primera sin aviso. Con
+        // esto se pueden combinar.
+        const condiciones: Record<string, unknown>[] = [];
+
+        // Mismo criterio que usa el catalogo para decidir que muestra: una fila
+        // con `imagenes` en null, vacio o "[]" no tiene foto. Si aca se usara
+        // otro, el panel diria una cosa y el sitio mostraria otra.
+        if (imagen === "con") {
+          condiciones.push(
+            { imagenes: { not: null } },
+            { imagenes: { not: "" } },
+            { imagenes: { not: "[]" } },
+          );
+        } else if (imagen === "sin") {
+          condiciones.push({
+            OR: [{ imagenes: null }, { imagenes: "" }, { imagenes: "[]" }],
+          });
+        }
         if (catPrincipalFilter && key === "revestimiento") where.categoriaPrincipal = { in: catPrincipalFilter };
 
         if (search) {
           const searchFields = SEARCH_FIELDS[key] ?? ["nombre", "sku"];
-          where.OR = searchFields.map((f) => ({ [f]: { contains: search } }));
+          condiciones.push({ OR: searchFields.map((f) => ({ [f]: { contains: search } })) });
         }
+
+        if (condiciones.length > 0) where.AND = condiciones;
 
         const rows = await delegate.findMany({
           where,
