@@ -451,6 +451,13 @@ Con la lista unificada, mover / quitar / "usar como principal" funcionan igual s
 guardada que sobre una pendiente. **El orden que se ve es el que se guarda**: al guardar se
 suben los pendientes en ese orden y cada uno ocupa su lugar. La primera es la portada.
 
+`public/uploads/` está **ignorado por git**. En producción los uploads van a Cloudinary; el
+driver local sólo corre en tu máquina y esos archivos son descartables. Estuvieron
+versionados hasta que se comprobó contra producción (`/api/storage/diagnostico`) que ningún
+producto los referenciaba: eran 50 MB que viajaban en cada clone y cada build. Ojo que
+borrarlos **no achicó el `.git`** — los blobs siguen en el historial, y bajar esos 344 MB
+requiere reescribirlo entero.
+
 Los archivos se nombran por el **sha256 de su contenido**, no al azar. Con el nombre
 aleatorio anterior, subir la misma foto dos veces creaba dos archivos: así fue como
 `public/uploads` terminó con 23 archivos de los cuales sólo 3 son imágenes distintas
