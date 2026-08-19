@@ -81,6 +81,27 @@ type ImagenItem =
   | { tipo: "url"; clave: string; url: string }
   | { tipo: "archivo"; clave: string; file: File; preview: string };
 
+/**
+ * Serializa lo que el usuario puede haber tocado, para detectar cambios sin
+ * guardar. Es una funcion pura y no un `useEffect` a proposito: la foto del
+ * estado inicial se toma en el mismo lugar donde se carga el formulario, asi no
+ * hay ventana en la que se capture un estado a medio asentar.
+ *
+ * `tabla` queda afuera: elegir una categoria y arrepentirse no es trabajo
+ * perdido, y avisar por eso convertiria la confirmacion en ruido.
+ */
+function huellaFormulario(
+  form: Record<string, unknown>,
+  metadatos: Meta[],
+  imagenes: ImagenItem[],
+): string {
+  return JSON.stringify({
+    form,
+    metadatos,
+    imagenes: imagenes.map((i) => (i.tipo === "url" ? i.url : `archivo:${i.clave}`)),
+  });
+}
+
 /** URL para mostrar en la grilla, venga de donde venga. */
 function previewDe(item: ImagenItem): string {
   return item.tipo === "url" ? item.url : item.preview;
@@ -141,6 +162,14 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
    * traer las 8 para mostrar una sería tirar el resto.
    */
   const [sugerencias, setSugerencias] = useState<Record<string, string[]>>({});
+  /**
+   * Foto del formulario recien cargado, para saber si hay cambios sin guardar.
+   *
+   * Un click afuera cerraba el popup y se perdia todo lo cargado. Con esto, el
+   * cierre accidental pide confirmacion en vez de descartar en silencio.
+   */
+  const snapshotRef = useRef("");
+  const [confirmandoCierre, setConfirmandoCierre] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -148,11 +177,15 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     setImagenes([]);
     setUrlInput("");
     setUrlError("");
+    setConfirmandoCierre(false);
+    snapshotRef.current = "";
 
     if (isNew) {
-      setForm({ isActive: true });
+      const vacio = { isActive: true };
+      setForm(vacio);
       setTabla("");
       setMetadatos([]);
+      snapshotRef.current = huellaFormulario(vacio, [], []);
       return;
     }
 
@@ -165,10 +198,17 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         setForm(p);
         setTabla(p._tabla ?? "");
         const imgs = (() => { try { const arr = JSON.parse(p.imagenes); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
-        setImagenes(
-          imgs.map((url: string) => ({ tipo: "url" as const, clave: `u${claveRef.current++}`, url })),
-        );
-        try { setMetadatos(p.metadatos ? JSON.parse(p.metadatos) : []); } catch { setMetadatos([]); }
+        const items: ImagenItem[] = imgs.map((url: string) => ({
+          tipo: "url" as const,
+          clave: `u${claveRef.current++}`,
+          url,
+        }));
+        setImagenes(items);
+        const metas: Meta[] = (() => {
+          try { return p.metadatos ? JSON.parse(p.metadatos) : []; } catch { return []; }
+        })();
+        setMetadatos(metas);
+        snapshotRef.current = huellaFormulario(p, metas, items);
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
@@ -185,6 +225,31 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       .catch(() => { if (!cancelado) setSugerencias({}); });
     return () => { cancelado = true; };
   }, [isOpen, tabla]);
+
+  const hayCambiosSinGuardar =
+    snapshotRef.current !== "" && huellaFormulario(form, metadatos, imagenes) !== snapshotRef.current;
+
+  /**
+   * Cierre pedido por el usuario (click afuera, la X, Cancelar o Escape).
+   * Con cambios sin guardar no cierra: pide confirmacion.
+   */
+  const intentarCerrar = () => {
+    if (fase) return; // guardando: no se interrumpe
+    if (hayCambiosSinGuardar) { setConfirmandoCierre(true); return; }
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Si hay una confirmacion abierta, Escape la cancela a ella.
+      if (confirmandoCierre) { setConfirmandoCierre(false); return; }
+      intentarCerrar();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const config = CATEGORY_CONFIGS.find((c) => c.tabla === tabla);
   const availableKeys = config
@@ -390,7 +455,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     <>
       <div
         className={`fixed inset-0 z-40 bg-black/20 transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        onClick={onClose}
+        onClick={intentarCerrar}
       />
 
       <div
@@ -415,7 +480,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-[#ccc] hover:text-[#777] transition-colors shrink-0">
+          <button onClick={intentarCerrar} className="p-1.5 text-[#ccc] hover:text-[#777] transition-colors shrink-0">
             <FiX size={16} />
           </button>
         </div>
@@ -612,6 +677,30 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
 
         {/* Footer */}
         <div className="border-t border-[#E0DED8] shrink-0">
+          {confirmandoCierre && (
+            <div className="flex items-center gap-3 px-6 py-3 bg-[#FFF8F1] border-b border-[#E0DED8]">
+              <FiAlertCircle size={14} className="text-[#DF8635] shrink-0" />
+              <span className="text-[11px] text-[#111] leading-relaxed">
+                Tenés cambios sin guardar. Si cerrás ahora se pierden.
+              </span>
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoCierre(false)}
+                  className="px-3 py-1.5 text-[11px] font-medium text-[#111] border border-[#111] hover:bg-[#111] hover:text-white transition-colors rounded-sm"
+                >
+                  Seguir editando
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmandoCierre(false); onClose(); }}
+                  className="px-3 py-1.5 text-[11px] font-medium text-red-600 hover:text-red-700 transition-colors"
+                >
+                  Descartar
+                </button>
+              </div>
+            </div>
+          )}
           {error && (
             <div className="flex items-start gap-2 px-6 pt-3 text-[11px] text-red-600">
               <FiAlertCircle size={13} className="shrink-0 mt-px" />
@@ -621,7 +710,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         <div className="px-6 py-4 flex gap-2">
           <button
             type="button"
-            onClick={onClose}
+            onClick={intentarCerrar}
             className="flex-1 py-2 text-[11px] font-medium text-[#888] hover:text-[#444] transition-colors rounded-sm"
           >
             Cancelar
