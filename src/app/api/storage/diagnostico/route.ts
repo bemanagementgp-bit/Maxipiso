@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getCloudinaryConfig, pingCloudinary } from "@/lib/cloudinary";
 import { getStorage, isEphemeralStorage } from "@/lib/storage";
+import { DB_NAMES, TABLE_KEYS, getDelegate } from "@/lib/all-products";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -19,6 +20,49 @@ export const runtime = "nodejs";
  * del secret sólo el largo, que es lo que hace falta para detectar el error más
  * común: un valor pegado a medias. Aun así es sólo para ADMIN.
  */
+/**
+ * Cuántos productos referencian imágenes en `public/uploads/`.
+ *
+ * Esos archivos están versionados en el repo y hay 23, de los cuales sólo 3 son
+ * imágenes distintas: el resto son copias del mismo archivo, porque hasta ahora
+ * cada subida generaba un nombre al azar. Antes de borrarlos hay que saber si
+ * alguno está en uso, y la base de producción es la única que puede responderlo.
+ */
+async function contarReferenciasAUploads() {
+  const porTabla: Record<string, number> = {};
+  let total = 0;
+  const rutas = new Set<string>();
+
+  await Promise.all(
+    TABLE_KEYS.map(async (key) => {
+      const filas = await getDelegate(key)
+        .findMany({
+          where: { imagenes: { contains: "/uploads/" } },
+          select: { imagenes: true },
+        })
+        .catch(() => [] as Record<string, unknown>[]);
+
+      if (filas.length === 0) return;
+      porTabla[DB_NAMES[key]] = filas.length;
+      total += filas.length;
+
+      for (const fila of filas) {
+        const crudo = String(fila.imagenes ?? "");
+        // `imagenes` es un JSON array, pero hay filas viejas con una sola ruta
+        // suelta: se extraen con regex para cubrir las dos formas.
+        for (const m of crudo.matchAll(/\/uploads\/[^"',\s\]]+/g)) rutas.add(m[0]);
+      }
+    }),
+  );
+
+  return {
+    productos: total,
+    porTabla,
+    // La lista concreta es lo que permite borrar sólo lo que sobra.
+    rutasEnUso: [...rutas].sort(),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const rateErr = enforceRateLimit(req, { key: "diagnostico", limit: 20, windowMs: 5 * 60 * 1000 });
   if (rateErr) return rateErr;
@@ -31,11 +75,13 @@ export async function GET(req: NextRequest) {
 
   const driver = getStorage().name;
   const config = getCloudinaryConfig();
+  const uploadsVersionados = await contarReferenciasAUploads();
 
   if (!config) {
     return NextResponse.json({
       driver,
       efimero: isEphemeralStorage(),
+      uploadsVersionados,
       cloudinary: {
         configurada: false,
         // Qué variables ve el proceso, sin revelar contenido: alcanza para
@@ -57,6 +103,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     driver,
     efimero: isEphemeralStorage(),
+    uploadsVersionados,
     cloudinary: {
       configurada: true,
       fuente: config.fuente,
