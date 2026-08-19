@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight, FiCopy } from "react-icons/fi";
 import { isRemoteImageUrl } from "@/lib/google-drive";
 import { getGridColumns, getCategoryConfig } from "@/lib/category-fields";
 
@@ -133,6 +133,8 @@ export type AdminProductRow = {
 
 export interface ProductTableProps {
   onEdit: (product: AdminProductRow) => void;
+  /** Abre el formulario precargado con los datos de este producto, como uno nuevo. */
+  onDuplicate: (product: AdminProductRow) => void;
   onDelete: (productId: string) => void;
   onViewHistory: (productId: string) => void;
   /** Avisos hacia los toasts de la pagina. La vista general no tiene barra
@@ -162,7 +164,7 @@ function parseFirstImage(value: unknown): string | null {
 }
 
 export function ProductTable({
-  onEdit, onDelete, onViewHistory, onNotify,
+  onEdit, onDelete, onViewHistory, onDuplicate, onNotify,
   searchTerm = "", tablaFilter = "", marcaFilter = "",
   estadoFilter = "activo", refreshKey = 0,
 }: ProductTableProps) {
@@ -546,6 +548,7 @@ export function ProductTable({
 
                           <button onClick={() => onViewHistory(p.id)} title="Historial" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiClock size={13} /></button>
                           <button onClick={() => onEdit(p)} title="Editar" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiEdit2 size={13} /></button>
+                          <button onClick={() => onDuplicate(p)} title="Duplicar" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiCopy size={13} /></button>
                           <button
                             onClick={() => {
                               setMoveTarget({ id: p.id, nombre });
@@ -729,6 +732,7 @@ export function ProductTable({
 
                         <button onClick={() => onViewHistory(p.id)} title="Historial" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiClock size={14} /></button>
                         <button onClick={() => onEdit(p)} title="Editar" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiEdit2 size={14} /></button>
+                        <button onClick={() => onDuplicate(p)} title="Duplicar" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiCopy size={14} /></button>
                         {deleteConfirm === p.id ? (
                           <div className="flex items-center gap-1 ml-1">
                             <button onClick={() => handleDelete(p.id)} className="text-[10px] font-semibold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1 rounded-md transition-colors">Confirmar</button>

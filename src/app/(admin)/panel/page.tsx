@@ -70,6 +70,8 @@ export default function ProductosPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [editProductId, setEditProductId] = useState<string | null>(null);
   const [isNewProduct, setIsNewProduct] = useState(false);
+  /** Producto del cual copiar los datos al abrir el formulario como nuevo. */
+  const [duplicateOfId, setDuplicateOfId] = useState<string | null>(null);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
   const [searchTerm, setSearchTerm] = useState("");
@@ -163,7 +165,7 @@ export default function ProductosPage() {
             Importar
           </Link>
           <button
-            onClick={() => { setEditProductId(null); setIsNewProduct(true); setIsPanelOpen(true); }}
+            onClick={() => { setEditProductId(null); setIsNewProduct(true); setDuplicateOfId(null); setIsPanelOpen(true); }}
             className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
           >
             <FiPlus size={14} />
@@ -221,7 +223,8 @@ export default function ProductosPage() {
       <div className="bg-white border border-[#E0DED8] overflow-hidden">
         <ProductTable
           refreshKey={tableRefreshKey}
-          onEdit={(product) => { setEditProductId(product.id); setIsNewProduct(false); setIsPanelOpen(true); }}
+          onEdit={(product) => { setEditProductId(product.id); setIsNewProduct(false); setDuplicateOfId(null); setIsPanelOpen(true); }}
+          onDuplicate={(product) => { setEditProductId(null); setIsNewProduct(true); setDuplicateOfId(product.id); setIsPanelOpen(true); }}
           onDelete={() => {
             setTableRefreshKey((v) => v + 1);
             addToast("success", "Producto eliminado");
@@ -240,6 +243,7 @@ export default function ProductosPage() {
         isOpen={isPanelOpen}
         productId={editProductId}
         isNew={isNewProduct}
+        duplicateOfId={duplicateOfId}
         isLoading={isLoading}
         onClose={() => { setIsPanelOpen(false); setEditProductId(null); }}
         onSave={handleSaveProduct}

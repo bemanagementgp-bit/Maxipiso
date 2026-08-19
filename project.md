@@ -473,6 +473,31 @@ archivos. Así fue como `public/uploads` terminó con 23 archivos de los cuales 
 imágenes distintas. En Cloudinary hace falta mandar `public_id` explícito, porque si no
 ignora el nombre del archivo y genera uno aleatorio.
 
+#### Duplicar un producto
+
+El botón **Duplicar** de cada fila abre el formulario precargado con los datos de ese
+producto, pero comportándose como uno nuevo (hace `POST`, no `PUT`). Existe porque cargar
+variantes de un mismo piso —mismas medidas, misma marca, mismo espesor, cambia el color—
+significaba tipear treinta campos idénticos cada vez.
+
+Es un **prefill del formulario, no una copia en la base**: nada se crea hasta que se aprieta
+Crear producto, así que se puede revisar y ajustar antes. Se limpian el `sku` (es único,
+chocaría con el original) y los campos de identidad del registro origen (`id`, `createdAt`,
+`updatedAt`, `sortOrder`). El nombre y las imágenes **sí** se copian: sirven de punto de
+partida y se cambian a mano. El encabezado avisa de qué producto es copia.
+
+#### Cerrar sin perder lo cargado
+
+Un click en el fondo cerraba el popup y descartaba en silencio todo lo cargado. Ahora los
+cuatro caminos de cierre (fondo, X, Cancelar, Escape) piden confirmación **sólo si hay
+cambios sin guardar**; sin cambios cierra directo, para que la confirmación no se vuelva un
+trámite que se aprende a ignorar.
+
+La comparación es contra una huella del formulario (`huellaFormulario()`) tomada **en el
+mismo lugar donde se carga**, no en un `useEffect`: la primera versión usaba un efecto que
+corría en el mismo commit que el reset y capturaba el estado viejo, con lo cual todo parecía
+modificado y el popup no cerraba nunca.
+
 #### Sugerencias en los campos de texto
 
 `GET /api/productos/valores?tabla=…` devuelve los valores ya usados en cada campo de texto de

@@ -113,6 +113,14 @@ interface QuickEditPanelProps {
   isOpen: boolean;
   productId: string | null;
   isNew: boolean;
+  /**
+   * Id del producto del cual copiar los datos, cuando `isNew` es true.
+   *
+   * Existe porque cargar varias variantes de un mismo piso —mismas medidas,
+   * misma marca, mismo espesor, cambia el color— significaba tipear treinta
+   * campos identicos cada vez.
+   */
+  duplicateOfId?: string | null;
   isLoading?: boolean;
   onClose: () => void;
   onSave: (data: any) => void | Promise<void>;
@@ -121,7 +129,7 @@ interface QuickEditPanelProps {
 const fieldClass = "w-full px-3 py-2 text-[12px] border border-[#E0DED8] bg-white focus:outline-none focus:border-[#aaa] transition-colors text-[#111] placeholder:text-[#ccc] rounded-sm";
 const labelClass = "block text-[9px] uppercase tracking-[0.08em] text-[#aaa] mb-1";
 
-export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, onClose, onSave }: QuickEditPanelProps) {
+export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null, isLoading = false, onClose, onSave }: QuickEditPanelProps) {
   const [form, setForm] = useState<Record<string, any>>({});
   const [tabla, setTabla] = useState("");
   const [metadatos, setMetadatos] = useState<Meta[]>([]);
@@ -169,6 +177,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
    * cierre accidental pide confirmacion en vez de descartar en silencio.
    */
   const snapshotRef = useRef("");
+  /** Nombre del producto original, para dejar claro de que es copia. */
+  const [copiaDe, setCopiaDe] = useState("");
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
 
   useEffect(() => {
@@ -180,7 +190,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
     setConfirmandoCierre(false);
     snapshotRef.current = "";
 
-    if (isNew) {
+    setCopiaDe("");
+
+    if (isNew && !duplicateOfId) {
       const vacio = { isActive: true };
       setForm(vacio);
       setTabla("");
@@ -189,15 +201,33 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
       return;
     }
 
-    if (!productId) return;
+    // Duplicando: se carga el producto origen igual que al editar, pero el
+    // formulario se comporta como uno nuevo (hace POST, no PUT).
+    const idACargar = isNew ? duplicateOfId : productId;
+    if (!idACargar) return;
     setFetching(true);
-    fetch(`/api/productos/${productId}`)
+    fetch(`/api/productos/${idACargar}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => {
-        const p = d.data;
+        const original = d.data;
+        // Al duplicar se limpian el SKU (es unico, chocaria) y los campos de
+        // identidad del registro origen. El nombre y las imagenes SI se copian:
+        // sirven de punto de partida y se cambian a mano.
+        const p = isNew
+          ? (() => {
+              const copia = { ...original };
+              delete copia.id;
+              delete copia.createdAt;
+              delete copia.updatedAt;
+              delete copia.sortOrder;
+              copia.sku = "";
+              return copia;
+            })()
+          : original;
+        if (isNew) setCopiaDe(String(original.nombre ?? original.especie ?? original.sku ?? ""));
         setForm(p);
-        setTabla(p._tabla ?? "");
-        const imgs = (() => { try { const arr = JSON.parse(p.imagenes); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
+        setTabla(original._tabla ?? "");
+        const imgs = (() => { try { const arr = JSON.parse(original.imagenes); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
         const items: ImagenItem[] = imgs.map((url: string) => ({
           tipo: "url" as const,
           clave: `u${claveRef.current++}`,
@@ -205,14 +235,14 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
         }));
         setImagenes(items);
         const metas: Meta[] = (() => {
-          try { return p.metadatos ? JSON.parse(p.metadatos) : []; } catch { return []; }
+          try { return original.metadatos ? JSON.parse(original.metadatos) : []; } catch { return []; }
         })();
         setMetadatos(metas);
         snapshotRef.current = huellaFormulario(p, metas, items);
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
-  }, [isOpen, productId, isNew]);
+  }, [isOpen, productId, isNew, duplicateOfId]);
 
   useEffect(() => {
     if (!isOpen || !tabla) { setSugerencias({}); return; }
@@ -473,11 +503,21 @@ export function QuickEditPanel({ isOpen, productId, isNew, isLoading = false, on
             )}
             <div className="min-w-0">
               <h2 className="text-[14px] font-medium text-[#111] truncate">
-                {fetching ? "Cargando..." : isNew ? "Nuevo producto" : (form.nombre || form.especie || "Editar producto")}
+                {fetching
+                  ? "Cargando..."
+                  : copiaDe
+                    ? "Duplicar producto"
+                    : isNew
+                      ? "Nuevo producto"
+                      : (form.nombre || form.especie || "Editar producto")}
               </h2>
-              {!isNew && form.sku && (
+              {copiaDe ? (
+                <p className="text-[10px] text-[#aaa] mt-0.5 truncate">
+                  Copia de <span className="text-[#777]">{copiaDe}</span> · poné un SKU nuevo
+                </p>
+              ) : !isNew && form.sku ? (
                 <p className="text-[10px] text-[#aaa] font-mono mt-0.5">{form.sku}</p>
-              )}
+              ) : null}
             </div>
           </div>
           <button onClick={intentarCerrar} className="p-1.5 text-[#ccc] hover:text-[#777] transition-colors shrink-0">
