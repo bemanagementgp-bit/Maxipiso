@@ -439,6 +439,37 @@ el historial.
 > corría en el montaje**, pisando la página que traía la URL. El guard con `useRef` es el fix;
 > lo demás es lo que hace que la vuelta se sienta instantánea.
 
+#### Imágenes en el ABM
+
+Las imágenes ya guardadas y los archivos que todavía no se subieron viven en **una sola
+lista ordenada** (`ImagenItem`). Antes el archivo nuevo estaba en un estado aparte
+(`imageFile`), y de ahí salían dos limitaciones que se sentían como bugs: sólo entraba una
+imagen por guardado, y la recién elegida no se podía mover, así que para dejarla de portada
+había que guardar, cerrar el popup y volver a abrirlo.
+
+Con la lista unificada, mover / quitar / "usar como principal" funcionan igual sobre una
+guardada que sobre una pendiente. **El orden que se ve es el que se guarda**: al guardar se
+suben los pendientes en ese orden y cada uno ocupa su lugar. La primera es la portada.
+
+Los archivos se nombran por el **sha256 de su contenido**, no al azar. Con el nombre
+aleatorio anterior, subir la misma foto dos veces creaba dos archivos: así fue como
+`public/uploads` terminó con 23 archivos de los cuales sólo 3 son imágenes distintas
+(~44 MB de copias). En Cloudinary además hace falta mandar `public_id`, porque si no ignora
+el nombre del archivo y genera uno aleatorio — sin eso el dedupe no serviría justamente en
+el storage que se usa en producción.
+
+#### Sugerencias en los campos de texto
+
+`GET /api/productos/valores?tabla=…` devuelve los valores ya usados en cada campo de texto de
+esa categoría, y el ABM los ofrece en un combo con búsqueda. **No es un select**: se puede
+escribir un valor nuevo, y la lista avisa cuando lo tipeado no coincide con ninguno.
+
+El problema que resuelve es de datos: los filtros del catálogo se arman con los valores
+distintos que hay en la tabla, así que "Max Core", "MaxCore" y "max core" aparecen como tres
+marcas y el filtro queda inservible. Se descartan los campos propios de cada producto (`sku`,
+`nombre`, `especie`, `codigo`, `descripcion`, fichas) y los que superan 200 valores distintos,
+que son campos libres disfrazados. Cache de 60 s por tabla.
+
 ### 8.2 bis Precios y stock — `/panel/precios`
 
 Grilla editable para actualizar listas de precios sin abrir producto por producto.
