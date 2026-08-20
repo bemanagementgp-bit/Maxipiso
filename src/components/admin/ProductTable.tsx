@@ -189,7 +189,12 @@ export function ProductTable({
   const [moveTarget, setMoveTarget]       = useState<{ id: string; nombre: string } | null>(null);
   const [movePos, setMovePos]             = useState("");
   const router = useRouter();
-  const PER_PAGE = 10;
+  /**
+   * Cuantos productos por pagina. El tope de 200 no es arbitrario: es el maximo
+   * que acepta `take` en /api/productos.
+   */
+  const OPCIONES_POR_PAGINA = [10, 25, 50, 100, 200];
+  const [PER_PAGE, setPerPage] = useState(10);
 
   const handleDragStart = (e: React.DragEvent, idx: number) => {
     setDragIdx(idx);
@@ -348,7 +353,7 @@ export function ProductTable({
   useEffect(() => {
     setPage(1);
     fetchProductos(0);
-  }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, imagenFilter, filtrosExtraKey, refreshKey]);
+  }, [searchTerm, tablaFilter, marcaFilter, estadoFilter, imagenFilter, filtrosExtraKey, PER_PAGE, refreshKey]);
 
   // El endpoint /api/productos/[id]/toggle existia desde siempre pero ningun
   // componente lo llamaba: el badge de estado era solo decorativo y la unica
@@ -604,7 +609,7 @@ export function ProductTable({
         )}
 
         {!isLoading && totalPages > 0 && (
-          <Pagination page={page} totalPages={totalPages} total={total} perPage={PER_PAGE} goToPage={goToPage} />
+          <Pagination page={page} totalPages={totalPages} total={total} perPage={PER_PAGE} goToPage={goToPage} opciones={OPCIONES_POR_PAGINA} onPerPage={setPerPage} />
         )}
 
         {moveTarget && (
@@ -766,20 +771,32 @@ export function ProductTable({
       </div>
 
       {!isLoading && totalPages > 0 && (
-        <Pagination page={page} totalPages={totalPages} total={total} perPage={PER_PAGE} goToPage={goToPage} />
+        <Pagination page={page} totalPages={totalPages} total={total} perPage={PER_PAGE} goToPage={goToPage} opciones={OPCIONES_POR_PAGINA} onPerPage={setPerPage} />
       )}
     </div>
   );
 }
 
-function Pagination({ page, totalPages, total, perPage, goToPage }: any) {
+function Pagination({ page, totalPages, total, perPage, goToPage, opciones, onPerPage }: any) {
   return (
-    <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 bg-gray-50">
-      <span className="text-[11px] text-gray-400">
-        {total > 0
-          ? `Mostrando ${(page-1)*perPage+1}-${Math.min(page*perPage,total)} de ${total.toLocaleString()} productos`
-          : "Sin productos"}
-      </span>
+    <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-gray-100 bg-gray-50">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-[11px] text-gray-400 truncate">
+          {total > 0
+            ? `Mostrando ${(page-1)*perPage+1}-${Math.min(page*perPage,total)} de ${total.toLocaleString()} productos`
+            : "Sin productos"}
+        </span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 px-2 text-[11px] border border-gray-200 bg-white rounded-md text-gray-500 focus:outline-none focus:border-gray-400 cursor-pointer shrink-0"
+          title="Productos por página"
+        >
+          {opciones.map((n: number) => (
+            <option key={n} value={n}>{n} por página</option>
+          ))}
+        </select>
+      </div>
       {totalPages > 1 && (
         <div className="flex items-center gap-1">
           <button onClick={() => goToPage(1)} disabled={page === 1} title="Primera página" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><FiChevronsLeft size={14} /></button>

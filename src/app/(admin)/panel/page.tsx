@@ -75,7 +75,9 @@ export default function ProductosPage() {
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
   const [searchTerm, setSearchTerm] = useState("");
-  const [tablaFilter, setTablaFilter] = useState("pisos_flotantes");
+  // Arranca en "todas": entrar viendo una sola categoria hacia parecer que el
+  // resto del catalogo no estaba, y obligaba a limpiar el filtro cada vez.
+  const [tablaFilter, setTablaFilter] = useState("");
   const [marcaFilter, setMarcaFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("activo");
   /** "" | "con" | "sin". El catalogo esconde los productos sin imagen, asi que
