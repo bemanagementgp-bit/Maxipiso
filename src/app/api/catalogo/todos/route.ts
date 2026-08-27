@@ -129,7 +129,13 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "espesor",      label: "Espesor" },
   ],
   "revestimientos": [
-    { key: "uso", label: "Tipo de uso" },
+    { key: "uso",                label: "Uso" },
+    { key: "marca",              label: "Marca" },
+    { key: "linea",              label: "Línea" },
+    { key: "tipoProducto",       label: "Tipo de producto" },
+    { key: "material",           label: "Material" },
+    { key: "categoriaPrincipal", label: "Categoría" },
+    { key: "espesor",            label: "Espesor" },
   ],
   "pisos-vinilicos": [
     { key: "categoriaTerciaria", label: "Tipo" },
@@ -150,7 +156,14 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "origen",      label: "Origen" },
     { key: "espesor",     label: "Espesor" },
   ],
-  "decks": [],
+  "decks": [
+    { key: "marca",              label: "Marca" },
+    { key: "linea",              label: "Línea" },
+    { key: "tipoProducto",       label: "Tipo de producto" },
+    { key: "material",           label: "Material" },
+    { key: "categoriaPrincipal", label: "Categoría" },
+    { key: "espesor",            label: "Espesor" },
+  ],
   "maderas": [
     { key: "tipoProducto",         label: "Tipo de producto" },
     { key: "origen",               label: "Origen" },
@@ -208,7 +221,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Clave de caché por combinación de parámetros
-    const cacheKey = JSON.stringify({ search, categoria, skip, take, activeFilters, auth: isAuthenticated });
+    // `sortBy` TIENE que entrar en la clave. Sin el, pedir la misma vista con
+    // otro orden devolvia la respuesta cacheada de la anterior: el desplegable
+    // "Ordenar por" cambiaba y la grilla se quedaba igual, como si no anduviera.
+    const cacheKey = JSON.stringify({ search, categoria, sortBy, skip, take, activeFilters, auth: isAuthenticated });
     const cached = getCached(cacheKey);
     if (cached) return NextResponse.json(cached);
 

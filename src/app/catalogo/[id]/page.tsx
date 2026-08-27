@@ -25,6 +25,14 @@ import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
 
+/**
+ * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
+ * galeria de cada producto. Vive en Cloudinary, no en `public/`: asi se puede
+ * reemplazar sin deployar y no viaja en cada clone del repo.
+ */
+const PLACA_INSTITUCIONAL =
+  "https://res.cloudinary.com/dnaom2evd/image/upload/v1787856931/imagen-productos-1_zjbjhl.jpg";
+
 function parseImagenes(val: string | null | undefined): string[] {
   if (!val) return [];
   const trimmed = val.trim();
@@ -290,9 +298,11 @@ export default async function ProductPage({
 
   // Build gallery from imagenes JSON array, semicolon/comma list, or single imagen field
   const imagenesArr: string[] = parseImagenes(raw.imagenes as string | null);
+  // Placa institucional que cierra la galeria de TODOS los productos. Es una
+  // sola constante a proposito: cambiarla acá la cambia en todo el catalogo.
   const galeria: string[] = imagenesArr.length > 0
-    ? [...imagenesArr, "/constante.png"]
-    : ["/constante.png"];
+    ? [...imagenesArr, PLACA_INSTITUCIONAL]
+    : [PLACA_INSTITUCIONAL];
 
   // Build specs from row fields
   const specs = buildSpecsFromRow(raw, tableKey);

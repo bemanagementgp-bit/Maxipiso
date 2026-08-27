@@ -65,7 +65,7 @@ const lineas = [
   { label: "Deck",            href: "/catalogo?categoria=decks",           img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1787077706/66047b68324866.20305652_j52w7e.jpg", Icon: FiSun },
   { label: "Revestimientos",  href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
   { label: "Maderas",         href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiBox },
-  { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "/accesorios.png",     Icon: FiTool },
+  { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1787856931/cat-accesorios_bmpwox.jpg",     Icon: FiTool },
 ];
 
 const stats = [
