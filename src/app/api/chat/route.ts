@@ -13,6 +13,35 @@ export const runtime = "nodejs";
 const apiKey = process.env.GROQ_API_KEY;
 const client = apiKey ? new Groq({ apiKey }) : null;
 
+/**
+ * Modelos a probar, en orden.
+ *
+ * Groq da de baja modelos y devuelve 404 `model_not_found`: los dos que usaba
+ * este endpoint (`llama-3.3-70b-versatile` y `llama-3.1-8b-instant`) fueron
+ * deprecados el 17/06/2026 y el chat quedo respondiendo "Error al procesar tu
+ * consulta" a todo el mundo.
+ *
+ * Por eso son varios y no uno: si el primero ya no existe se pasa al siguiente
+ * solo, en vez de caerse el chat entero. Y por eso es configurable por entorno:
+ * cuando vuelva a pasar, se corrige cambiando una variable en Vercel sin
+ * esperar un deploy.
+ *
+ * La lista real disponible para la cuenta se consulta en
+ * GET /api/chat/diagnostico.
+ */
+const MODELOS = (process.env.GROQ_MODELS ?? "openai/gpt-oss-120b,openai/gpt-oss-20b,llama-3.1-8b-instant")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+/** `true` si el error significa "ese modelo ya no esta", no "fallo la llamada". */
+function modeloNoDisponible(err: unknown): boolean {
+  if (!(err instanceof Groq.APIError)) return false;
+  if (err.status === 404) return true;
+  const cuerpo = JSON.stringify(err.error ?? "").toLowerCase();
+  return cuerpo.includes("model_not_found") || cuerpo.includes("decommission");
+}
+
 const SYSTEM = `Sos Nacho, el asistente comercial virtual de Maxipiso Mayorista, el N°1 en Argentina en importación y distribución de pisos, maderas y revestimientos, con más de 60 años en el mercado. Tu nombre es Nacho y así te presentás siempre.
 
 ━━ ROL ━━
@@ -215,24 +244,27 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    // Intenta primero con el modelo de mayor calidad; si está rate-limited (429)
-    // cae automáticamente al modelo rápido con límite de TPM más alto.
+    // Se recorre la lista: se pasa al siguiente modelo si el actual ya no existe
+    // o esta rate-limited. Cualquier otro error corta, porque reintentar con
+    // otro modelo no lo va a arreglar y solo esconderia la causa.
     let response;
-    try {
-      response = await client.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        ...chatParams,
-      });
-    } catch (primaryErr) {
-      if (primaryErr instanceof Groq.APIError && primaryErr.status === 429) {
-        response = await client.chat.completions.create({
-          model: "llama-3.1-8b-instant",
-          ...chatParams,
-        });
-      } else {
-        throw primaryErr;
+    let ultimoError: unknown = null;
+    for (const modelo of MODELOS) {
+      try {
+        response = await client.chat.completions.create({ model: modelo, ...chatParams });
+        break;
+      } catch (err) {
+        ultimoError = err;
+        const rateLimited = err instanceof Groq.APIError && err.status === 429;
+        if (modeloNoDisponible(err)) {
+          console.error(`[chat] el modelo "${modelo}" ya no esta disponible en Groq, probando el siguiente`);
+          continue;
+        }
+        if (rateLimited) continue;
+        throw err;
       }
     }
+    if (!response) throw ultimoError ?? new Error("Ningun modelo de la lista respondio");
 
     const rawReply = response.choices[0]?.message?.content ?? "{}";
     let parsedReply: {
@@ -244,7 +276,11 @@ export async function POST(req: NextRequest) {
     try {
       parsedReply = JSON.parse(rawReply);
     } catch {
-      parsedReply = {};
+      // El modo JSON no lo respetan todos los modelos por igual. Si vuelve
+      // texto suelto se usa como respuesta en vez de descartarlo: el bot pierde
+      // el boton de WhatsApp, pero contesta. Antes esto dejaba la burbuja
+      // vacia, que para el usuario es lo mismo que estar roto.
+      parsedReply = { reply: rawReply };
     }
 
     const reply = sanitizeText(parsedReply.reply ?? "", 2000);
@@ -270,6 +306,16 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[chat] error:", err instanceof Error ? err.message : err);
+    if (modeloNoDisponible(err)) {
+      console.error(
+        `[chat] NINGUN modelo de la lista existe en Groq. Probados: ${MODELOS.join(", ")}. ` +
+          `Consultá los disponibles en /api/chat/diagnostico y corregí GROQ_MODELS.`,
+      );
+      return NextResponse.json(
+        { error: "El asistente está temporalmente fuera de servicio." },
+        { status: 503 },
+      );
+    }
     if (err instanceof Groq.APIError) {
       if (err.status === 401 || err.status === 403) {
         console.error("[chat] API key inválida o sin permisos — reiniciá el servidor.");
