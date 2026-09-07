@@ -736,6 +736,47 @@ sticker que se comiera el click rompería la navegación.
 > La migración `20260907000000_stickers` crea la tabla y agrega la columna a las 8 de
 > producto. **Hay que aplicarla en Turso** antes de que el deploy sirva de algo.
 
+### 8.2 quinquies Estado de la base — `/panel/diagnostico`
+
+Responde una sola pregunta: **¿la base tiene todo lo que el código necesita?** Cuando la
+respuesta es no, muestra qué falta por tabla y el SQL que lo arregla, listo para copiar.
+
+Existe por una tarde entera perdida. Se deployó código que leía una columna nueva antes de
+aplicar la migración en Turso, y el síntoma fue **"0 productos"**: cada tabla del catálogo
+está envuelta en un `catch` que devuelve lista vacía —para que una tabla lenta no tire abajo
+la página— y ese mismo catch se traga el `no such column`. Un catálogo vacío y un catálogo
+que no se puede leer se veían igual.
+
+Dos cambios para que no vuelva a pasar:
+
+1. **`revisarBase()`** (`lib/db-health.ts`) compara el DMMF del cliente generado contra
+   `pragma_table_info` de cada tabla. La lista de columnas esperadas sale del DMMF y no de
+   una lista escrita a mano, que se desactualizaría justo cuando importa.
+2. **El catálogo devuelve 503 cuando fallan TODAS las tablas consultadas.** Si falla una sola
+   se sigue como antes —una categoría caída no puede tapar el resto—, pero si no se pudo leer
+   nada, eso no es un catálogo vacío y la página lo dice, con un botón de reintentar. El
+   detalle del error va al log, no al navegador: nombra tablas y columnas.
+
+### 8.2 sexies Los 10 stickers iniciales
+
+La migración `20260907040000_stickers_iniciales` deja cargados los diez que pidió el cliente,
+para que nadie tenga que crearlos a mano. Se editan, apagan y borran como cualquier otro: la
+tabla sigue siendo el catálogo dinámico de §8.2 ter.
+
+Las banderas (Alemania, EE.UU., Italia, Unión Europea) apuntan a los SVG de `public/flags/`,
+los mismos que ya se usan para el origen del producto — no hay que subir nada. La de la Unión
+Europea no existía y se generó con la geometría oficial: 12 estrellas de 5 puntas en un
+círculo de radio ⅓ del alto.
+
+Las esquinas no son arbitrarias: las banderas arriba a la izquierda (la procedencia se lee
+primero), lo comercial —Oferta, Más Vendido, Novedad— arriba a la derecha, donde el ojo busca
+el precio, y lo técnico —Waterproof, Water Resistant, Importado— abajo a la derecha. **Nada
+abajo a la izquierda**: ahí la card del catálogo tiene el chip del SKU.
+
+"Logo de Producto Importado" va como etiqueta de texto porque no hay logo. Cuando lo tengan se
+cambia a tipo imagen desde el panel **sin tocar los productos que ya lo tengan asignado**: el
+id no cambia.
+
 ### 8.2 quater Portadas del home — `/panel/portadas`
 
 Las 8 cards de *Nuestras líneas de productos* de la página principal. Es lo que más rota del

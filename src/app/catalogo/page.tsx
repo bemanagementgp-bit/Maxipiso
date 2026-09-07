@@ -161,6 +161,9 @@ function CatalogoPage() {
   const [selectedCategoria, setSelectedCategoria] = useState(inicial.categoria);
 
   const [filtros, setFiltros] = useState<Record<string, FilterGroup>>({});
+  // Un catalogo que no se pudo leer no es un catalogo vacio. Sin esto, una
+  // migracion sin aplicar se veia como "Sin resultados".
+  const [errorCarga, setErrorCarga] = useState("");
   // Arrancaba en `{}` mientras el resto del estado si leia la URL. Por eso el
   // primer render era "sin filtros": el efecto que escribe la URL publicaba esa
   // version incompleta, y recien despues el que lee la URL los restauraba y
@@ -344,7 +347,10 @@ function CatalogoPage() {
     abortRef.current = controller;
     try {
       const res = await fetch(`/api/catalogo/todos?${queryString}`, { cache: "no-store", signal: controller.signal });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const detalle = await res.json().catch(() => null);
+        throw new Error(detalle?.error ?? "No se pudo cargar el catálogo.");
+      }
       const json = await res.json();
       if (fetchIdRef.current !== currentFetchId) return;
       const data = json.data;
@@ -354,6 +360,7 @@ function CatalogoPage() {
       setTotal(totalNuevo);
       if (data?.filtros) setFiltros(data.filtros);
       if (data?.categorias) setCategorias(data.categorias);
+      setErrorCarga("");
       guardarSnapshot(cacheKey, {
         productos: productosNuevos,
         total: totalNuevo,
@@ -364,6 +371,7 @@ function CatalogoPage() {
       if ((err as Error)?.name !== "AbortError" && fetchIdRef.current === currentFetchId && !cacheado) {
         setProductos([]);
         setTotal(0);
+        setErrorCarga((err as Error)?.message || "No se pudo cargar el catálogo.");
       }
     } finally {
       if (abortRef.current === controller) {
@@ -830,6 +838,17 @@ function CatalogoPage() {
             >
               {loading && productos.length === 0 ? (
                 Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
+              ) : errorCarga ? (
+                <div className="col-span-full py-16 text-center">
+                  <p className="text-[#111111] font-semibold mb-1">No pudimos cargar el catálogo</p>
+                  <p className="text-sm text-gray-500 mb-5">{errorCarga}</p>
+                  <button
+                    onClick={() => setAuthTick((t) => t + 1)}
+                    className="border border-gray-200 text-gray-600 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
+                  >
+                    Reintentar
+                  </button>
+                </div>
               ) : productos.length === 0 ? (
                 <EmptyState label={selectedCatLabel ?? "Catálogo"} />
               ) : (

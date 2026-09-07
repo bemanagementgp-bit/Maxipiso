@@ -15,10 +15,25 @@ export const runtime = "nodejs";
 const QUERY_TIMEOUT_MS = 12_000;
 
 
-function timeout<T>(promise: Promise<T>, ms: number, fallback: T, label = "query"): Promise<T> {
+/**
+ * Corre la query con un techo de tiempo y un valor de descarte.
+ *
+ * `alFallar` se llama cuando la query no dio resultado —por lentitud o por
+ * error—, para que quien la pidio sepa que ese `[]` es una falla y no una
+ * categoria vacia. Sin eso, una columna que falta en la base se ve exactamente
+ * igual que "no hay productos", que es lo que nos costo una tarde.
+ */
+function timeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  fallback: T,
+  label = "query",
+  alFallar?: (motivo: string) => void,
+): Promise<T> {
   return new Promise<T>((resolve) => {
     const t = setTimeout(() => {
       console.warn(`[catalogo/todos] timeout (${ms}ms) en ${label}`);
+      alFallar?.(`timeout en ${label}`);
       resolve(fallback);
     }, ms);
     promise.then(
@@ -29,6 +44,7 @@ function timeout<T>(promise: Promise<T>, ms: number, fallback: T, label = "query
         // (campo inexistente en el modelo). Sin este log el sintoma es
         // "0 productos" sin ningun error visible.
         console.error(`[catalogo/todos] query fallo en ${label}:`, err);
+        alFallar?.(err instanceof Error ? err.message : String(err));
         resolve(fallback);
       }
     );
@@ -264,6 +280,9 @@ export async function GET(req: NextRequest) {
 
     // Query all tables + filters in parallel
     const singleTable = tablesToQuery.length === 1;
+    // Se anota que tablas fallaron para poder distinguir "no hay productos" de
+    // "no pudimos consultarlos". Ver la respuesta al final.
+    const tablasQueFallaron = new Map<string, string>();
     const productPromises = tablesToQuery.map(async (table) => {
       const d = table.delegate() as any;
       const where: Record<string, unknown> = { isActive: true, AND: [{ imagenes: { not: null } }, { imagenes: { not: "" } }, { imagenes: { not: "[]" } }] };
@@ -290,14 +309,18 @@ export async function GET(req: NextRequest) {
       } else if (!singleTable) {
         findArgs.take = skip + take;
       }
+      const anotarFalla = (motivo: string) => {
+        if (!tablasQueFallaron.has(table.key)) tablasQueFallaron.set(table.key, motivo);
+      };
       const [rows, count] = await Promise.all([
         timeout(
           d.findMany(findArgs) as Promise<Record<string, unknown>[]>,
           QUERY_TIMEOUT_MS,
           [] as Record<string, unknown>[],
-          `findMany ${table.key}`
+          `findMany ${table.key}`,
+          anotarFalla,
         ),
-        timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0, `count ${table.key}`),
+        timeout(d.count({ where }) as Promise<number>, QUERY_TIMEOUT_MS, 0, `count ${table.key}`, anotarFalla),
       ]);
       return { key: table.key, label: table.label, rows, count, needsPrioritySort };
     });
@@ -424,6 +447,30 @@ export async function GET(req: NextRequest) {
 
     // Categories available
     const categorias = TABLES.map((t) => ({ key: t.key, label: t.label }));
+
+    /**
+     * Si TODAS las tablas consultadas fallaron, esto no es un catálogo vacío:
+     * es un catálogo que no se pudo leer, y decirlo importa. El síntoma de una
+     * migración sin aplicar era "0 productos", indistinguible de "no hay nada
+     * en esta categoría".
+     *
+     * Se responde 503 —el servidor no puede atender ahora— para que el cliente
+     * muestre un error en vez de "Sin resultados". El detalle va al log, no al
+     * navegador: nombra columnas y tablas.
+     */
+    if (tablasQueFallaron.size > 0 && tablasQueFallaron.size === tablesToQuery.length) {
+      console.error(
+        "[catalogo/todos] fallaron TODAS las tablas consultadas:",
+        Object.fromEntries(tablasQueFallaron),
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No se pudo leer el catálogo. Si acabás de deployar, revisá Panel → Estado de la base.",
+        },
+        { status: 503, headers: { "Cache-Control": "private, no-store, max-age=0" } },
+      );
+    }
 
     const payload = {
       success: true,

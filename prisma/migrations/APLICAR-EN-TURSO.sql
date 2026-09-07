@@ -102,3 +102,21 @@ ALTER TABLE "pisos_madera"    ADD COLUMN "complementarios" TEXT;
 ALTER TABLE "decks"           ADD COLUMN "complementarios" TEXT;
 ALTER TABLE "maderas"         ADD COLUMN "complementarios" TEXT;
 ALTER TABLE "accesorios"      ADD COLUMN "complementarios" TEXT;
+
+
+-- ── 5. LOS 10 STICKERS, YA CARGADOS (20260907040000) ────────────────────────
+-- No es urgente: sin esto el panel de stickers arranca vacio y hay que crearlos
+-- a mano. Las banderas apuntan a los SVG de public/flags, que ya se usan para
+-- el origen del producto.
+-- INSERT OR IGNORE por los ids fijos: correrlo dos veces no duplica nada.
+
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_bandera_alemania','Bandera de Alemania','imagen','/flags/de.svg',NULL,NULL,NULL,'arriba-izq',0,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_bandera_americana','Bandera Americana','imagen','/flags/us.svg',NULL,NULL,NULL,'arriba-izq',1,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_bandera_italia','Bandera Italia','imagen','/flags/it.svg',NULL,NULL,NULL,'arriba-izq',2,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_bandera_ue','Bandera Union Europea','imagen','/flags/eu.svg',NULL,NULL,NULL,'arriba-izq',3,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_oferta','Oferta','texto',NULL,'OFERTA','#DF8635','#FFFFFF','arriba-der',0,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_mas_vendido','Mas Vendido','texto',NULL,'MÁS VENDIDO','#111111','#FFFFFF','arriba-der',1,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_novedad','Novedad','texto',NULL,'NOVEDAD','#2E7D5B','#FFFFFF','arriba-der',2,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_waterproof','Waterproof','texto',NULL,'WATERPROOF','#12608F','#FFFFFF','abajo-der',0,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_water_resistant','Water Resistant','texto',NULL,'WATER RESISTANT','#4A94C4','#FFFFFF','abajo-der',1,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colorFondo","colorTexto","posicion","orden","isActive","createdAt","updatedAt") VALUES ('stk_importado','Producto Importado','texto',NULL,'IMPORTADO','#4A4A4A','#FFFFFF','abajo-der',2,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
