@@ -575,6 +575,39 @@ sticker que se comiera el click rompería la navegación.
 > La migración `20260907000000_stickers` crea la tabla y agrega la columna a las 8 de
 > producto. **Hay que aplicarla en Turso** antes de que el deploy sirva de algo.
 
+### 8.2 quater Portadas del home — `/panel/portadas`
+
+Las 8 cards de *Nuestras líneas de productos* de la página principal. Es lo que más rota del
+sitio —cada campaña trae fotos nuevas— y hasta acá cada cambio era editar `page.tsx` y
+deployar. Ahora viven en la tabla `lineas_home` y se editan desde el panel.
+
+**El `slug` es la clave y no se edita.** Ancla la fila con dos cosas que sí viven en el
+código: la categoría del catálogo (`/catalogo?categoria=<slug>`) y el ícono, que es un
+componente de React y por eso no puede ser un dato. Editable: la foto, el rótulo, el orden y
+si se muestra. **No hay alta ni baja**: las líneas son las 8 categorías del catálogo, así que
+para sacar una del home se la apaga.
+
+La foto se sube con el mismo `/api/upload` que las de producto —va a Cloudinary— o se pega
+una URL, validada contra la misma lista de hosts (`validateImageRef`). El panel muestra cada
+card **con el aspecto real que tiene en el home** y no como fila de tabla: lo que se está
+editando es una imagen.
+
+#### El home pasó a ser server component
+
+`src/app/page.tsx` era un componente de cliente de 800 líneas, que no puede consultar Prisma.
+Quedó partido en dos: `page.tsx` es ahora un server component fino que lee las líneas y
+`home-client.tsx` es el home de siempre, que las recibe por prop. Así las portadas viajan **ya
+en el HTML**, sin parpadeo ni fetch al montar.
+
+El home es **ISR con `revalidate = 300`**, y guardar una portada llama a `revalidatePath("/")`
+para que el cambio se vea al instante — el revalidate es sólo la red de seguridad. Si la
+consulta falla o la tabla está vacía se cae a `LINEAS_DEFECTO`: preferimos el home con las
+portadas de siempre antes que un home sin catálogo.
+
+> La migración `20260907010000_lineas_home` crea la tabla y **la siembra con las 8 líneas tal
+> como están hoy en el código**, así el home se ve igual apenas se aplica y el panel arranca
+> con algo que editar. **Hay que aplicarla en Turso.**
+
 ### 8.2 bis Precios y stock — `/panel/precios`
 
 Grilla editable para actualizar listas de precios sin abrir producto por producto.

@@ -527,3 +527,21 @@ model Sticker {
   @@index([isActive])
   @@map("stickers")
 }
+
+/// Una de las cards de "Nuestras lineas de productos" del home.
+///
+/// Existe como tabla porque la portada es lo que mas cambia del sitio: cada
+/// campana trae fotos nuevas, y hasta ahora cada cambio era editar codigo y
+/// deployar. El `slug` es la categoria del catalogo a la que lleva la card, y
+/// es lo que ancla la fila: el icono sigue viviendo en el codigo porque es un
+/// componente, no un dato.
+model LineaHome {
+  slug      String   @id
+  label     String
+  imagenUrl String
+  orden     Int      @default(0)
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("lineas_home")
+}
