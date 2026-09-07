@@ -66,6 +66,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
       descripcion:            "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -105,6 +107,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
       descripcion:            "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -138,6 +142,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
       descripcion:            "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -184,6 +190,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":          "fichaTecnica",
       "archivo instalacion":    "archivoInstalacion",
       descripcion:              "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -224,6 +232,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
       descripcion:            "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -256,6 +266,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
       descripcion:            "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -281,6 +293,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       "ficha tecnica":        "fichaTecnica",
       "archivo instalacion":  "archivoInstalacion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 
@@ -304,6 +318,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       imagen:           "imagenes",
       imagenes:         "imagenes",
       descripcion:      "descripcion",
+      stickers:               "stickers",
+      complementarios:        "complementarios",
     },
   },
 ];

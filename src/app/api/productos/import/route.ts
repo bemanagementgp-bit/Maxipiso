@@ -8,6 +8,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { verifyOrigin } from "@/lib/security";
 import { norm, detectSchema, parseRowWithSchema } from "@/lib/sheet-schemas";
 import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
+import { partirLista, mapaDeStickers, resolverProductosPorSku, resolverConMapa } from "@/lib/import-relaciones";
 
 export const runtime = "nodejs";
 
@@ -20,10 +21,20 @@ function toNumber(v: unknown): number | undefined {
   return isFinite(n) ? n : undefined;
 }
 
+/**
+ * Columnas que no se escriben en la primera pasada.
+ *
+ * En la planilla vienen como nombres y SKUs; en la base son arrays de ids. Se
+ * resuelven despues de crear todas las filas, porque un complementario puede
+ * ser un producto que se esta creando en esta misma importacion.
+ */
+const CAMPOS_RELACION = new Set(["stickers", "complementarios"]);
+
 function cleanRow(raw: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (k === "tabla") continue;
+    if (CAMPOS_RELACION.has(k)) continue;
     // Campos numéricos conocidos
     if (["precioM2","precioCaja","precioTabla","precioMl","precioMLineal","precioEnvioCaja","precio","flete","pesoCaja","pesoPallet"].includes(k)) {
       const n = toNumber(v);
@@ -135,6 +146,32 @@ export async function POST(req: NextRequest) {
     byTabla.get(tabla)!.push(row);
   }
 
+  /**
+   * Filas que traian stickers o complementarios, con su id ya conocido.
+   *
+   * Se juntan durante la primera pasada y se resuelven al final: un
+   * complementario puede apuntar a un SKU que se crea en esta misma
+   * importacion, y en el momento de procesar su fila todavia no existe.
+   */
+  type Pendiente = {
+    id: string;
+    tableKey: ReturnType<typeof tableKeyFromDbName> & string;
+    sku: string;
+    stickers: string[];
+    complementarios: string[];
+  };
+  const pendientes: Pendiente[] = [];
+  const anotarRelaciones = (
+    row: Record<string, unknown>,
+    tableKey: Pendiente["tableKey"],
+    id: string,
+  ) => {
+    const stickers = partirLista(row.stickers);
+    const complementarios = partirLista(row.complementarios);
+    if (stickers.length === 0 && complementarios.length === 0) return;
+    pendientes.push({ id, tableKey, sku: String(row.sku), stickers, complementarios });
+  };
+
   // Procesar cada tabla
   for (const [tablaNombre, rows] of byTabla.entries()) {
     const prismaKey = tableKeyFromDbName(tablaNombre);
@@ -156,6 +193,7 @@ export async function POST(req: NextRequest) {
       try {
         if (existingRecord) {
           await delegate.update({ where: { sku }, data });
+          anotarRelaciones(row, prismaKey, existingRecord.id);
           await prisma.changeLog.create({
             data: {
               tablaNombre,
@@ -171,6 +209,7 @@ export async function POST(req: NextRequest) {
         } else {
           const created = await delegate.create({ data });
           const createdId = String(created.id);
+          anotarRelaciones(row, prismaKey, createdId);
           await prisma.changeLog.create({
             data: {
               tablaNombre,
@@ -189,6 +228,67 @@ export async function POST(req: NextRequest) {
         skippedCount++;
       }
     }
+  }
+
+  /**
+   * Segunda pasada: stickers y complementarios.
+   *
+   * Recien aca, con todas las filas ya creadas, se pueden resolver los SKUs de
+   * la columna "Complementarios" —que pueden apuntar a productos de esta misma
+   * planilla— y los nombres de la columna "Stickers".
+   *
+   * Lo que no se encuentra se avisa y se descarta. Una celda con un sticker mal
+   * escrito no puede tirar abajo una importacion de 500 filas.
+   */
+  if (pendientes.length > 0) {
+    const skusComplementarios = [...new Set(pendientes.flatMap((p) => p.complementarios))];
+
+    const [mapaStickers, mapaSkus] = await Promise.all([
+      mapaDeStickers(),
+      resolverProductosPorSku(skusComplementarios),
+    ]);
+
+    // Los avisos se agrupan por valor y no por fila: "no existe el sticker
+    // Ofertas" una vez es util; repetido 300 veces es ruido.
+    const stickersDesconocidos = new Set<string>();
+    const skusDesconocidos = new Set<string>();
+    let conRelaciones = 0;
+
+    for (const p of pendientes) {
+      const stk = resolverConMapa(p.stickers, mapaStickers);
+      for (const n of stk.noEncontrados) stickersDesconocidos.add(n);
+      const idsStickers = stk.ids;
+
+      const comps = resolverConMapa(p.complementarios, mapaSkus);
+      for (const s of comps.noEncontrados) skusDesconocidos.add(s);
+      // Un producto no se complementa a si mismo.
+      const idsComplementarios = comps.ids.filter((id) => id !== p.id);
+
+      const data: Record<string, unknown> = {};
+      if (p.stickers.length > 0) data.stickers = JSON.stringify(idsStickers);
+      if (p.complementarios.length > 0) data.complementarios = JSON.stringify(idsComplementarios);
+      if (Object.keys(data).length === 0) continue;
+
+      try {
+        await getDelegate(p.tableKey).update({ where: { id: p.id }, data });
+        conRelaciones++;
+      } catch (e) {
+        console.error(`[import] no se pudieron guardar stickers/complementarios de ${p.sku}:`, e);
+        warnings.push(`No se pudieron guardar los stickers/complementarios de ${p.sku}.`);
+      }
+    }
+
+    if (stickersDesconocidos.size > 0) {
+      warnings.push(
+        `Stickers que no existen y se ignoraron: ${[...stickersDesconocidos].join(", ")}. Se crean en Panel → Stickers.`,
+      );
+    }
+    if (skusDesconocidos.size > 0) {
+      warnings.push(
+        `SKUs de complementarios que no se encontraron: ${[...skusDesconocidos].join(", ")}.`,
+      );
+    }
+    console.log(`[import] relaciones aplicadas en ${conRelaciones} productos`);
   }
 
   clearCatalogCache();

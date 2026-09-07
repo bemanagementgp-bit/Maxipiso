@@ -916,6 +916,41 @@ categorías", `tabla` va vacío y el endpoint devuelve 400.
 
 ### 8.4 Importación desde Excel
 
+#### La plantilla y las columnas que no son texto
+
+Los encabezados de la plantilla salen del mismo `fieldMap` que lee el parser, así que **no se
+pueden desincronizar**: agregar una columna al schema la agrega a la plantilla y a la
+importación de una vez.
+
+Un campo de la base puede tener varias claves en el `fieldMap` —`imagen` e `imagenes` son la
+misma columna, para aceptar las dos formas— pero la plantilla emite **una sola por campo**.
+Antes se filtraba literalmente `"imagen"`, y las tres categorías cuya única clave era esa
+(revestimientos, deck, maderas) **quedaban sin ninguna columna de foto**: no se podían cargar
+imágenes en masa.
+
+`stickers` y `complementarios` son arrays de ids en la base, pero **nadie va a tipear un cuid
+en un Excel**. En la planilla se escribe lo que la persona ya conoce:
+
+    Stickers          Oferta | Waterproof | Bandera de Alemania
+    Complementarios   ZOC-001 | PERF-220
+
+o sea el **nombre** del sticker y el **SKU** del producto (también sirven `,` y `;`). En
+Stickers se acepta además el texto de la etiqueta —"OFERTA"— porque es lo que se ve en la foto
+y es lo que alguien va a copiar.
+
+**Se resuelven en una segunda pasada, después de crear todas las filas**, y ese orden importa:
+un complementario puede apuntar a un SKU que se crea en esa misma planilla, y al procesar su
+fila todavía no existe. Verificado con las hojas en los dos órdenes.
+
+Lo que no se encuentra **se avisa y se descarta**: una celda con un sticker mal escrito no
+puede tirar abajo una importación de 500 filas, y la fila entra igual sin ese sticker. Los
+avisos se agrupan por valor y no por fila — "no existe el sticker Ofertas" una vez es útil,
+repetido 300 veces es ruido.
+
+La plantilla abre en una hoja de **Instrucciones** que explica esto y **lista los stickers
+que existen hoy**, leídos de la base al generar el archivo: sin eso hay que adivinar cómo se
+escriben.
+
 `/panel/importacion` (asistente de 3 pasos) o el botón "Importar" de `/panel`.
 
 1. **Plantilla** — `GET /api/productos/plantilla?categoria=<id>` genera un `.xlsx` con las
