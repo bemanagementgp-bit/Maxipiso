@@ -1,5 +1,7 @@
 "use client";
 
+import { useIdioma } from "@/components/providers/IdiomaProvider";
+
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,21 +41,20 @@ function saveLeadCache(lead: LeadCache) {
   }
 }
 
-const QUICK_ACTIONS = [
-  "¿Qué tipos de pisos tienen?",
-  "Busco piso para exterior",
-  "Quiero ver maderas macizas",
-];
-
-const WELCOME: Message = {
+/**
+ * El saludo se arma con el diccionario, no como constante de modulo: tiene que
+ * seguir al idioma como el resto del chat.
+ */
+const bienvenida = (texto: string): Message => ({
   role: "assistant",
-  content: "¡Hola! Soy Nacho, tu asesor de Maxipiso 👋 Contame qué estás buscando — tipo de ambiente, estilo, m² aproximados — y te oriento con las mejores opciones.",
-};
+  content: texto,
+});
 
 export default function ChatWidget() {
+  const { t, idioma } = useIdioma();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([WELCOME]);
+  const [messages, setMessages] = useState<Message[]>([bienvenida(t.chat.saludoInicial)]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [bubble, setBubble] = useState(false);
@@ -101,12 +102,13 @@ export default function ChatWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: next.map((m) => ({ role: m.role, content: m.content })),
+          idioma,
         }),
       });
       const data = await res.json();
       const assistantMsg: Message = {
         role: "assistant",
-        content: data.reply || data.error || "Hubo un error. Intentá de nuevo.",
+        content: data.reply || data.error || t.chat.error,
         waUrl: data.waUrl ?? undefined,
         storeUrl: data.storeUrl ?? undefined,
       };
@@ -122,7 +124,7 @@ export default function ChatWidget() {
         }));
       }
     } catch {
-      setMessages([...next, { role: "assistant", content: "Hubo un error. Intentá de nuevo." }]);
+      setMessages([...next, { role: "assistant", content: t.chat.error }]);
     } finally {
       setLoading(false);
     }
@@ -159,7 +161,7 @@ export default function ChatWidget() {
               </div>
               <div>
                 <p className="text-white text-sm font-bold leading-tight">Nacho</p>
-                <p className="text-[#DF8635] text-xs font-medium">Asesor Maxipiso · En línea</p>
+                <p className="text-[#DF8635] text-xs font-medium">{t.chat.asesor}</p>
               </div>
             </div>
             <button
@@ -227,7 +229,7 @@ export default function ChatWidget() {
                     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    Ver tienda online
+                    {t.chat.verTienda}
                   </Link>
                 )}
               </div>
@@ -260,7 +262,7 @@ export default function ChatWidget() {
           {/* Quick actions — solo al inicio */}
           {messages.length === 1 && (
             <div className="px-4 py-2 flex flex-wrap gap-2 bg-gray-50 border-t border-gray-100 shrink-0">
-              {QUICK_ACTIONS.map((q) => (
+              {t.chat.sugerencias.map((q: string) => (
                 <button
                   key={q}
                   onClick={() => send(q)}
@@ -279,7 +281,7 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="Escribile a Nacho..."
+              placeholder={t.chat.escribi}
               disabled={loading}
               className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#DF8635] disabled:opacity-50"
             />
@@ -302,8 +304,8 @@ export default function ChatWidget() {
         <div className="fixed bottom-28 right-5 z-50 flex items-end gap-2 animate-fade-up">
           <div className="relative bg-white text-[#111111] text-sm font-medium px-4 py-3 rounded-2xl rounded-br-sm max-w-[230px]"
             style={{ boxShadow: "0 4px 20px rgba(223,134,53,0.2), 0 2px 8px rgba(0,0,0,0.12)" }}>
-            <p className="font-semibold text-[#DF8635] text-xs mb-0.5">Nacho · Asesor Maxipiso</p>
-            Hola, soy Nacho. Estoy listo para ayudarte 👋
+            <p className="font-semibold text-[#DF8635] text-xs mb-0.5">{t.chat.saludoTitulo}</p>
+            {t.chat.saludo}
             <div className="absolute -bottom-2 right-4 w-3 h-3 bg-white rotate-45"
               style={{ boxShadow: "2px 2px 4px rgba(0,0,0,0.06)" }} />
           </div>
@@ -324,7 +326,7 @@ export default function ChatWidget() {
 
         <button
           onClick={() => setOpen((o) => !o)}
-          aria-label="Abrir chat"
+          aria-label={t.chat.abrir}
           className="relative w-16 h-16 rounded-full text-white flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
           style={{ background: "linear-gradient(135deg, #DF8635, #f0a44e)", boxShadow: "0 4px 24px rgba(223,134,53,0.5), 0 2px 8px rgba(0,0,0,0.2)" }}
         >
@@ -367,6 +369,7 @@ function LeadHandoff({
   extractedLead: ExtractedLead;
   onSent: () => void;
 }) {
+  const { t } = useIdioma();
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
@@ -411,20 +414,20 @@ function LeadHandoff({
     const emailTrim = email.trim();
 
     if (nombreTrim.length < 2) {
-      setError("Ingresá tu nombre.");
+      setError(t.chat.faltaNombre);
       return;
     }
     if (telTrim.replace(/\D+/g, "").length < 7) {
-      setError("Ingresá un WhatsApp válido.");
+      setError(t.chat.whatsappInvalido);
       return;
     }
     if (emailTrim.length === 0) {
-      setError("Ingresá tu email.");
+      setError(t.chat.faltaEmail);
       return;
     }
     // Validación básica de email (la del backend es estricta)
     if (!/^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$/.test(emailTrim)) {
-      setError("Ingresá un email válido.");
+      setError(t.chat.emailInvalido);
       return;
     }
 
@@ -494,7 +497,7 @@ function LeadHandoff({
             onClick={() => setEditing(true)}
             className="text-xs text-[#DF8635] font-medium px-2 hover:underline"
           >
-            Usar otros datos
+            {t.chat.usarOtros}
           </button>
         </div>
         {error && <p className="text-[11px] text-red-600 mt-2">{error}</p>}
@@ -508,13 +511,13 @@ function LeadHandoff({
       className="mt-2 w-full max-w-[340px] bg-white border border-[#25D366]/30 rounded-xl p-3 shadow-sm space-y-2"
     >
       <p className="text-[11px] text-gray-500 leading-snug">
-        Dejanos tus datos y te derivamos con un asesor por WhatsApp.
+        {t.chat.datosTexto}
       </p>
       <input
         type="text"
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
-        placeholder="Nombre*"
+        placeholder={t.chat.campoNombre}
         required
         maxLength={150}
         disabled={submitting}
@@ -524,7 +527,7 @@ function LeadHandoff({
         type="tel"
         value={telefono}
         onChange={(e) => setTelefono(e.target.value)}
-        placeholder="WhatsApp* (ej: +54 9 221 1234567)"
+        placeholder={t.chat.campoWhatsapp}
         required
         maxLength={30}
         disabled={submitting}
@@ -554,7 +557,7 @@ function LeadHandoff({
             <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
             </svg>
-            Continuar a WhatsApp
+            {t.chat.continuar}
           </>
         )}
       </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/components/providers/IdiomaProvider";
+
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +13,7 @@ const WA_HREF =
   "https://wa.me/542214388894?text=Hola%2C%20quiero%20solicitar%20acceso%20al%20cat%C3%A1logo%20mayorista";
 
 export default function CatalogoLoginPage() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -36,12 +39,12 @@ export default function CatalogoLoginPage() {
         setNeedsTotp(true);
         setError("");
       } else if (result?.error) {
-        setError("Credenciales inválidas");
+        setError(t.acceso.credencialesInvalidas);
       } else if (result?.ok) {
         router.push("/catalogo");
       }
     } catch {
-      setError("No se pudo iniciar sesión. Intentá nuevamente.");
+      setError(t.acceso.errorGenerico);
     } finally {
       setIsLoading(false);
     }
@@ -66,13 +69,13 @@ export default function CatalogoLoginPage() {
           </div>
           <div>
             <p className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3">
-              Catálogo Mayorista
+              {t.acceso.etiqueta}
             </p>
             <h2 className="text-white text-4xl font-bold leading-tight mb-4">
-              Accedé a nuestro<br />catálogo exclusivo
+              {t.acceso.tituloA}<br />catálogo exclusivo
             </h2>
             <p className="text-white/60 text-sm leading-relaxed max-w-sm">
-              Pisos, maderas, revestimientos y más. Consultá disponibilidad y solicitá tu acceso por WhatsApp.
+              {t.acceso.texto}
             </p>
           </div>
         </div>
@@ -88,12 +91,12 @@ export default function CatalogoLoginPage() {
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-[#111111] mb-1">
-              {needsTotp ? "Verificación en dos pasos" : "Acceso al catálogo"}
+              {needsTotp ? t.acceso.dosPasos : t.acceso.titulo}
             </h1>
             <p className="text-gray-400 text-sm">
               {needsTotp
-                ? "Ingresá el código de tu app autenticadora"
-                : "Ingresá tus credenciales para ver el catálogo"}
+                ? t.acceso.dosPasosTexto
+                : t.acceso.subtitulo}
             </p>
           </div>
 
@@ -102,7 +105,7 @@ export default function CatalogoLoginPage() {
               <>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Email
+                    {t.home.campoEmail}
                   </label>
                   <div className="relative">
                     <FiMail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -119,7 +122,7 @@ export default function CatalogoLoginPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Contraseña
+                    {t.acceso.contrasena}
                   </label>
                   <div className="relative">
                     <FiLock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -137,7 +140,7 @@ export default function CatalogoLoginPage() {
             ) : (
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Código 2FA
+                  {t.acceso.codigo2fa}
                 </label>
                 <div className="relative">
                   <FiShield size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -174,7 +177,7 @@ export default function CatalogoLoginPage() {
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {needsTotp ? "Verificar" : "Ingresar"}
+                  {needsTotp ? t.acceso.verificar : t.acceso.ingresar}
                   <FiArrowRight size={16} />
                 </>
               )}
@@ -194,7 +197,7 @@ export default function CatalogoLoginPage() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-8">
             <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 uppercase tracking-wider">¿No tenés cuenta?</span>
+            <span className="text-xs text-gray-400 uppercase tracking-wider">{t.acceso.sinCuenta}</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
@@ -206,7 +209,7 @@ export default function CatalogoLoginPage() {
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1da851] text-white font-semibold text-sm transition-colors"
           >
             <FaWhatsapp size={18} />
-            Pedí tus credenciales por WhatsApp
+            {t.acceso.pedirCredenciales}
           </a>
 
           {/* Back to home */}
@@ -214,11 +217,11 @@ export default function CatalogoLoginPage() {
             href="/"
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-700 text-sm transition-colors"
           >
-            Volver al inicio
+            {t.acceso.volver}
           </a>
 
           <p className="mt-6 text-center text-xs text-gray-300">
-            Acceso exclusivo para clientes mayoristas
+            {t.acceso.exclusivo}
           </p>
         </div>
       </div>

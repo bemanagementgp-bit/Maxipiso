@@ -200,7 +200,18 @@ const MessageSchema = z.object({
 
 const BodySchema = z.object({
   messages: z.array(MessageSchema).min(1).max(30),
+  /**
+   * Idioma en el que esta viendo el sitio quien escribe.
+   *
+   * Se valida contra la lista cerrada: llega del cliente y termina dentro del
+   * prompt del sistema, asi que no puede ser texto libre.
+   */
+  idioma: z.enum(["es", "en", "de", "fr", "it", "pt"]).optional(),
 });
+
+const NOMBRE_IDIOMA: Record<string, string> = {
+  es: "espanol", en: "ingles", de: "aleman", fr: "frances", it: "italiano", pt: "portugues",
+};
 
 export async function POST(req: NextRequest) {
   const originErr = verifyOrigin(req);
@@ -237,10 +248,23 @@ export async function POST(req: NextRequest) {
       content: sanitizeText(m.content, 2000),
     }));
 
+  /**
+   * Nacho responde en el idioma en que la persona esta viendo el sitio.
+   *
+   * El prompt sigue en espanol —lo escribio y lo mantiene el equipo— y solo se le
+   * suma la instruccion del idioma. Traducir el prompt entero a seis idiomas
+   * seria seis textos que mantener sincronizados.
+   */
+  const idioma = parsed.data.idioma ?? "es";
+  const sistema =
+    idioma === "es"
+      ? SYSTEM
+      : `${SYSTEM}\n\n━━ IDIOMA ━━\nEl cliente esta viendo el sitio en ${NOMBRE_IDIOMA[idioma]}. Respondele SIEMPRE en ${NOMBRE_IDIOMA[idioma]}, aunque te escriba en otro idioma. Los nombres de producto y los SKU van tal cual estan, sin traducir.`;
+
   const chatParams = {
     max_tokens: 400,
     response_format: { type: "json_object" as const },
-    messages: [{ role: "system" as const, content: SYSTEM }, ...safeMessages],
+    messages: [{ role: "system" as const, content: sistema }, ...safeMessages],
   };
 
   try {

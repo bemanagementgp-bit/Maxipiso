@@ -1,3 +1,4 @@
+import { textos } from "@/lib/i18n/servidor";
 import Link from "next/link";
 import { articles } from "@/data/novedades";
 
@@ -30,15 +31,16 @@ const landings = [
 
 const allCards = [...landings, ...articles];
 
-export default function NovedadesPage() {
+export default async function NovedadesPage() {
+  const t = await textos();
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
       <div className="bg-[#111111] text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-widest">Blog</span>
-          <h1 className="text-4xl md:text-5xl font-bold mt-2 mb-3">Novedades</h1>
-          <p className="text-gray-400 text-lg">Guías, consejos y tendencias del mundo de los pisos y revestimientos.</p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-2 mb-3">{t.home.novedadesTitulo}</h1>
+          <p className="text-gray-400 text-lg">{t.home.novedadesSubtitulo}</p>
         </div>
       </div>
 
@@ -68,7 +70,7 @@ export default function NovedadesPage() {
                     {card.excerpt}
                   </p>
                   <div className="mt-6 flex items-center gap-1 text-[#DF8635] text-sm font-semibold">
-                    Leer más
+                    {t.home.leerMas}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>

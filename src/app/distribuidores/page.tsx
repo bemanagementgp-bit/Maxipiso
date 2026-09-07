@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/components/providers/IdiomaProvider";
+
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { distributors } from "@/data/distributors";
@@ -27,6 +29,7 @@ const WA_ICON = (
 );
 
 export default function DistribuidoresPage() {
+  const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -66,8 +69,8 @@ export default function DistribuidoresPage() {
       {/* Header */}
       <div className="bg-[#111111] text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold mb-2">Distribuidores</h1>
-          <p className="text-gray-300 text-lg">La red de distribución más grande del país</p>
+          <h1 className="text-4xl font-bold mb-2">{t.distribuidores.etiqueta}</h1>
+          <p className="text-gray-300 text-lg">{t.distribuidores.titulo}</p>
         </div>
       </div>
 
@@ -161,7 +164,7 @@ export default function DistribuidoresPage() {
               href="#ser-distribuidor"
               className="w-full flex items-center justify-center gap-2 bg-[#111111] text-white font-semibold py-3 rounded-xl hover:bg-[#333] transition-colors text-sm"
             >
-              Quiero ser distribuidor
+              {t.distribuidores.quieroSer}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -176,11 +179,11 @@ export default function DistribuidoresPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <div className="text-center mb-8">
               <span className="inline-block bg-[#DF8635]/10 text-[#DF8635] text-sm font-semibold px-4 py-1 rounded-full mb-3">
-                ¿Querés sumarte?
+                {t.distribuidores.sumateTitulo}
               </span>
-              <h2 className="text-2xl font-bold text-[#111111]">Quiero ser distribuidor</h2>
+              <h2 className="text-2xl font-bold text-[#111111]">{t.distribuidores.quieroSer}</h2>
               <p className="text-gray-500 mt-2 text-sm">
-                Completá el formulario y te contactamos con toda la información.
+                {t.distribuidores.sumateTexto}
               </p>
             </div>
 
@@ -191,52 +194,52 @@ export default function DistribuidoresPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="font-bold text-[#111111] mb-2">¡Solicitud enviada!</h3>
-                <p className="text-gray-500 text-sm">Te contactaremos a la brevedad.</p>
+                <h3 className="font-bold text-[#111111] mb-2">{t.distribuidores.enviada}</h3>
+                <p className="text-gray-500 text-sm">{t.distribuidores.enviadaDetalle}</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Nombre *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoNombre} *</label>
                     <input {...register("nombre", { required: true })} placeholder="Tu nombre" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
-                    {errors.nombre && <p className="text-red-500 text-xs mt-1">Requerido</p>}
+                    {errors.nombre && <p className="text-red-500 text-xs mt-1">{t.distribuidores.requerido}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Empresa</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoEmpresa}</label>
                     <input {...register("empresa")} placeholder="Nombre de tu negocio" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Ciudad *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.distribuidores.campoCiudad} *</label>
                     <input {...register("ciudad", { required: true })} placeholder="Tu ciudad" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
-                    {errors.ciudad && <p className="text-red-500 text-xs mt-1">Requerido</p>}
+                    {errors.ciudad && <p className="text-red-500 text-xs mt-1">{t.distribuidores.requerido}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Provincia *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.distribuidores.campoProvincia} *</label>
                     <input {...register("provincia", { required: true })} placeholder="Tu provincia" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
-                    {errors.provincia && <p className="text-red-500 text-xs mt-1">Requerido</p>}
+                    {errors.provincia && <p className="text-red-500 text-xs mt-1">{t.distribuidores.requerido}</p>}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Teléfono *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoTelefono} *</label>
                     <input {...register("telefono", { required: true })} placeholder="+54 221 ..." className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
-                    {errors.telefono && <p className="text-red-500 text-xs mt-1">Requerido</p>}
+                    {errors.telefono && <p className="text-red-500 text-xs mt-1">{t.distribuidores.requerido}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Email *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoEmail} *</label>
                     <input {...register("email", { required: true, pattern: /^\S+@\S+$/i })} placeholder="tu@email.com" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" />
-                    {errors.email && <p className="text-red-500 text-xs mt-1">Email inválido</p>}
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{t.distribuidores.emailInvalido}</p>}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#111111] mb-1">¿Qué vendés actualmente?</label>
+                  <label className="block text-sm font-medium text-[#111111] mb-1">{t.distribuidores.campoQueVendes}</label>
                   <textarea {...register("mensaje")} rows={3} placeholder="Contanos sobre tu negocio..." className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635] resize-none" />
                 </div>
                 {formStatus === "error" && (
-                  <p className="text-red-500 text-sm">Error al enviar. Intentá por WhatsApp.</p>
+                  <p className="text-red-500 text-sm">{t.distribuidores.errorEnvio}</p>
                 )}
                 <button
                   type="submit"

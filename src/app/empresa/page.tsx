@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/components/providers/IdiomaProvider";
+import type { Diccionario } from "@/lib/i18n";
 import Link from "next/link";
 
 function useInView(threshold = 0.15) {
@@ -47,53 +49,32 @@ function useCounter(target: number, active: boolean, duration = 1800, delay = 0)
   return val;
 }
 
-const valores = [
-  {
-    titulo: "Liderazgo",
-    descripcion:
-      "Somos el N°1 en Argentina en importación y distribución de pisos y revestimientos. Ese liderazgo se construye día a día con trabajo y compromiso.",
-    icon: (
+const valoresDe = (t: Diccionario) => [
+  { titulo: t.empresa.valores.liderazgo.titulo,  descripcion: t.empresa.valores.liderazgo.texto,  icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    ),
-  },
-  {
-    titulo: "Calidad de importación",
-    descripcion:
-      "Importamos directamente desde los mejores orígenes del mundo. Cada producto pasa por un proceso de selección riguroso antes de llegar a nuestra red.",
-    icon: (
+  ) },
+  { titulo: t.empresa.valores.calidad.titulo,    descripcion: t.empresa.valores.calidad.texto,    icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    ),
-  },
-  {
-    titulo: "Compromiso con el cliente",
-    descripcion:
-      "Distribuidores y profesionales confían en Maxipiso porque cumplimos: stock garantizado, precios estables y atención personalizada.",
-    icon: (
+  ) },
+  { titulo: t.empresa.valores.compromiso.titulo, descripcion: t.empresa.valores.compromiso.texto, icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-    ),
-  },
-  {
-    titulo: "Innovación constante",
-    descripcion:
-      "Incorporamos permanentemente nuevas líneas, tendencias y materiales del mercado internacional para mantenernos siempre un paso adelante.",
-    icon: (
+  ) },
+  { titulo: t.empresa.valores.innovacion.titulo, descripcion: t.empresa.valores.innovacion.texto, icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    ),
-  },
+  ) },
 ];
 
-const hitos = [
-  { año: "1965", hecho: "Fundación de Maxipiso en La Plata, Buenos Aires. Primeros pasos en la comercialización de pisos cerámicos nacionales." },
-  { año: "1978", hecho: "Apertura del primer depósito propio en La Plata. Consolidación como referente regional en el rubro." },
-  { año: "1989", hecho: "Expansión comercial hacia el interior de la provincia de Buenos Aires. Primeros distribuidores exclusivos." },
-  { año: "1997", hecho: "Inicio de las primeras importaciones directas desde España e Italia, marcando un antes y un después en la propuesta de valor." },
-  { año: "2005", hecho: "Incorporación de porcelanato rectificado importado. Lanzamiento de las líneas simil madera y simil piedra." },
-  { año: "2012", hecho: "Apertura de la red de distribuidores a nivel nacional. Cobertura en más de 15 provincias." },
-  { año: "2018", hecho: "Inauguración del nuevo centro de distribución con más de 20.000 m² de depósito. Lanzamiento de la línea Swan Timber de maderas macizas." },
-  { año: "2024", hecho: "Más de 1.300 clientes activos, presencia en las 24 provincias y consolidación como el mayorista N°1 en Argentina." },
-];
+
+const ANIOS = ["1965", "1978", "1989", "1997", "2005", "2012", "2018", "2024"];
+/** El año es un dato; el hecho, texto que se traduce. Van en el mismo orden. */
+const hitosDe = (t: Diccionario) =>
+  ANIOS.map((anio, i) => ({ año: anio, hecho: t.empresa.hitos[i] ?? "" }));
+
 
 export default function EmpresaPage() {
+  const t = useT();
+  const valores = valoresDe(t);
+  const hitos = hitosDe(t);
   const hero = useInView(0.1);
   const flota = useInView(0.1);
   const valores_ = useInView(0.1);
@@ -115,15 +96,14 @@ export default function EmpresaPage() {
             <div>
               <span className="inline-flex items-center gap-2 text-[#DF8635] text-xs font-semibold uppercase tracking-widest mb-4">
                 <span className="w-6 h-px bg-[#DF8635]" />
-                Nuestra historia
+                {t.empresa.historiaEtiqueta}
               </span>
               <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
-                Más de 30 años siendo
-                <span className="text-[#DF8635]"> el N°1 en Argentina.</span>
+                {t.empresa.historiaTituloA}
+                <span className="text-[#DF8635]">{t.empresa.historiaTituloB}</span>
               </h1>
               <p className="text-gray-400 text-base leading-relaxed">
-                Maxipiso nació con una visión clara: acercar los mejores pisos y revestimientos del mundo
-                a distribuidores y profesionales argentinos, con el mejor precio y el mayor stock del país.
+                {t.empresa.historiaTexto}
               </p>
             </div>
           </div>
@@ -175,13 +155,13 @@ export default function EmpresaPage() {
             {/* Texto */}
             <div>
               <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">
-                Las personas detrás de Maxipiso
+                {t.empresa.equipoEtiqueta}
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-[#111111] leading-tight mb-6">
-                Un equipo que mueve al país
+                {t.empresa.equipoTitulo}
               </h2>
               <p className="text-gray-500 leading-relaxed mb-8">
-                Más de 30 años de historia se sostienen gracias a las personas. Logística, equipo y el día a día de Maxipiso. Seguinos en Instagram y enterate de todo lo que pasa en el N°1 de Argentina.
+                {t.empresa.equipoTexto}
               </p>
               <div className="flex gap-10 mb-10">
                 {[
@@ -204,7 +184,7 @@ export default function EmpresaPage() {
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                 </svg>
-                Seguinos en Instagram
+                {t.empresa.seguinosInstagram}
               </a>
             </div>
           </div>
@@ -246,20 +226,20 @@ export default function EmpresaPage() {
                 transitionDelay: "150ms",
               }}
             >
-              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">Logística propia</span>
+              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">{t.empresa.flotaEtiqueta}</span>
               <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-8">
-                Flota propia.<br /> Llegamos a donde estés.
+                {t.empresa.flotaTituloA}<br /> {t.empresa.flotaTituloB}
               </h2>
               <p className="text-gray-400 leading-relaxed mb-10 text-lg">
-                Contamos con nuestra propia flota de camiones para garantizar entregas a todo el país. Sin terceros, sin demoras. Desde La Plata hasta la Patagonia, el stock llega donde lo necesitás.
+                {t.empresa.flotaTexto}
               </p>
 
               <ul className="space-y-5">
                 {[
-                  { text: "Entregas en las 24 provincias", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" },
-                  { text: "Flota propia", icon: "M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" },
-                  { text: "Despacho inmediato desde stock", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
-                  { text: "Seguimiento de tu pedido", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+                  ...t.empresa.flotaPuntos.map((text, i) => ({
+                    text,
+                    icon: ["M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z", "M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0", "M13 10V3L4 14h7v7l9-11h-7z", "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"][i],
+                  })),
                 ].map(({ text, icon }, i) => (
                   <li
                     key={text}
@@ -284,15 +264,15 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-      {/* Nuestros valores */}
+      {/* {t.empresa.valoresTitulo} */}
       <section className="py-20 bg-[#DF8635]" ref={valores_.ref}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <span className="text-white/70 text-sm font-semibold uppercase tracking-widest">
-              Lo que nos define
+              {t.empresa.valoresEtiqueta}
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-white mt-3">
-              Nuestros valores
+              {t.empresa.valoresTitulo}
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -325,17 +305,17 @@ export default function EmpresaPage() {
       <section className="bg-[#111111] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Impulsa tu empresa con el N°1
+            {t.empresa.ctaTitulo}
           </h2>
           <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
-            Sumate como distribuidor o contactá a nuestro equipo de ventas para conocer todas las opciones.
+            {t.empresa.ctaTexto}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/distribuidores#ser-distribuidor"
               className="bg-[#DF8635] text-white font-semibold px-8 py-3 rounded-full hover:bg-[#c97220] transition-colors"
             >
-              Quiero ser distribuidor
+              {t.empresa.ctaDistribuidor}
             </Link>
             <a
               href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20Maxipiso"
@@ -346,7 +326,7 @@ export default function EmpresaPage() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
-              Contactar Asesor
+              {t.nav.contactarAsesor}
             </a>
           </div>
         </div>

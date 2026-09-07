@@ -416,13 +416,25 @@ clave mal escrita es un error de tipos y no un `undefined` que se cuela hasta la
 `useT()` para componentes de cliente; `textos()` (`lib/i18n/servidor.ts`) para los de
 servidor, que es como se traduce la ficha de producto sin volverla cliente.
 
+#### El chatbot también sigue al idioma
+
+Nacho contesta en el idioma en que la persona está viendo el sitio. **El prompt del sistema
+sigue en español** —lo escribió y lo mantiene el equipo— y sólo se le suma una instrucción de
+idioma al final: traducir el prompt entero a seis idiomas serían seis textos que mantener
+sincronizados, y bastaría que uno quedara viejo para que el bot contestara distinto según el
+idioma. El código que llega del cliente se valida contra la lista cerrada de idiomas: termina
+dentro del prompt, así que no puede ser texto libre.
+
 #### Detalles que no se traducen
 
 - **Los mensajes de WhatsApp van siempre en español.** Los lee el vendedor, no el cliente:
   traducirlos obligaría al equipo a leer alemán.
 - Teléfonos, dirección y horarios son datos, no texto.
 - Las `keywords` del `<meta>` apuntan al mercado argentino, que es donde se busca este catálogo.
-- El panel de administración queda en español: lo usa el equipo.
+- El panel de administración queda en español: lo usa el equipo. Su login (`/auth/login`)
+  también; el del catálogo (`/catalogo/login`) sí se traduce, porque lo usa el cliente.
+- Las notas de Novedades: traducir el título de una nota que lleva a un artículo en español
+  es peor que dejarlo.
 
 En el selector, **cada idioma se muestra en su propio idioma** ("Deutsch", no "Alemán"): quien
 lo busca no lee español, y es la única forma de que lo encuentre.
