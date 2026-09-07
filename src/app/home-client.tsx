@@ -11,6 +11,8 @@ import HeroCarousel from "@/components/home/HeroCarousel";
 import { articles as novedadesArticles } from "@/data/novedades";
 import type { IconType } from "react-icons";
 import { hrefDeLinea, type LineaHome } from "@/lib/lineas-home";
+import { useT } from "@/components/providers/IdiomaProvider";
+import type { Diccionario } from "@/lib/i18n";
 
 const novedadesLandings = [
   { slug: "ofertas-mayoristas", title: "Ofertas imperdibles — hasta 30% OFF", excerpt: "Descuentos exclusivos en pisos y revestimientos. Packs por cantidad, envío inmediato y stock actualizado.", image: "/maderas.jpg", category: "Ofertas", date: "Actualizado permanentemente" },
@@ -71,48 +73,20 @@ const ICONOS_POR_SLUG: Record<string, IconType> = {
   "accesorios": FiTool,
 };
 
-const stats = [
-  { value: 1300,    label: "clientes" },
-  { value: 1500000, label: "m² de stock" },
-  { value: 60,      label: "años" },
-  { value: 20000,   label: "m² de depósito" },
+const statsDe = (t: Diccionario) => [
+  { value: 1300,    label: t.home.statsClientes },
+  { value: 1500000, label: t.home.statsStock },
+  { value: 60,      label: t.home.statsAnios },
+  { value: 20000,   label: t.home.statsDeposito },
 ];
 
-const features = [
-  {
-    title: "Importación directa",
-    description: "Importamos directamente de origen para garantizar la mejor calidad y precio.",
-    Icon: MdVerifiedUser,
-  },
-  {
-    title: "Cobertura nacional",
-    description: "Red de distribuidores en todo el país. Del norte al sur, llegamos donde estés.",
-    Icon: FiMapPin,
-  },
-  {
-    title: "Amplia variedad",
-    description: "+1000 productos en stock, la mayor variedad del mercado.",
-    Icon: FiPackage,
-  },
-  {
-    title: "Asesoramiento técnico",
-    description: "Más de 60 años de experiencia a tu disposición para cada proyecto.",
-    Icon: FiSettings,
-  },
-];
+const featuresDe = (t: Diccionario) => [
+  { title: t.home.beneficios.importacion.titulo,   description: t.home.beneficios.importacion.texto,   Icon: MdVerifiedUser },
+  { title: t.home.beneficios.cobertura.titulo,     description: t.home.beneficios.cobertura.texto,     Icon: FiMapPin },
+  { title: t.home.beneficios.variedad.titulo,      description: t.home.beneficios.variedad.texto,      Icon: FiPackage },
+  { title: t.home.beneficios.asesoramiento.titulo, description: t.home.beneficios.asesoramiento.texto, Icon: FiSettings },
+]
 
-const TICKER_ITEMS = [
-  "Importación directa",
-  "+1000 distribuidores activos",
-  "Entregas a todo el país",
-  "+60 años de trayectoria",
-  "Stock garantizado",
-  "El N°1 en Argentina",
-  "Distribución mayorista",
-  "Asesoramiento técnico",
-  "5 continentes de importación",
-  "La mayor variedad del mercado",
-];
 
 const CDN = "https://cdn.shopify.com/s/files/1/0656/7251/1711";
 
@@ -138,31 +112,20 @@ const ROW2_IMGS = [
   `${CDN}/products/alisorustico_b5c83623-dd1d-442c-a658-cf5e666df667.jpg`,
 ];
 
-const CADENA = [
-  {
-    step: "01",
-    title: "Importación directa",
-    desc: "Trabajamos con los mejores fabricantes de Europa, Asia y América. Sin intermediarios, precio de origen.",
-    Icon: FaGlobe,
-  },
-  {
-    step: "02",
-    title: "Stock permanente",
-    desc: "Depósito propio con miles de m² en stock. Disponibilidad inmediata para pedidos de cualquier volumen.",
-    Icon: MdWarehouse,
-  },
-  {
-    step: "03",
-    title: "Distribución nacional",
-    desc: "24 provincias cubiertas. Red de distribuidores activos en todo el país con despacho garantizado.",
-    Icon: MdOutlineLocalShipping,
-  },
+const cadenaDe = (t: Diccionario) => [
+  { step: "01", title: t.home.cadena.importacion.titulo,  desc: t.home.cadena.importacion.texto,  Icon: FaGlobe },
+  { step: "02", title: t.home.cadena.stock.titulo,        desc: t.home.cadena.stock.texto,        Icon: MdWarehouse },
+  { step: "03", title: t.home.cadena.distribucion.titulo, desc: t.home.cadena.distribucion.texto, Icon: MdOutlineLocalShipping },
 ];
+
 
 // ── Ticker ────────────────────────────────────────────────────────────────────
 
 function Ticker() {
-  const items = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  const t = useT();
+  // Duplicado a proposito: la animacion desplaza la mitad del ancho y vuelve al
+  // origen, y con una sola copia se veria el corte.
+  const items = [...t.home.ticker, ...t.home.ticker];
   return (
     <div className="bg-[#111111] py-3 overflow-hidden border-t border-white/5">
       <div className="flex animate-ticker whitespace-nowrap">
@@ -205,6 +168,7 @@ function StatCard({ value, label, active, delay }: {
 }
 
 function StatsSection() {
+  const t = useT();
   const { ref, inView } = useInView(0.2);
   return (
     <section ref={ref} className="bg-[#0a0a0a] py-20 overflow-hidden relative">
@@ -212,11 +176,11 @@ function StatsSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`text-center mb-16 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em]">
-            Los números hablan solos
+            {t.home.statsEtiqueta}
           </p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 lg:divide-x lg:divide-white/10">
-          {stats.map((s, i) => (
+          {statsDe(t).map((s, i) => (
             <StatCard
               key={s.label}
               value={s.value}
@@ -343,6 +307,7 @@ function NovedadesCarousel() {
 // ── Product gallery marquee ───────────────────────────────────────────────────
 
 function GalleryMarquee() {
+  const t = useT();
   const r1 = [...ROW1_IMGS, ...ROW1_IMGS];
   const r2 = [...ROW2_IMGS, ...ROW2_IMGS];
   return (
@@ -374,7 +339,7 @@ function GalleryMarquee() {
           href="/catalogo"
           className="inline-flex items-center gap-2 border border-[#111111] text-[#111111] text-sm font-semibold px-7 py-3 rounded-full hover:bg-[#111111] hover:text-white transition-colors"
         >
-          Ver catálogo completo
+          {t.nav.verCatalogoCompleto}
           <FiArrowRight size={16} />
         </Link>
       </Reveal>
@@ -385,6 +350,7 @@ function GalleryMarquee() {
 // ── Value chain ────────────────────────────────────────────────────────────────
 
 function CadenaValor() {
+  const t = useT();
   return (
     <section className="py-24 bg-[#F9F8F6]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -392,15 +358,15 @@ function CadenaValor() {
         <Reveal className="mt-14">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div>
-              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">Importación directa</span>
+              <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-4 block">{t.home.importacionEtiqueta}</span>
               <h3 className="text-2xl md:text-3xl font-bold text-[#111111] leading-tight mb-4">
-                Del fabricante a tu negocio, sin intermediarios
+                {t.home.importacion.titulo}
               </h3>
               <p className="text-gray-500 leading-relaxed mb-6">
-                Importamos directamente desde los mejores fabricantes de Europa, Asia y América. Eso nos permite ofrecerte el precio más competitivo del mercado con la mayor variedad disponible.
+                {t.home.importacion.texto}
               </p>
               <ul className="space-y-3">
-                {["Stock permanente de más de 1.000 productos", "Control de calidad en origen", "Precios de mayorista directo", "Envíos a todo el país con flota propia"].map((item) => (
+                {t.home.importacion.puntos.map((item) => (
                   <li key={item} className="flex items-center gap-3 text-gray-600 text-sm">
                     <span className="w-5 h-5 rounded-full bg-[#DF8635]/15 flex items-center justify-center shrink-0 text-[#DF8635]">
                       <FiCheck size={12} strokeWidth={3} />
@@ -433,6 +399,7 @@ function CadenaValor() {
 type FormData = { nombre: string; empresa: string; telefono: string; email: string; mensaje: string };
 
 function ContactSection() {
+  const t = useT();
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
 
@@ -448,8 +415,8 @@ function ContactSection() {
     <section id="contacto" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center mb-12">
-          <span className="text-[#DF8635] text-sm font-semibold uppercase tracking-widest">Contacto</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mt-3">¿En qué te podemos ayudar?</h2>
+          <span className="text-[#DF8635] text-sm font-semibold uppercase tracking-widest">{t.home.contactoEtiqueta}</span>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mt-3">{t.home.contactoTitulo}</h2>
           <p className="text-gray-500 mt-3 max-w-xl mx-auto">Completá el formulario y un asesor te responde a la brevedad. También podés escribirnos por WhatsApp.</p>
         </Reveal>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -470,7 +437,7 @@ function ContactSection() {
                   <FiMail size={20} />
                 </div>
                 <div>
-                  <p className="font-semibold text-[#111111]">Email de ventas</p>
+                  <p className="font-semibold text-[#111111]">{t.home.emailVentas}</p>
                   <a href="mailto:ventas@maxipiso.com.ar" className="text-[#DF8635] hover:underline">ventas@maxipiso.com.ar</a>
                 </div>
               </div>
@@ -485,43 +452,43 @@ function ContactSection() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
                     <FiCheck size={32} strokeWidth={2.5} />
                   </div>
-                  <h3 className="text-xl font-bold text-[#111111] mb-2">¡Mensaje enviado!</h3>
-                  <p className="text-gray-500 mb-6">Te contactaremos a la brevedad.</p>
-                  <button onClick={() => setStatus("idle")} className="text-[#DF8635] underline text-sm">Enviar otro mensaje</button>
+                  <h3 className="text-xl font-bold text-[#111111] mb-2">{t.home.mensajeEnviado}</h3>
+                  <p className="text-gray-500 mb-6">{t.home.mensajeEnviadoDetalle}</p>
+                  <button onClick={() => setStatus("idle")} className="text-[#DF8635] underline text-sm">{t.home.enviarOtro}</button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-medium text-[#111111] mb-1">Nombre *</label>
+                      <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoNombre} *</label>
                       <input {...register("nombre", { required: "Requerido" })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" placeholder="Tu nombre" />
                       {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#111111] mb-1">Empresa</label>
+                      <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoEmpresa}</label>
                       <input {...register("empresa")} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" placeholder="Nombre de la empresa" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-medium text-[#111111] mb-1">Teléfono *</label>
+                      <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoTelefono} *</label>
                       <input {...register("telefono", { required: "Requerido" })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" placeholder="+54 221 ..." />
                       {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#111111] mb-1">Email *</label>
+                      <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoEmail} *</label>
                       <input {...register("email", { required: "Requerido", pattern: { value: /^\S+@\S+$/i, message: "Email inválido" } })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635]" placeholder="tu@email.com" />
                       {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">Mensaje *</label>
+                    <label className="block text-sm font-medium text-[#111111] mb-1">{t.home.campoMensaje} *</label>
                     <textarea {...register("mensaje", { required: "Requerido" })} rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#DF8635] resize-none" placeholder="Contanos en qué te podemos ayudar..." />
                     {errors.mensaje && <p className="text-red-500 text-xs mt-1">{errors.mensaje.message}</p>}
                   </div>
-                  {status === "error" && <p className="text-red-500 text-sm">Hubo un error al enviar. Intentá por WhatsApp.</p>}
+                  {status === "error" && <p className="text-red-500 text-sm">{t.home.errorEnvio}</p>}
                   <button type="submit" disabled={status === "loading"} className="w-full bg-[#DF8635] text-white font-semibold py-3 rounded-xl hover:bg-[#c97220] transition-colors disabled:opacity-60">
-                    {status === "loading" ? "Enviando..." : "Enviar mensaje"}
+                    {status === "loading" ? t.home.enviando : t.home.enviar}
                   </button>
                 </form>
               )}
@@ -541,6 +508,7 @@ function ContactSection() {
  * fetch del lado del cliente.
  */
 export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
+  const t = useT();
   return (
     <>
       {/* Hero */}
@@ -566,16 +534,16 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
               style={{ animationDelay: "0.05s" }}
             >
               <span className="w-8 h-px bg-[#DF8635]" />
-              N°1 en Argentina
+              {t.home.heroEtiqueta}
             </span>
 
             <h1
               className="text-5xl md:text-6xl lg:text-7xl font-bold leading-none mb-8 text-white text-balance animate-fade-up"
               style={{ animationDelay: "0.2s" }}
             >
-              Líderes en{" "}
-              <span className="text-[#DF8635]">importación y distribución</span>{" "}
-              de pisos, maderas y revestimientos.
+              {t.home.heroTituloA}{" "}
+              <span className="text-[#DF8635]">{t.home.heroTituloB}</span>{" "}
+              {t.home.heroTituloC}
             </h1>
 
             <div
@@ -586,7 +554,7 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
                 href="/catalogo"
                 className="bg-[#DF8635] text-white font-semibold px-8 py-3.5 rounded-full hover:bg-[#c97220] transition-colors text-base"
               >
-                Ver catálogo
+                {t.home.verCatalogo}
               </Link>
               <a
                 href="https://wa.me/542214388894?text=Hola%2C%20quiero%20información%20sobre%20productos%20Maxipiso"
@@ -595,7 +563,7 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
                 className="border-2 border-white text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white hover:text-[#111111] transition-colors text-base flex items-center gap-2"
               >
                 <FaWhatsapp size={20} />
-                Contactar Asesor
+                {t.home.contactarAsesor}
               </a>
             </div>
           </div>
@@ -610,12 +578,12 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
       <section className="bg-white py-20">
         <div className="max-w-[104rem] mx-auto px-4 sm:px-6 lg:px-6">
           <Reveal className="text-center mb-12">
-            <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3 block">Catálogo</span>
+            <span className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-3 block">{t.home.lineasEtiqueta}</span>
             <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
-              Nuestras líneas de productos
+              {t.home.lineasTitulo}
             </h2>
             <p className="text-gray-400 text-lg mt-3">
-              La mayor variedad en importación, en un solo lugar
+              {t.home.lineasSubtitulo}
             </p>
           </Reveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -682,7 +650,7 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
               href="/catalogo"
               className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-3 rounded-full transition-all duration-300"
             >
-              Ver catálogo completo
+              {t.nav.verCatalogoCompleto}
               <FiArrowRight size={16} />
             </Link>
           </Reveal>
@@ -697,10 +665,10 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center mb-10">
             <p className="text-[#DF8635] text-xs font-semibold uppercase tracking-[0.3em] mb-2">
-              Blog & Guías
+              {t.home.novedadesEtiqueta}
             </p>
             <h2 className="text-3xl md:text-4xl font-bold text-[#111111]">
-              Novedades
+              {t.home.novedadesTitulo}
             </h2>
           </Reveal>
         </div>
@@ -742,15 +710,15 @@ export default function HomeClient({ lineas }: { lineas: LineaHome[] }) {
               <Reveal>
                 <span className="inline-flex items-center gap-2 text-[#DF8635] text-sm font-semibold uppercase tracking-widest mb-4">
                   <span className="w-8 h-px bg-[#DF8635]" />
-                  Más de 60 años de experiencia
+                  {t.home.experienciaEtiqueta}
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-8">
-                  ¿Por qué elegirnos?
+                  {t.home.porQueTitulo}
                 </h2>
               </Reveal>
 
               <div className="space-y-6 mb-10">
-                {features.map((f, i) => (
+                {featuresDe(t).map((f, i) => (
                   <Reveal key={f.title} delay={i * 0.08}>
                     <div className="flex gap-4 items-start group">
                       <div className="shrink-0 w-11 h-11 rounded-xl bg-[#DF8635]/10 flex items-center justify-center text-[#DF8635] group-hover:bg-[#DF8635] group-hover:text-white transition-colors">

@@ -3,6 +3,8 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import AuthSessionProvider from "@/components/providers/SessionProvider";
 import ShellLayout from "@/components/layout/ShellLayout";
+import { IdiomaProvider } from "@/components/providers/IdiomaProvider";
+import { idiomaActual, textos } from "@/lib/i18n/servidor";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -22,32 +24,45 @@ const geist = Geist({
 const FAVICON_URL =
   "https://res.cloudinary.com/dnaom2evd/image/upload/v1787081441/favicon_sp5ild.png";
 
-export const metadata: Metadata = {
-  title: "Maxipiso | Líderes en Pisos, Maderas y Revestimientos",
-  description:
-    "Maxipiso, el N°1 en Argentina en importación y distribución de pisos, maderas y revestimientos. Porcelanato, madera, cerámica y accesorios para distribuidores y profesionales.",
-  keywords: "pisos mayorista, porcelanato, madera, cerámica, revestimientos, distribuidores, importación argentina",
-  // El favicon vive en Cloudinary, no en `src/app/icon.png`. Esta entrada gana
-  // sobre la convención de archivo de Next, que si no inyecta su propio
-  // `<link rel="icon">` y el navegador se queda con el que encuentra primero.
-  icons: {
-    icon: [{ url: FAVICON_URL, type: "image/png" }],
-    shortcut: [{ url: FAVICON_URL, type: "image/png" }],
-    apple: [{ url: FAVICON_URL }],
-  },
-};
+/**
+ * El titulo y la descripcion tambien siguen al idioma.
+ *
+ * Es `generateMetadata` y no una constante porque depende de la cookie: un
+ * buscador o un enlace compartido tienen que mostrar el texto en el idioma de
+ * quien lo vio. Las `keywords` quedan en espanol: apuntan al mercado argentino,
+ * que es donde se busca este catalogo.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await textos();
+  return {
+    title: t.meta.titulo,
+    description: t.meta.descripcion,
+    keywords: "pisos mayorista, porcelanato, madera, cerámica, revestimientos, distribuidores, importación argentina",
+    // El favicon vive en Cloudinary, no en `src/app/icon.png`. Esta entrada gana
+    // sobre la convención de archivo de Next, que si no inyecta su propio
+    // `<link rel="icon">` y el navegador se queda con el que encuentra primero.
+    icons: {
+      icon: [{ url: FAVICON_URL, type: "image/png" }],
+      shortcut: [{ url: FAVICON_URL, type: "image/png" }],
+      apple: [{ url: FAVICON_URL }],
+    },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const idioma = await idiomaActual();
   return (
-    <html lang="es" className={`${geist.variable} h-full antialiased`} data-scroll-behavior="smooth">
+    <html lang={idioma} className={`${geist.variable} h-full antialiased`} data-scroll-behavior="smooth">
       <body className="min-h-full flex flex-col">
-        <AuthSessionProvider>
-          <ShellLayout>{children}</ShellLayout>
-        </AuthSessionProvider>
+        <IdiomaProvider inicial={idioma}>
+          <AuthSessionProvider>
+            <ShellLayout>{children}</ShellLayout>
+          </AuthSessionProvider>
+        </IdiomaProvider>
       </body>
     </html>
   );

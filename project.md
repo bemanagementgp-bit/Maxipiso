@@ -380,6 +380,53 @@ pueda ejecutarse como HTML/JS.
 
 ## 8. Flujos principales
 
+### 8.0 Idiomas del sitio público
+
+Seis idiomas: **español (base), inglés, alemán, francés, italiano y portugués**.
+
+**Se traduce el sitio, no los productos.** Nombres y descripciones salen de la base, se cargan
+en español y quedan así: son miles de filas, y traducirlas obligaría a escribir cada una en
+cinco idiomas cada vez que se carga un producto. El contenido editorial de Novedades tampoco
+se traduce — traducir el título de una nota que lleva a un artículo en español es peor que
+dejarlo.
+
+#### La cookie, no la URL
+
+El idioma vive en una **cookie**, y la URL no cambia. La alternativa estándar —`/en/catalogo`,
+`/de/catalogo`— es mejor para Google, pero obliga a mover todas las rutas bajo `app/[locale]/`,
+y eso toca la navegación del catálogo, que es la parte más delicada del sitio (§8.1). Si más
+adelante hace falta el SEO por idioma, se puede montar encima de esto sin tirar nada.
+
+En la **primera visita**, cuando todavía no hay cookie, el idioma sale del `Accept-Language`
+del navegador: un alemán que entra por primera vez ve el sitio en alemán sin buscar el
+selector. Ese cálculo pasa en el servidor y baja por prop al provider, así el HTML **ya llega
+traducido** y no hay un parpadeo de español a alemán al hidratar. El `<html lang>` y el
+`<title>` siguen al idioma por lo mismo.
+
+#### Los diccionarios
+
+Uno por idioma en `lib/i18n/diccionarios/`. **El español es la fuente de verdad**: los otros
+cinco se tipan contra él (`Diccionario = typeof es`), así que agregar una clave rompe la
+compilación de los otros cinco hasta traducirla. Un texto sin traducir tiene que aparecer al
+compilar, no en producción.
+
+Se acceden como objeto (`t.nav.inicio`) y no con rutas en string (`t("nav.inicio")`): una
+clave mal escrita es un error de tipos y no un `undefined` que se cuela hasta la pantalla.
+
+`useT()` para componentes de cliente; `textos()` (`lib/i18n/servidor.ts`) para los de
+servidor, que es como se traduce la ficha de producto sin volverla cliente.
+
+#### Detalles que no se traducen
+
+- **Los mensajes de WhatsApp van siempre en español.** Los lee el vendedor, no el cliente:
+  traducirlos obligaría al equipo a leer alemán.
+- Teléfonos, dirección y horarios son datos, no texto.
+- Las `keywords` del `<meta>` apuntan al mercado argentino, que es donde se busca este catálogo.
+- El panel de administración queda en español: lo usa el equipo.
+
+En el selector, **cada idioma se muestra en su propio idioma** ("Deutsch", no "Alemán"): quien
+lo busca no lee español, y es la única forma de que lo encuentre.
+
 ### 8.1 Catálogo público
 
 `/catalogo` (client component) → `GET /api/catalogo/todos`.

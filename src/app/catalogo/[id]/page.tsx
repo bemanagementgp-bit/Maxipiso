@@ -26,6 +26,7 @@ import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
 import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } from "@/lib/stickers";
 import { CAMPOS_DOC, normalizarLinkDoc } from "@/lib/doc-links";
+import { textos } from "@/lib/i18n/servidor";
 
 /**
  * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
@@ -290,6 +291,7 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const t = await textos();
   const session = await getServerSession(authOptions);
   const isAuthenticated = !!session;
 
@@ -367,12 +369,20 @@ export default async function ProductPage({
    * de instalación a un zócalo.
    */
   type DocCard = { title: string; href: string; esArchivo: boolean };
+  const rotuloDoc: Record<string, string> = {
+    archivoInstalacion: t.producto.instalacion,
+    fichaTecnica: t.producto.fichaTecnica,
+    garantia: t.producto.garantia,
+  };
   const docCards = CAMPOS_DOC.map(({ key, label }): DocCard | null => {
+    const rotulo = rotuloDoc[key] ?? label;
     const link = normalizarLinkDoc(raw[key]);
-    if (link) return { title: label, href: link, esArchivo: true };
+    if (link) return { title: rotulo, href: link, esArchivo: true };
     if (TABLE_CATEGORIA[tableKey] !== "Pisos") return null;
     return {
-      title: label,
+      title: rotulo,
+      // El mensaje de WhatsApp va SIEMPRE en espanol: lo lee el vendedor, no el
+      // cliente. Traducirlo obligaria al equipo a leer aleman.
       href: buildWA(`Hola, quiero ${label.toLowerCase()} de ${product.nombre}.`),
       esArchivo: false,
     };
@@ -434,14 +444,14 @@ export default async function ProductPage({
       {/* Header negro */}
       <div className="w-full bg-[#111]">
         <div className="max-w-[1260px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <h1 className="text-xl font-bold text-white tracking-tight">Detalle de producto</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">{t.producto.detalle}</h1>
           <nav
-            aria-label="Migas de pan"
+            aria-label={t.producto.migas}
             className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm md:text-[15px] text-gray-200"
           >
-            <Link href="/" className="hover:text-gray-400 transition-colors">Inicio</Link>
+            <Link href="/" className="hover:text-gray-400 transition-colors">{t.nav.inicio}</Link>
             <FiChevronRight size={14} className="text-gray-500 shrink-0" />
-            <Link href="/catalogo" className="hover:text-gray-400 transition-colors">Catálogo</Link>
+            <Link href="/catalogo" className="hover:text-gray-400 transition-colors">{t.nav.catalogo}</Link>
             {productCatalogPath.map((segment, index) => (
               <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-2">
                 <FiChevronRight size={14} className="text-gray-500 shrink-0" />
@@ -489,7 +499,7 @@ export default async function ProductPage({
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[#111111] text-sm uppercase tracking-wide leading-tight">{card.title}</p>
                     <p className="text-[13px] text-gray-400 mt-0.5 truncate">
-                      {card.esArchivo ? "Abrir documento" : "Pedir por WhatsApp"}
+                      {card.esArchivo ? t.producto.abrirDocumento : t.producto.pedirPorWhatsapp}
                     </p>
                   </div>
                   <FiChevronRight size={18} className="text-gray-400 shrink-0" />
@@ -537,7 +547,7 @@ export default async function ProductPage({
                 {product.precio > 500 ? "$" : "u$d"}{" "}
                 {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 <span className="text-sm font-normal text-gray-400 ml-1">
-                  {product.unidadMedida ? `/${product.unidadMedida} ` : ""}+ IVA
+                  {product.unidadMedida ? `/${product.unidadMedida} ` : ""}{t.producto.masIva}
                 </span>
               </p>
             )}
@@ -587,7 +597,7 @@ export default async function ProductPage({
               >
                 <span className="flex items-center gap-2">
                   <FiTruck size={14} className="text-gray-400" />
-                  Calculá tu envío
+                  {t.producto.calcularEnvio}
                 </span>
                 <FiChevronRight size={14} className="text-gray-400" />
               </a>
@@ -600,7 +610,7 @@ export default async function ProductPage({
         {complementarios.length > 0 && (
           <div className="mt-12">
             <ProductCarousel
-              title="Productos Complementarios"
+              title={t.producto.complementarios}
               href="/catalogo"
               products={complementarios}
               showPrices={isAuthenticated}
@@ -610,7 +620,7 @@ export default async function ProductPage({
 
         {/* Productos similares */}
         <div className="mt-12">
-          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} showPrices={isAuthenticated} />
+          <ProductCarousel title={t.producto.similares} href="/catalogo" products={related} showPrices={isAuthenticated} />
         </div>
 
       </div>

@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import { useT } from "@/components/providers/IdiomaProvider";
 import { FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import SafeImage from "./SafeImage";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
@@ -14,6 +15,7 @@ type ProductCarouselProps = {
 };
 
 export default function ProductCarousel({ title, href, products, showPrices }: ProductCarouselProps) {
+  const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
 
   if (products.length === 0) return null;
@@ -36,7 +38,7 @@ export default function ProductCarousel({ title, href, products, showPrices }: P
               href={href}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DF8635] hover:text-[#c97220] transition-colors"
             >
-              Ver todos
+              {t.producto.verTodos}
               <FiArrowRight size={13} />
             </Link>
           )}
@@ -100,7 +102,7 @@ export default function ProductCarousel({ title, href, products, showPrices }: P
                 </p>
               )}
               <span className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DF8635]">
-                Ver producto
+                {t.producto.verProducto}
                 <FiArrowRight
                   size={12}
                   className="transition-transform duration-300 group-hover:translate-x-1 group-hover:text-[#DF8635]"

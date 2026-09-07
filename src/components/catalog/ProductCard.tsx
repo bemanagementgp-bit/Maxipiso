@@ -16,6 +16,8 @@ import SafeImage from "./SafeImage";
 import { getFlagUrl, formatOriginLabel } from "@/lib/flags";
 import StickerOverlay from "./StickerOverlay";
 import type { Sticker } from "@/lib/stickers";
+import { useT } from "@/components/providers/IdiomaProvider";
+import { interpolar } from "@/lib/i18n";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -90,6 +92,7 @@ function ProductCardBase({
   item: CatalogItem;
   categorySlug: string;
 }) {
+  const t = useT();
   const img = firstImage(item);
   const name = displayName(item);
   const waText = encodeURIComponent(
@@ -161,7 +164,7 @@ function ProductCardBase({
             href={`/catalogo/${item.id}`}
             className="text-center border border-gray-200 text-[#111111] text-xs font-semibold py-2.5 rounded-xl hover:border-[#DF8635] transition-colors"
           >
-            Ver detalle
+            {t.catalogo.verDetalle}
           </Link>
           <a
             href={`https://wa.me/542214388894?text=${waText}`}
@@ -169,7 +172,7 @@ function ProductCardBase({
             rel="noopener noreferrer"
             className="text-center bg-[#DF8635] text-white text-xs font-semibold py-2.5 rounded-xl hover:bg-[#c97220] transition-colors"
           >
-            Consultar
+            {t.catalogo.consultar}
           </a>
         </div>
       </div>
@@ -201,14 +204,15 @@ function SkeletonCard() {
 // ─── EmptyState ──────────────────────────────────────────────────────────────
 
 export function EmptyState({ label }: { label: string }) {
+  const t = useT();
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-24 text-center px-4">
       <div className="w-20 h-20 rounded-full bg-[#DF8635]/10 flex items-center justify-center mb-5">
         <FiPackage size={36} className="text-[#DF8635]" />
       </div>
-      <h3 className="text-xl font-bold text-[#111111] mb-2">Sin resultados</h3>
+      <h3 className="text-xl font-bold text-[#111111] mb-2">{t.catalogo.sinResultados}</h3>
       <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
-        No se encontraron productos en <strong>{label}</strong> con los filtros seleccionados.
+        {interpolar(t.catalogo.sinResultadosDetalle, { categoria: label })}
       </p>
       <a
         href="https://wa.me/542214388894?text=Hola%2C%20quiero%20consultar%20disponibilidad%20de%20productos"
@@ -216,7 +220,7 @@ export function EmptyState({ label }: { label: string }) {
         rel="noopener noreferrer"
         className="mt-6 inline-flex items-center gap-2 bg-[#DF8635] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#c97220] transition-colors"
       >
-        Consultar por WhatsApp
+        {t.catalogo.consultarPorWhatsapp}
       </a>
     </div>
   );

@@ -8,77 +8,78 @@ import { BsFillGridFill } from "react-icons/bs";
 import { GiWoodPile } from "react-icons/gi";
 import { MdDeck, MdLayers } from "react-icons/md";
 import { FaTools } from "react-icons/fa";
+import { useT } from "@/components/providers/IdiomaProvider";
+import SelectorIdioma from "./SelectorIdioma";
+import type { Diccionario } from "@/lib/i18n";
 
 // ─── Catálogo mega-menu data ─────────────────────────────────────────────────
 
-const CATALOG_ITEMS = [
+const catalogItems = (t: Diccionario) => [
   {
-    label: "Pisos",
+    label: t.categorias.pisos,
     href: "/catalogo",
     Icon: BsFillGridFill,
     color: "#DF8635",
-    subs: ["Flotantes", "Vinílicos", "Porcelanatos", "Madera e Ingeniería"],
-    subHrefs: [ 
-      "/catalogo#flotantes",
-      "/catalogo#vinilicos",
-      "/catalogo#porcellanatos",
-      "/catalogo#madera",
+    subs: [t.categorias.flotantes, t.categorias.vinilicos, t.categorias.porcelanatos, t.categorias.maderaIngenieria],
+    subHrefs: [
+      "/catalogo?categoria=pisos-flotantes",
+      "/catalogo?categoria=pisos-vinilicos",
+      "/catalogo?categoria=porcellanatos",
+      "/catalogo?categoria=pisos-madera",
     ],
   },
   {
-    label: "Maderas",
-    href: "/catalogo",
+    label: t.categorias.maderas,
+    href: "/catalogo?categoria=maderas",
     Icon: GiWoodPile,
     color: "#b45309",
-    subs: ["Nativas", "Exóticas", "Tratadas"],
-    subHrefs: ["/catalogo", "/catalogo", "/catalogo"],
+    subs: [t.categorias.nativas, t.categorias.exoticas, t.categorias.tratadas],
+    subHrefs: ["/catalogo?categoria=maderas", "/catalogo?categoria=maderas", "/catalogo?categoria=maderas"],
   },
   {
-    label: "Decks",
-    href: "/catalogo",
+    label: t.categorias.decks,
+    href: "/catalogo?categoria=decks",
     Icon: MdDeck,
     color: "#059669",
-    subs: ["WPC", "Madera Natural"],
-    subHrefs: ["/catalogo", "/catalogo"],
+    subs: [t.categorias.wpc, t.categorias.maderaNatural],
+    subHrefs: ["/catalogo?categoria=decks", "/catalogo?categoria=decks"],
   },
   {
-    label: "Revestimientos",
-    href: "/catalogo",
+    label: t.categorias.revestimientos,
+    href: "/catalogo?categoria=revestimientos",
     Icon: MdLayers,
     color: "#475569",
-    subs: ["Exteriores", "Interiores"],
-    subHrefs: ["/catalogo", "/catalogo"],
+    subs: [t.categorias.exteriores, t.categorias.interiores],
+    subHrefs: ["/catalogo?categoria=revestimientos", "/catalogo?categoria=revestimientos"],
   },
   {
-    label: "Accesorios",
-    href: "/catalogo",
+    label: t.categorias.accesorios,
+    href: "/catalogo?categoria=accesorios",
     Icon: FaTools,
     color: "#71717a",
-    subs: ["Zócalos", "Terminaciones", "Mantos"],
-    subHrefs: [
-      "/catalogo",
-      "/catalogo",
-      "/catalogo",
-    ],
+    subs: [t.categorias.zocalos, t.categorias.terminaciones, t.categorias.mantos],
+    subHrefs: ["/catalogo?categoria=accesorios", "/catalogo?categoria=accesorios", "/catalogo?categoria=accesorios"],
   },
-] as const;
+];
 
-const STATIC_LINKS = [
-  { href: "/", label: "Inicio" },
-  { href: "/empresa", label: "Empresa" },
-  { href: "/novedades", label: "Novedades" },
+const staticLinks = (t: Diccionario) => [
+  { href: "/", label: t.nav.inicio },
+  { href: "/empresa", label: t.nav.empresa },
+  { href: "/novedades", label: t.nav.novedades },
 ];
 
 // ─── MegaMenu ────────────────────────────────────────────────────────────────
 
 function MegaMenu({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const CATALOG_ITEMS = catalogItems(t);
   return (
     <div className="absolute top-full left-1/2 -translate-x-1/2 w-[780px] max-w-[96vw] bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 z-50 mt-2">
       {/* Arrow */}
       <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-gray-100 rotate-45" />
 
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4 px-1">
-        Catálogo Mayorista
+        {t.nav.catalogoMayorista}
       </p>
 
       <div className="grid grid-cols-5 gap-3">
@@ -125,7 +126,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="text-xs text-[#DF8635] font-semibold hover:underline"
         >
-          Ver catálogo completo →
+          {t.nav.verCatalogoCompleto} →
         </Link>
         <a
           href="https://wa.me/542214388894"
@@ -133,7 +134,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
           rel="noopener noreferrer"
           className="text-xs text-gray-400 hover:text-[#111111] transition-colors"
         >
-          Consultar precios mayoristas por WhatsApp
+          {t.nav.consultarPrecios}
         </a>
       </div>
     </div>
@@ -144,6 +145,8 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
 
 export default function Header() {
   const [menuOpen, setMenuOpen]     = useState(false);
+  const t = useT();
+  const STATIC_LINKS = staticLinks(t);
 
   /* Cerrar mega-menu al hacer click fuera
   useEffect(() => {
@@ -189,7 +192,7 @@ export default function Header() {
             href="/catalogo"
             className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors"
           >
-            Catálogo
+            {t.nav.catalogo}
           </Link>
 
             <a
@@ -198,15 +201,16 @@ export default function Header() {
               rel="noopener noreferrer"
               className="bg-[#DF8635] text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-[#c97220] transition-colors"
             >
-              Contactar Asesor
+              {t.nav.contactarAsesor}
             </a>
+            <SelectorIdioma />
           </nav>
 
           {/* Mobile hamburger */}
           <button
             className="md:hidden p-2 text-[#111111]"
             onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Abrir menú"
+            aria-label={menuOpen ? t.nav.cerrarMenu : t.nav.abrirMenu}
           >
             {menuOpen ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,7 +244,7 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
               className="text-sm font-medium text-[#111111] hover:text-[#DF8635] transition-colors py-2 px-3 rounded-lg hover:bg-gray-50"
             >
-              Catálogo
+              {t.nav.catalogo}
             </Link>
 
             <a
@@ -249,8 +253,11 @@ export default function Header() {
               rel="noopener noreferrer"
               className="mt-2 bg-[#DF8635] text-white font-semibold px-5 py-2.5 rounded-full text-center hover:bg-[#c97220] transition-colors"
             >
-              Contactar Asesor
+              {t.nav.contactarAsesor}
             </a>
+            <div className="mt-3 flex justify-center">
+              <SelectorIdioma compacto />
+            </div>
           </nav>
         </div>
       )}

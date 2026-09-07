@@ -7,6 +7,8 @@ import { useSession, signOut } from "next-auth/react";
 import { FiChevronRight, FiSearch, FiX, FiArrowLeft, FiChevronDown, FiUser } from "react-icons/fi";
 import { BsFillGridFill } from "react-icons/bs";
 import { ProductCard, EmptyState } from "@/components/catalog/ProductCard";
+import { useT } from "@/components/providers/IdiomaProvider";
+import { interpolar } from "@/lib/i18n";
 import type { CatalogItem } from "@/components/catalog/ProductCard";
 import LoginModal from "@/components/catalog/LoginModal";
 
@@ -138,6 +140,7 @@ function guardarSnapshot(key: string, snap: CatalogoSnapshot) {
 }
 
 function CatalogoPage() {
+  const t = useT();
   const PAGE_SIZE = 30;
   const searchParams = useSearchParams();
   const { data: session, status, update: updateSession } = useSession();
@@ -549,9 +552,9 @@ function CatalogoPage() {
       <div className="w-full bg-[#111]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Catálogo</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">{t.catalogo.titulo}</h1>
             <p className="text-gray-400 text-sm mt-0.5">
-              Explorá todo nuestro stock mayorista. Entrega en todo el país.
+              {t.catalogo.subtitulo}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -569,7 +572,7 @@ function CatalogoPage() {
                 className="flex items-center gap-2 px-4 py-2 border border-gray-600 text-gray-300 text-sm font-semibold hover:bg-white/10 transition-colors shrink-0"
               >
                 <FiUser size={14} />
-                Cerrar sesión
+                {t.catalogo.cerrarSesion}
               </button>
             )}
             <div className="relative">
@@ -577,7 +580,7 @@ function CatalogoPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar..."
+                placeholder={t.catalogo.buscar}
                 className="w-full sm:w-56 pl-9 pr-4 py-2 bg-white/10 border border-gray-700 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#DF8635] transition-colors"
               />
             </div>
@@ -617,7 +620,7 @@ function CatalogoPage() {
                     className="flex items-center gap-1.5 text-[11px] text-[#DF8635] font-semibold mb-4 hover:underline"
                   >
                     <FiArrowLeft size={12} />
-                    Todas las categorías
+                    {t.catalogo.todasLasCategorias}
                   </button>
 
                   <div className="bg-[#DF8635]/10 rounded-xl px-3 py-2.5 mb-5">
@@ -637,13 +640,13 @@ function CatalogoPage() {
                 return (
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-bold text-[#111111] uppercase tracking-widest">Filtros</h3>
+                      <h3 className="text-xs font-bold text-[#111111] uppercase tracking-widest">{t.catalogo.filtros}</h3>
                       {activeCount > 0 && (
                         <button
                           onClick={handleClearFilters}
                           className="text-[10px] text-[#DF8635] font-semibold hover:underline"
                         >
-                          Limpiar ({activeCount})
+                          {t.catalogo.limpiar} ({activeCount})
                         </button>
                       )}
                     </div>
@@ -692,7 +695,7 @@ function CatalogoPage() {
                                   : "border-gray-200 bg-white text-gray-700"
                               }`}
                             >
-                              <option value="">Todos</option>
+                              <option value="">{t.catalogo.todos}</option>
                               {group.values.map((val) => (
                                 <option key={val} value={val}>{val}</option>
                               ))}
@@ -717,7 +720,7 @@ function CatalogoPage() {
                   onChange={(e) => { handleSelectCategoria(e.target.value); handleClearFilters(); }}
                   className="w-full pl-3 pr-8 py-2.5 border border-gray-200 text-sm focus:outline-none focus:border-[#DF8635] appearance-none bg-white"
                 >
-                  <option value="">Todas las categorías</option>
+                  <option value="">{t.catalogo.todasLasCategorias}</option>
                   {categorias.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
                 </select>
                 <FiChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -771,21 +774,21 @@ function CatalogoPage() {
             {/* Sort bar */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
               {!loading || productos.length > 0 ? (
-                <p className="text-xs text-gray-400">{total} producto{total !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-gray-400">{total} {total === 1 ? t.catalogo.producto : t.catalogo.productos}</p>
               ) : (
                 <span />
               )}
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="hidden sm:inline">Ordenar por</span>
+                <span className="hidden sm:inline">{t.catalogo.ordenarPor}</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="text-xs bg-transparent border border-gray-200 px-2.5 py-1.5 pr-7 text-gray-700 focus:outline-none focus:border-[#DF8635] cursor-pointer appearance-none"
                   style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
                 >
-                  <option value="relevancia">Más relevantes</option>
-                  <option value="precio-menor">Menor precio</option>
-                  <option value="precio-mayor">Mayor precio</option>
+                  <option value="relevancia">{t.catalogo.orden.relevancia}</option>
+                  <option value="precio-menor">{t.catalogo.orden.precioAsc}</option>
+                  <option value="precio-mayor">{t.catalogo.orden.precioDesc}</option>
                   <option value="nombre-az">A → Z</option>
                   <option value="nombre-za">Z → A</option>
                   <option value="recientes">Más recientes</option>
@@ -797,7 +800,7 @@ function CatalogoPage() {
             {(selectedCategoria || activeCount > 0) && (
               <div className="mb-4">
                 <nav className="flex items-center gap-1.5 text-xs text-gray-400 flex-wrap">
-                  <span className="text-gray-500 font-medium">Catálogo</span>
+                  <span className="text-gray-500 font-medium">{t.catalogo.titulo}</span>
                   {selectedCategoria && (
                     <>
                       <FiChevronRight size={11} />
@@ -840,17 +843,17 @@ function CatalogoPage() {
                 Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
               ) : errorCarga ? (
                 <div className="col-span-full py-16 text-center">
-                  <p className="text-[#111111] font-semibold mb-1">No pudimos cargar el catálogo</p>
+                  <p className="text-[#111111] font-semibold mb-1">{t.catalogo.errorTitulo}</p>
                   <p className="text-sm text-gray-500 mb-5">{errorCarga}</p>
                   <button
                     onClick={() => setAuthTick((t) => t + 1)}
                     className="border border-gray-200 text-gray-600 hover:text-[#111111] hover:border-[#DF8635] text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
                   >
-                    Reintentar
+                    {t.catalogo.reintentar}
                   </button>
                 </div>
               ) : productos.length === 0 ? (
-                <EmptyState label={selectedCatLabel ?? "Catálogo"} />
+                <EmptyState label={selectedCatLabel ?? t.catalogo.titulo} />
               ) : (
                 productGrid
               )}
@@ -864,7 +867,7 @@ function CatalogoPage() {
                   disabled={page === 1}
                   className="px-3 py-2 text-sm border border-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"
                 >
-                  Anterior
+                  {t.catalogo.anterior}
                 </button>
                 {paginationRange.map((p, i) =>
                   p === "..." ? (
@@ -888,7 +891,7 @@ function CatalogoPage() {
                   disabled={page === totalPages}
                   className="px-3 py-2 text-sm border border-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#DF8635] hover:text-[#DF8635] transition-colors"
                 >
-                  Siguiente
+                  {t.catalogo.siguiente}
                 </button>
               </nav>
             )}
