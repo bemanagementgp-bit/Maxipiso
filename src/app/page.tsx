@@ -57,15 +57,18 @@ function useCounter(target: number, active: boolean, duration = 2000, startDelay
 
 // Los `categoria` tienen que coincidir con las claves de TABLES en
 // /api/catalogo/todos: /catalogo las lee de la query string al montar.
+// Portadas de las 8 lineas. Viven en Cloudinary y no en `public/`: se cambian
+// sin deployar, no viajan en cada clone del repo, y se sirven optimizadas por
+// el loader de SafeImage (f_auto/q_auto por cada ancho del srcset).
 const lineas = [
-  { label: "Pisos Laminados", href: "/catalogo?categoria=pisos-flotantes", img: "/14704-1.jpg",        Icon: FiGrid },
-  { label: "Pisos Vinílicos", href: "/catalogo?categoria=pisos-vinilicos", img: "/20230-1.jpg",        Icon: FiLayers },
-  { label: "Porcelanatos",    href: "/catalogo?categoria=porcellanatos",   img: "/24803-1.jpg",        Icon: FiSquare },
-  { label: "Pisos de Madera", href: "/catalogo?categoria=pisos-madera",    img: "/23904-1.jpg",        Icon: FiColumns },
-  { label: "Deck",            href: "/catalogo?categoria=decks",           img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1787077706/66047b68324866.20305652_j52w7e.jpg", Icon: FiSun },
-  { label: "Revestimientos",  href: "/catalogo?categoria=revestimientos",  img: "/revestimientos.png", Icon: FiLayout },
-  { label: "Maderas",         href: "/catalogo?categoria=maderas",         img: "/maderas.jpg",        Icon: FiBox },
-  { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1787856931/cat-accesorios_bmpwox.jpg",     Icon: FiTool },
+  { label: "Pisos Laminados", href: "/catalogo?categoria=pisos-flotantes", img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784476/laminados-portada_s4ialn.png",        Icon: FiGrid },
+  { label: "Pisos Vinílicos", href: "/catalogo?categoria=pisos-vinilicos", img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784476/vinilico-portada_jtwqrp.png",        Icon: FiLayers },
+  { label: "Porcelanatos",    href: "/catalogo?categoria=porcellanatos",   img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784517/porcelanato-portada_vfp0ml.png",        Icon: FiSquare },
+  { label: "Pisos de Madera", href: "/catalogo?categoria=pisos-madera",    img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784476/pisos-madera-portada_skuv8k.png",        Icon: FiColumns },
+  { label: "Deck",            href: "/catalogo?categoria=decks",           img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784519/deck-portada_cah2hc.png", Icon: FiSun },
+  { label: "Revestimientos",  href: "/catalogo?categoria=revestimientos",  img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784475/revestimientos-portada_ou8yse.png", Icon: FiLayout },
+  { label: "Maderas",         href: "/catalogo?categoria=maderas",         img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784518/maderas-portada_ynx4dp.png",        Icon: FiBox },
+  { label: "Accesorios",      href: "/catalogo?categoria=accesorios",      img: "https://res.cloudinary.com/dnaom2evd/image/upload/v1788784475/accesorios-portada_pfjckc.png",     Icon: FiTool },
 ];
 
 const stats = [
