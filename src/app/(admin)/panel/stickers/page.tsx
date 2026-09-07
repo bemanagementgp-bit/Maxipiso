@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FiPlus, FiTrash2, FiUpload, FiLoader, FiAlertCircle, FiCheck } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUpload, FiLoader, FiAlertCircle, FiCheck, FiDownloadCloud } from "react-icons/fi";
 import {
   COLOR_FONDO_DEFECTO,
   COLOR_TEXTO_DEFECTO,
@@ -77,6 +77,7 @@ export default function StickersPage() {
   const [subiendo, setSubiendo] = useState(false);
   const [confirmarBorrar, setConfirmarBorrar] = useState<string | null>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
+  const [cargandoSugeridos, setCargandoSugeridos] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -117,6 +118,34 @@ export default function StickersPage() {
     } finally {
       setSubiendo(false);
       if (archivoRef.current) archivoRef.current.value = "";
+    }
+  };
+
+  /**
+   * Carga los diez stickers iniciales.
+   *
+   * Los ids son fijos, asi que apretarlo dos veces no duplica nada ni pisa lo
+   * que se haya editado a mano: solo agrega los que falten.
+   */
+  const cargarSugeridos = async () => {
+    setCargandoSugeridos(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stickers/sugeridos", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "No se pudieron cargar");
+      const { creados, yaEstaban } = json.data;
+      setAviso(
+        creados === 0
+          ? "Ya estaban todos cargados."
+          : `${creados} sticker${creados === 1 ? "" : "s"} cargado${creados === 1 ? "" : "s"}` +
+            (yaEstaban > 0 ? ` (${yaEstaban} ya estaban).` : "."),
+      );
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error de red");
+    } finally {
+      setCargandoSugeridos(false);
     }
   };
 
@@ -179,12 +208,24 @@ export default function StickersPage() {
 
   return (
     <div className="px-6 lg:px-10 py-8 max-w-[1100px]">
-      <div className="mb-6">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
         <h1 className="text-[22px] font-bold text-[#111] tracking-tight">Stickers</h1>
         <p className="text-[12px] text-[#888] mt-1">
           Etiquetas que se dibujan encima de la foto de portada. Se eligen por producto al
           cargarlo, en la sección <span className="text-[#555]">Stickers sobre la foto</span>.
         </p>
+        </div>
+        <button
+          type="button"
+          onClick={cargarSugeridos}
+          disabled={cargandoSugeridos}
+          title="Crea los 10 stickers iniciales. Repetirlo no duplica nada."
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[#E0DED8] hover:border-[#DF8635] text-[11px] text-[#555] transition-colors disabled:opacity-50"
+        >
+          {cargandoSugeridos ? <FiLoader size={12} className="animate-spin" /> : <FiDownloadCloud size={12} />}
+          Cargar los 10 sugeridos
+        </button>
       </div>
 
       {error && (

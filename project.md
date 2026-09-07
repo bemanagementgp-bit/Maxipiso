@@ -759,8 +759,16 @@ Dos cambios para que no vuelva a pasar:
 
 ### 8.2 sexies Los 10 stickers iniciales
 
-La migración `20260907040000_stickers_iniciales` deja cargados los diez que pidió el cliente,
-para que nadie tenga que crearlos a mano. Se editan, apagan y borran como cualquier otro: la
+Los diez que pidió el cliente se cargan con **un botón en Panel → Stickers**, y también
+existen como la migración `20260907040000_stickers_iniciales` para las bases que se creen de
+cero. La definición vive en `lib/stickers-sugeridos.ts`, en código y no sólo en el `.sql`,
+justamente para que se puedan cargar desde el panel: aplicar SQL a mano en producción es un
+trámite que no tiene por qué hacer quien administra el catálogo.
+
+**Los ids son fijos y legibles** (`stk_oferta`, `stk_bandera_alemania`). Eso hace que apretar
+el botón dos veces no duplique nada ni pise lo que alguien haya editado a mano —sólo agrega
+los que faltan, nunca borra ni modifica— y que cambiarle el tipo o la imagen a uno más
+adelante no toque a los productos que ya lo tienen asignado. Se editan, apagan y borran como cualquier otro: la
 tabla sigue siendo el catálogo dinámico de §8.2 ter.
 
 Las banderas (Alemania, EE.UU., Italia, Unión Europea) apuntan a los SVG de `public/flags/`,
