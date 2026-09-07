@@ -17,7 +17,7 @@ const SYSTEM_FIELDS = new Set([
   "_tablaLabel",
 ]);
 
-const JSON_STRING_FIELDS = new Set(["metadatos", "imagenes", "stickers"]);
+const JSON_STRING_FIELDS = new Set(["metadatos", "imagenes", "stickers", "complementarios"]);
 
 function sanitizeProductData(tablaNombre: string, raw: Record<string, unknown>) {
   const config = getCategoryConfig(tablaNombre);
@@ -34,6 +34,7 @@ function sanitizeProductData(tablaNombre: string, raw: Record<string, unknown>) 
   // `stickers` es una columna JSON como `imagenes`, no un campo de la config de
   // categoria: se permite explicitamente o el update la descarta en silencio.
   allowedFields.add("stickers");
+  allowedFields.add("complementarios");
 
   const data: Record<string, unknown> = {};
 

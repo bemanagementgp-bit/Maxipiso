@@ -239,6 +239,56 @@ export async function findProductById(id: string): Promise<{
   return null;
 }
 
+/**
+ * Busca varios productos por id, sin saber de que tabla es cada uno.
+ *
+ * Se usa para los complementarios, que se eligen a mano y pueden ser de
+ * cualquier categoria. Consulta las 8 tablas en paralelo con un `in` en vez de
+ * llamar a `findProductById` por cada id: eso serian hasta 8 consultas por
+ * producto elegido, secuenciales.
+ *
+ * Devuelve los productos **en el orden en que vinieron los ids**, que es el
+ * orden en que los eligio quien carga el producto, y descarta en silencio los
+ * que ya no existen o estan desactivados. Borrar un producto no puede romper la
+ * ficha de otro.
+ */
+export async function findRowsByIds(
+  ids: string[],
+): Promise<{ raw: Record<string, unknown>; tableKey: TableKey }[]> {
+  if (ids.length === 0) return [];
+
+  const porTabla = await Promise.all(
+    TABLE_KEYS.map(async (key) => {
+      const filas = await getDelegate(key)
+        .findMany({ where: { id: { in: ids }, isActive: true } })
+        .catch(() => []);
+      return (filas as Record<string, unknown>[]).map((raw) => ({ raw, tableKey: key }));
+    }),
+  );
+
+  const porId = new Map(porTabla.flat().map((p) => [p.raw.id as string, p]));
+  return ids.map((id) => porId.get(id)).filter((p) => p !== undefined);
+}
+
+/**
+ * Lee la columna `complementarios` (un JSON array de ids, como `imagenes`).
+ *
+ * Tolera lo que haya: null, texto vacio, un JSON roto o algo que no sea array.
+ * Un dato mal guardado tiene que dejar la ficha sin complementarios, no sin
+ * ficha.
+ */
+export function parseComplementarios(valor: unknown): string[] {
+  const texto = String(valor ?? "").trim();
+  if (!texto) return [];
+  try {
+    const parsed = JSON.parse(texto);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x): x is string => typeof x === "string" && x.trim() !== "");
+  } catch {
+    return [];
+  }
+}
+
 /** Batch-fetch products by IDs in parallel across all tables. Returns Map<id, NormalizedProduct>. */
 export async function findProductsByIds(ids: string[]): Promise<Map<string, NormalizedProduct>> {
   if (!ids.length) return new Map();

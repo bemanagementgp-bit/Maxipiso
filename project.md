@@ -463,6 +463,76 @@ cualquiera de esos, el campo se puede cargar pero no se ve, o se ve pero no se p
   precios ya es sólo para clientes mayoristas.
 - Las migas de pan pasan a **gris** en hover. El naranja es el color de acción de la marca y
   estaba compitiendo con los botones de verdad.
+- La barra con la ruta del producto pasó de beige naranja a **gris claro**, por lo mismo: era
+  otro acento peleando con el naranja, que es el color de acción.
+
+#### Documentos del producto — garantía, ficha técnica, instalación
+
+`garantia`, `fichaTecnica` y `archivoInstalacion` son columnas de texto libre que carga el
+panel y también llegan por la importación de planillas. Ahora **si lo cargado es un link, la
+ficha muestra una tarjeta que lo abre**; si no, sigue siendo la consulta por WhatsApp de
+siempre, y sólo en Pisos — no tiene sentido ofrecerle una guía de instalación a un zócalo.
+
+`normalizarLinkDoc()` (`lib/doc-links.ts`) decide si algo es un link, y es deliberadamente
+tolerante en la entrada y estricta en la salida: acepta `www.krono.com/ficha.pdf` sin esquema
+—que es lo que alguien pega copiando de la barra del navegador— y devuelve `https://…`; acepta
+rutas relativas para archivos propios; y devuelve `null` para `javascript:`, para `data:` y
+para cualquier cosa sin pinta de dominio. **Lo que hay guardado no se toca**: hay `garantia`
+con "12 meses" cargado de planillas viejas, y eso es un dato válido que no es un link. La
+decisión se toma al renderizar, no al guardar, así que no hay migración ni riesgo de perder
+texto.
+
+El panel avisa en el momento, debajo del campo, si lo escrito se va a abrir como link o si se
+guarda como texto: enterarse de que el link no anda mirando el catálogo es la peor forma de
+descubrirlo.
+
+> **Un campo vaciado en el panel ahora se borra de verdad.** El payload omitía los valores
+> vacíos, y omitir es "no lo toques": una vez guardado un dato no había forma de sacarlo — el
+> link de garantía quedaba pegado para siempre. Ahora viaja como `null`.
+
+#### Productos complementarios
+
+Debajo de la ficha van dos carruseles. **Complementarios va primero**: "Similares" es la misma
+tabla, o sea otro modelo que compite con el que el cliente ya está mirando; lo complementario
+es lo que le falta para terminar la obra.
+
+**Se eligen a mano, producto por producto, desde el ABM.** La primera versión los armaba con
+un mapa por categoría —a todo piso flotante se le ofrecían los mismos accesorios—, que es una
+recomendación que no recomienda nada. **Un producto sin nada elegido no muestra la sección**, y
+está bien que sea así: no todos tienen complemento.
+
+`complementarios` es una **columna JSON con los ids**, igual que `imagenes` y `stickers` y por
+el mismo motivo: viene con la fila en las consultas que ya existen. Se pueden elegir de
+cualquier categoría —el complemento de un piso suele ser un accesorio, pero también puede ser
+un revestimiento—, así que resolverlos es buscar ids sin saber de qué tabla son:
+`findRowsByIds()` consulta las 8 en paralelo con un `in`, en vez de las hasta 8 consultas
+secuenciales por id que costaría `findProductById()`. Los devuelve **en el orden en que se
+eligieron** y descarta en silencio los que ya no existen o están apagados: borrar un producto
+no puede romper la ficha de otro.
+
+El selector del panel es un buscador y no un desplegable porque el catálogo tiene miles de
+filas —lo que se busca es un zócalo puntual, no el primero de la lista— y muestra la foto de
+cada resultado, porque quien carga reconoce el producto por la foto antes que por el SKU. Al
+**duplicar** un producto los complementarios se copian: si es el mismo piso en otro color, le
+va el mismo zócalo.
+
+> La migración `20260907030000_complementarios` agrega la columna a las 8 tablas. **Hay que
+> aplicarla en Turso antes de deployar**: el código la lee en cada consulta de producto, y una
+> columna que falta deja el catálogo en cero (ver §9.x).
+
+#### La ficha del producto
+
+- **El país con su bandera quedó sólo en Maderas.** En el resto de las categorías lo
+  reemplazan los stickers (§8.2 ter): se eligen por producto y dicen más que el origen solo.
+  En Maderas la procedencia es parte de lo que se compra, así que ahí se queda. En la grilla
+  de datos de la ficha `Origen` sigue estando en todas: ahí es un dato técnico rotulado, no
+  una insignia.
+- **Los datos del producto se leen a 13/14 px**, no a 10/11. El público del rubro no es joven
+  y la grilla de specs es lo que más se mira de la ficha.
+- El precio dice **"+ IVA"**. Decía "mayorista", que no es información: el catálogo con
+  precios ya es sólo para clientes mayoristas.
+- Las migas de pan pasan a **gris** en hover. El naranja es el color de acción de la marca y
+  estaba compitiendo con los botones de verdad.
 
 #### Documentos del producto — garantía, ficha técnica, instalación
 

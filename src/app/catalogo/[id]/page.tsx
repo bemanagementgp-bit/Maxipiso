@@ -19,7 +19,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { findProductById, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS, type TableKey } from "@/lib/all-products";
+import { findProductById, findRowsByIds, parseComplementarios, buildSpecsFromRow, TABLE_CATEGORIA, TABLE_LABELS, type TableKey } from "@/lib/all-products";
 import { getFlagUrl, getCountryLabel } from "@/lib/flags";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
@@ -409,35 +409,21 @@ export default async function ProductPage({
   const related = (relatedRaw as Record<string, unknown>[]).map((r) => rowToPublic(r, tableKey));
 
   /**
-   * Qué se le ofrece al lado de cada producto.
+   * Complementarios: lo que le falta al cliente para terminar la obra.
    *
-   * "Similares" es la misma tabla —otro modelo del mismo tipo de piso—, y eso
-   * compite con lo que el cliente ya está mirando. Lo complementario es lo que
-   * le falta para terminar la obra: el zócalo y el perfil del piso, la madera
-   * del deck. Por eso los accesorios encabezan casi todas las listas.
+   * Se eligen a mano, producto por producto, desde el panel. Antes se armaban
+   * con un mapa por categoria —a todo piso flotante se le ofrecian los mismos
+   * accesorios—, que es una recomendacion que no recomienda nada. **Un producto
+   * sin nada elegido no muestra la seccion**, y esta bien que sea asi.
+   *
+   * Van arriba de "Similares" porque los similares compiten con el producto que
+   * el cliente ya esta mirando; esto lo suma.
    */
-  const COMPLEMENTARIOS: Record<string, string[]> = {
-    pisoFlotante:  ["accesorio", "revestimiento"],
-    pisoVinilico:  ["accesorio", "revestimiento"],
-    pisoMadera:    ["accesorio", "revestimiento"],
-    porcellanato:  ["accesorio", "revestimiento"],
-    revestimiento: ["accesorio", "pisoFlotante"],
-    deck:          ["accesorio", "madera"],
-    madera:        ["accesorio", "deck"],
-    accesorio:     ["pisoFlotante", "porcellanato"],
-  };
-
-  const complementarios: CatalogPublicProduct[] = [];
-  for (const tk of COMPLEMENTARIOS[tableKey] ?? []) {
-    const filas = await (prisma as any)[tk]
-      .findMany({ where: { isActive: true }, take: 12 })
-      .catch(() => []);
-    // Primero las que tienen foto: una tarjeta con el placeholder no vende nada.
-    const ordenadas = (filas as Record<string, unknown>[]).sort(
-      (a, b) => Number(parseImagenes(b.imagenes as string).length > 0) - Number(parseImagenes(a.imagenes as string).length > 0),
-    );
-    for (const fila of ordenadas.slice(0, 6)) complementarios.push(rowToPublic(fila, tk));
-  }
+  const idsComplementarios = parseComplementarios(raw.complementarios);
+  const filasComplementarias = await findRowsByIds(idsComplementarios);
+  const complementarios: CatalogPublicProduct[] = filasComplementarias.map(({ raw: fila, tableKey: tk }) =>
+    rowToPublic(fila, tk),
+  );
 
   const productCatalogPath = getProductCatalogPath(tableKey, raw);
   const productDetailPath = getProductDetailPath(tableKey, raw);
@@ -517,7 +503,7 @@ export default async function ProductPage({
           <aside className="xl:sticky xl:top-24">
             {/* Badge + path */}
             {productDetailPath.length > 0 && (
-              <div className="rounded-md bg-[#EFE0CB] px-3 py-3 mb-4">
+              <div className="rounded-md bg-[#EEEDEA] px-3 py-3 mb-4">
                 <div className="flex flex-wrap items-center gap-2">
                   {productDetailPath.map((item, index) => (
                   <span key={`${item.text}-${index}`} className="inline-flex items-center gap-1">
@@ -525,7 +511,7 @@ export default async function ProductPage({
                       {item.text}
                     </Link>
                     {index < productDetailPath.length - 1 && (
-                      <span className="mx-1 text-[#8A5A2B]">›</span>
+                      <span className="mx-1 text-[#A3A3A0]">›</span>
                     )}
                   </span>
                 ))}
@@ -610,11 +596,6 @@ export default async function ProductPage({
           </aside>
         </div>
 
-        {/* Productos similares */}
-        <div className="mt-12">
-          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} showPrices={isAuthenticated} />
-        </div>
-
         {/* Complementarios: lo que le falta para terminar la obra */}
         {complementarios.length > 0 && (
           <div className="mt-12">
@@ -626,11 +607,13 @@ export default async function ProductPage({
             />
           </div>
         )}
+
+        {/* Productos similares */}
+        <div className="mt-12">
+          <ProductCarousel title="Productos Similares" href="/catalogo" products={related} showPrices={isAuthenticated} />
+        </div>
+
       </div>
     </div>
   );
 }
-
-
-
-

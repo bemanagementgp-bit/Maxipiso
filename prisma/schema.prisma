@@ -128,6 +128,7 @@ model PisoFlotante {
   stock               Int?
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
+  complementarios     String? // JSON array de ids de productos
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -176,6 +177,7 @@ model Porcellanato {
   stock               Int?
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
+  complementarios     String? // JSON array de ids de productos
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -220,6 +222,7 @@ model Revestimiento {
   moneda             String?
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
+  complementarios    String? // JSON array de ids de productos
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -277,6 +280,7 @@ model PisoVinilico {
   stock                Int?
   imagenes             String? // JSON array de URLs
   stickers             String? // JSON array de ids de Sticker
+  complementarios      String? // JSON array de ids de productos
   precioEnvioCaja      Float?
   garantia             String?
   fichaTecnica         String?
@@ -329,6 +333,7 @@ model PisoMadera {
   stock               Int?
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
+  complementarios     String? // JSON array de ids de productos
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -371,6 +376,7 @@ model Deck {
   moneda             String?
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
+  complementarios    String? // JSON array de ids de productos
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -404,6 +410,7 @@ model Madera {
   stock                Int?
   imagenes             String?
   stickers             String? // JSON array de ids de Sticker
+  complementarios      String? // JSON array de ids de productos
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
@@ -420,25 +427,26 @@ model Madera {
 
 // ── 8. ACCESORIOS ──────────────────────────────────────────────
 model Accesorio {
-  id            String   @id @default(cuid())
-  sku           String   @unique
-  tipoProducto  String?
-  subtipo       String?
-  composicion   String?
-  compatibleCon String?
-  nombre        String
-  espesor       String?
-  dimensiones   String?
-  colores       String?
-  stock         Int?
-  imagenes      String?
-  stickers      String? // JSON array de ids de Sticker
-  descripcion   String?
-  metadatos     String? // JSON key-value extra
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  sku             String   @unique
+  tipoProducto    String?
+  subtipo         String?
+  composicion     String?
+  compatibleCon   String?
+  nombre          String
+  espesor         String?
+  dimensiones     String?
+  colores         String?
+  stock           Int?
+  imagenes        String?
+  stickers        String? // JSON array de ids de Sticker
+  complementarios String? // JSON array de ids de productos
+  descripcion     String?
+  metadatos       String? // JSON key-value extra
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([sku])
   @@index([isActive])

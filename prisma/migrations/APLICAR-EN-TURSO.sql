@@ -87,3 +87,18 @@ ALTER TABLE "porcellanatos"   ADD COLUMN "diseno" TEXT;
 ALTER TABLE "pisos_madera"    ADD COLUMN "textura" TEXT;
 ALTER TABLE "accesorios"      ADD COLUMN "compatibleCon" TEXT;
 ALTER TABLE "accesorios"      ADD COLUMN "composicion" TEXT;
+
+
+-- ── 4. PRODUCTOS COMPLEMENTARIOS (20260907030000) ──────────────── URGENTE ───
+-- Los complementarios se eligen a mano desde el ABM. El codigo lee esta columna
+-- en cada consulta de producto: si falta, el catalogo vuelve a quedar en cero.
+-- APLICAR ANTES DE DEPLOYAR.
+
+ALTER TABLE "pisos_flotantes" ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "porcellanatos"   ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "revestimientos"  ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "pisos_vinilicos" ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "pisos_madera"    ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "decks"           ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "maderas"         ADD COLUMN "complementarios" TEXT;
+ALTER TABLE "accesorios"      ADD COLUMN "complementarios" TEXT;

@@ -8,6 +8,7 @@ import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
 import { normalizarLinkDoc } from "@/lib/doc-links";
 import StickerPicker from "./StickerPicker";
+import ComplementariosPicker from "./ComplementariosPicker";
 import { parseStickerIds, type Sticker } from "@/lib/stickers";
 
 type Meta = { clave: string; valor: string };
@@ -107,12 +108,14 @@ function huellaFormulario(
   metadatos: Meta[],
   imagenes: ImagenItem[],
   stickers: string[] = [],
+  complementarios: string[] = [],
 ): string {
   return JSON.stringify({
     form,
     metadatos,
     imagenes: imagenes.map((i) => (i.tipo === "url" ? i.url : `archivo:${i.clave}`)),
     stickers,
+    complementarios,
   });
 }
 
@@ -121,7 +124,7 @@ function previewDe(item: ImagenItem): string {
   return item.tipo === "url" ? item.url : item.preview;
 }
 
-const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
+const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "complementarios", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
 
 interface QuickEditPanelProps {
   isOpen: boolean;
@@ -187,6 +190,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   /** Catalogo de stickers disponibles, y los elegidos para este producto. */
   const [stickersDisponibles, setStickersDisponibles] = useState<Sticker[]>([]);
   const [stickersElegidos, setStickersElegidos] = useState<string[]>([]);
+  const [complementarios, setComplementarios] = useState<string[]>([]);
   /**
    * Foto del formulario recien cargado, para saber si hay cambios sin guardar.
    *
@@ -216,7 +220,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       setTabla("");
       setMetadatos([]);
       setStickersElegidos([]);
-      snapshotRef.current = huellaFormulario(vacio, [], [], []);
+      setComplementarios([]);
+      snapshotRef.current = huellaFormulario(vacio, [], [], [], []);
       return;
     }
 
@@ -261,7 +266,14 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
         // producto en otro color".
         const ids = parseStickerIds(original.stickers);
         setStickersElegidos(ids);
-        snapshotRef.current = huellaFormulario(p, metas, items, ids);
+        // Los complementarios tambien se copian al duplicar: si es el mismo
+        // producto en otro color, le va el mismo zocalo.
+        const comps = (() => {
+          try { const arr = JSON.parse(original.complementarios ?? "[]"); return Array.isArray(arr) ? arr.filter(Boolean) : []; }
+          catch { return []; }
+        })();
+        setComplementarios(comps);
+        snapshotRef.current = huellaFormulario(p, metas, items, ids, comps);
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
@@ -292,7 +304,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
 
   const hayCambiosSinGuardar =
     snapshotRef.current !== "" &&
-    huellaFormulario(form, metadatos, imagenes, stickersElegidos) !== snapshotRef.current;
+    huellaFormulario(form, metadatos, imagenes, stickersElegidos, complementarios) !== snapshotRef.current;
 
   /**
    * Cierre pedido por el usuario (click afuera, la X, Cancelar o Escape).
@@ -459,6 +471,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     }
     payload.sku = form.sku;
     payload.stickers = JSON.stringify(stickersElegidos);
+    payload.complementarios = JSON.stringify(complementarios);
     payload.isActive = form.isActive ?? true;
     payload._tabla = tabla;
     if (metaFiltrados.length > 0) payload.metadatos = JSON.stringify(metaFiltrados);
@@ -668,6 +681,18 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
                   disponibles={stickersDisponibles}
                   elegidos={stickersElegidos}
                   onChange={setStickersElegidos}
+                />
+              </div>
+            )}
+
+            {/* Complementarios */}
+            {tabla && (
+              <div>
+                <label className={labelClass}>Productos complementarios</label>
+                <ComplementariosPicker
+                  elegidos={complementarios}
+                  onChange={setComplementarios}
+                  productoActualId={productId}
                 />
               </div>
             )}
