@@ -111,6 +111,7 @@ model PisoFlotante {
   abrasion            String?
   mantoIncorporado    String?
   bisel               String?
+  tono                String?
   ancho               String?
   anchoUm             String?
   largo               String?
@@ -153,6 +154,8 @@ model Porcellanato {
   tipoProducto        String?
   acabado             String?
   terminacion         String?
+  tono                String?
+  diseno              String?
   origen              String?
   nombre              String
   codigo              String?
@@ -199,6 +202,7 @@ model Revestimiento {
   tipoProducto       String?
   uso                String?
   material           String?
+  tono               String?
   marca              String?
   linea              String?
   nombre             String
@@ -263,6 +267,7 @@ model PisoVinilico {
   base                 String?
   baseUm               String?
   bisel                String?
+  tono                 String?
   precioM2             Float?
   moneda               String?
   precioCaja           Float?
@@ -301,6 +306,7 @@ model PisoMadera {
   especie             String?
   acabado             String?
   terminacion         String?
+  textura             String?
   calidad             String?
   origen              String?
   marca               String?
@@ -347,6 +353,7 @@ model Deck {
   categoriaPrincipal String?
   tipoProducto       String?
   material           String?
+  tono               String?
   marca              String?
   linea              String?
   nombre             String
@@ -413,23 +420,25 @@ model Madera {
 
 // ── 8. ACCESORIOS ──────────────────────────────────────────────
 model Accesorio {
-  id           String   @id @default(cuid())
-  sku          String   @unique
-  tipoProducto String?
-  subtipo      String?
-  nombre       String
-  espesor      String?
-  dimensiones  String?
-  colores      String?
-  stock        Int?
-  imagenes     String?
-  stickers     String? // JSON array de ids de Sticker
-  descripcion  String?
-  metadatos    String? // JSON key-value extra
-  isActive     Boolean  @default(true)
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  tipoProducto  String?
+  subtipo       String?
+  composicion   String?
+  compatibleCon String?
+  nombre        String
+  espesor       String?
+  dimensiones   String?
+  colores       String?
+  stock         Int?
+  imagenes      String?
+  stickers      String? // JSON array de ids de Sticker
+  descripcion   String?
+  metadatos     String? // JSON key-value extra
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([sku])
   @@index([isActive])

@@ -363,6 +363,9 @@ const MASTER_SLOTS: SpecSlot[] = [
   { label: "Línea",                 field: "linea" },
   { label: "Material",              field: "material" },
   { label: "Acabado",               field: "acabado" },
+  { label: "Diseño",                field: "diseno" },
+  { label: "Tono",                  field: "tono" },
+  { label: "Textura",               field: "textura" },
   { label: "Característica",        field: "terminacion" },
   { label: "Calidad",               field: "calidad" },
   { label: "Base",                  field: "base", measure: { unitField: "baseUm", defaultUnit: "m²" } },
@@ -375,18 +378,20 @@ const MASTER_SLOTS: SpecSlot[] = [
   { label: "Espesores Disponibles", field: "espesoresDisponibles" },
   { label: "Dimensiones",           field: "dimensiones" },
   { label: "Colores",               field: "colores" },
+  { label: "Compatible con",        field: "compatibleCon" },
+  { label: "Composición",           field: "composicion" },
 ];
 
 // Allowed fields per table (by field name)
 const TABLE_FIELDS: Record<string, Set<string>> = {
-  pisoFlotante:  new Set(["sku","tipoProducto","codigo","origen","espesor","ancho","largo","bisel","tipoDeUso","linea","mantoIncorporado","base","abrasion"]),
-  pisoVinilico:  new Set(["sku","tipoProducto","codigo","origen","espesorTotal","ancho","largo","bisel","tipoDeUso","linea","material","capaDeUso","mantoIncorporado","base"]),
-  porcellanato:  new Set(["sku","tipoProducto","codigo","marca","origen","espesor","ancho","largo","tipoDeUso","linea","acabado","terminacion","base"]),
-  pisoMadera:    new Set(["sku","tipoProducto","origen","espesor","ancho","largo","acabado","bisel","terminacion","calidad","base"]),
-  deck:          new Set(["sku","tipoProducto","espesor","ancho","largo","linea","material","baseTabla"]),
-  revestimiento: new Set(["sku","tipoProducto","espesor","ancho","largo","uso","linea","material","baseTabla"]),
+  pisoFlotante:  new Set(["sku","tipoProducto","codigo","origen","espesor","ancho","largo","bisel","tipoDeUso","linea","mantoIncorporado","base","abrasion","tono"]),
+  pisoVinilico:  new Set(["sku","tipoProducto","codigo","origen","espesorTotal","ancho","largo","bisel","tipoDeUso","linea","material","capaDeUso","mantoIncorporado","base","tono"]),
+  porcellanato:  new Set(["sku","tipoProducto","codigo","marca","origen","espesor","ancho","largo","tipoDeUso","linea","acabado","terminacion","base","diseno","tono"]),
+  pisoMadera:    new Set(["sku","tipoProducto","origen","espesor","ancho","largo","acabado","bisel","terminacion","calidad","base","textura"]),
+  deck:          new Set(["sku","tipoProducto","espesor","ancho","largo","linea","material","baseTabla","tono"]),
+  revestimiento: new Set(["sku","tipoProducto","espesor","ancho","largo","uso","linea","material","baseTabla","tono"]),
   madera:        new Set(["sku","tipoProducto","origen","espesoresDisponibles"]),
-  accesorio:     new Set(["sku","tipoProducto","dimensiones","colores"]),
+  accesorio:     new Set(["sku","tipoProducto","dimensiones","colores","compatibleCon","composicion"]),
 };
 
 export function buildSpecsFromRow(row: Record<string, unknown>, tableKey?: TableKey): SpecEntry[] {

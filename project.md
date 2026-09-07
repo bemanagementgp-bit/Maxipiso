@@ -405,6 +405,51 @@ La ficha `/catalogo/[id]` es **server component**: resuelve el producto con `fin
 (recorre las 8 tablas secuencialmente hasta el primer match), arma las specs con
 `buildSpecsFromRow()` y muestra precios sólo si `getServerSession` devuelve sesión.
 
+#### Filtros del catálogo
+
+La lista de filtros de cada categoría la define el negocio, no la tabla: son los cortes con
+los que un cliente busca un piso, y por eso son distintos en cada una y no la unión de todas
+las columnas. Viven en `FILTER_FIELDS_BY_TABLE` (`/api/catalogo/todos`), en el orden en que
+se muestran.
+
+| Categoría | Filtros |
+|---|---|
+| Pisos Flotantes | Tipo, Espesor, Tipo de uso, Tono, Manto incorporado, Bisel, Marca |
+| Pisos Vinílicos | Tipo, Material, Espesor total, Capa de uso, Manto incorporado, Tono, Bisel |
+| Porcelanatos | Acabado, Diseño, Tono, Ancho, Largo |
+| Revestimientos | Uso, Tipo de producto, Línea, Material, Tono |
+| Pisos de Madera | Tipo de estructura, Especie, Calidad, Terminación, Acabado, Textura |
+| Deck | Material, Tipo de producto, Línea, Tono |
+| Maderas | Especie, Origen, Espesores, Secado |
+| Accesorios | Compatible con, Tipo de accesorio, Composición |
+
+Dos mapeos que no se leen del nombre:
+
+- **"Tipo" en Pisos Flotantes es `categoriaTerciaria`**; en Pisos Vinílicos es `tipoProducto`
+  (la columna E del maestro), y su "Material" es la F. **"Tipo de estructura"** en Pisos de
+  Madera es la columna D, o sea `categoriaTerciaria`.
+- **"Especie" en Maderas es `nombre`.** Así viene el maestro —la columna se llama "nombre de
+  madera" y su contenido es la especie: Lapacho, Cedro—, y filtrar por ahí anda con los datos
+  que ya están cargados en vez de pedir una columna nueva vacía.
+
+**Un filtro sin valores cargados no se publica.** El armado de `filtros` descarta los que
+quedan sin opciones, así que una columna nueva puede estar en la lista desde el día uno y
+aparecer sola cuando se carguen los datos. Por eso las columnas nuevas —`tono` (5 tablas),
+`diseno`, `textura`, `compatibleCon`, `composicion`— se agregaron vacías sin romper nada.
+
+`tono` se llama igual en las cinco categorías a propósito: filtrar "Claro" tiene que
+significar lo mismo en un piso flotante que en un deck.
+
+Cada campo nuevo se agregó en los cinco lugares que hacen falta para que exista de verdad: la
+tabla (`schema.prisma` + migración), el ABM (`category-fields.ts`, que además alimenta las
+sugerencias y los filtros del panel), la importación del maestro (`sheet-schemas.ts`), la
+ficha del producto (`MASTER_SLOTS` + `TABLE_FIELDS`) y el filtro del catálogo. Faltando
+cualquiera de esos, el campo se puede cargar pero no se ve, o se ve pero no se puede cargar.
+
+> La migración `20260907020000_filtros_nuevos` agrega las 9 columnas. **Hay que aplicarla en
+> Turso**, junto con las otras dos pendientes: `prisma/migrations/APLICAR-EN-TURSO.sql` las
+> junta en orden, listas para pegar.
+
 #### La ficha del producto
 
 - **El país con su bandera quedó sólo en Maderas.** En el resto de las categorías lo

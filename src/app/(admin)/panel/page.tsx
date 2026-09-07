@@ -118,6 +118,11 @@ export default function ProductosPage() {
     { key: "terminacion",         label: "Terminación" },
     { key: "origen",              label: "Origen" },
     { key: "espesor",             label: "Espesor" },
+    { key: "tono",                label: "Tono" },
+    { key: "diseno",              label: "Diseño" },
+    { key: "textura",             label: "Textura" },
+    { key: "compatibleCon",       label: "Compatible con" },
+    { key: "composicion",         label: "Composición" },
   ];
 
   /**

@@ -21,7 +21,10 @@ const SECTIONS = [
   },
   {
     title: "Clasificación",
-    keys: ["categoriaPrincipal", "categoriaSecundaria", "categoriaTerciaria", "tipoProducto", "subtipo", "subtipo2", "tipoDeUso"],
+    keys: [
+      "categoriaPrincipal", "categoriaSecundaria", "categoriaTerciaria", "tipoProducto",
+      "subtipo", "subtipo2", "tipoDeUso", "diseno", "compatibleCon", "composicion",
+    ],
   },
   {
     title: "Dimensiones",
@@ -32,6 +35,7 @@ const SECTIONS = [
       "ancho", "anchoUm", "largo", "largoUm",
       "base", "baseUm", "baseTabla", "baseTablUm",
       "dimensiones", "colores", "medidas", "secado", "espesoresDisponibles",
+      "tono", "textura",
     ],
   },
   {
@@ -61,6 +65,8 @@ const FIELD_LABELS: Record<string, string> = {
   espesorComposicionUm: "Ud. espesor comp.", espesorLamina: "Espesor lámina",
   espesorLaminaUm: "Ud. espesor lámina", capaDeUso: "Capa de uso",
   abrasion: "Abrasión", mantoIncorporado: "Manto incorporado", bisel: "Bisel",
+  tono: "Tono", diseno: "Diseño", textura: "Textura",
+  compatibleCon: "Compatible con", composicion: "Composición",
   ancho: "Ancho", anchoUm: "Ud. ancho", largo: "Largo", largoUm: "Ud. largo",
   base: "Base", baseUm: "Ud. base", baseTabla: "Base tabla", baseTablUm: "Ud. base tabla",
   dimensiones: "Dimensiones", colores: "Colores", medidas: "Medidas",

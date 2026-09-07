@@ -108,74 +108,76 @@ const SEARCH_FIELDS: Record<string, string[]> = {
 
 type FilterField = { key: string; label: string };
 
-// Filtros disponibles por categoría, según los campos de cada tabla
+/**
+ * Filtros de cada categoría, en el orden en que se muestran.
+ *
+ * La lista la define el negocio, no la tabla: son los cortes con los que un
+ * cliente busca un piso, y por eso son distintos en cada categoría y no la
+ * union de todas las columnas. Un filtro sin valores cargados no se publica
+ * (ver el armado de `filtros` mas abajo), asi que una columna nueva puede
+ * quedar acá desde el dia uno y aparecer sola cuando se carguen los datos.
+ */
 const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
   "pisos-flotantes": [
     { key: "categoriaTerciaria", label: "Tipo" },
-    { key: "marca",        label: "Marca" },
-    { key: "linea",        label: "Línea" },
-    { key: "origen",       label: "Origen" },
-    { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "tipoDeUso",    label: "Tipo de uso" },
-    { key: "espesor",      label: "Espesor" },
-  ],
-  "porcellanatos": [
-    { key: "marca",        label: "Marca" },
-    { key: "linea",        label: "Línea" },
-    { key: "origen",       label: "Origen" },
-    { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "tipoDeUso",    label: "Tipo de uso" },
-    { key: "acabado",      label: "Acabado" },
-    { key: "terminacion",  label: "Terminación" },
-    { key: "espesor",      label: "Espesor" },
-  ],
-  "revestimientos": [
-    { key: "uso",                label: "Uso" },
-    { key: "marca",              label: "Marca" },
-    { key: "linea",              label: "Línea" },
-    { key: "tipoProducto",       label: "Tipo de producto" },
-    { key: "material",           label: "Material" },
-    { key: "categoriaPrincipal", label: "Categoría" },
-    { key: "espesor",            label: "Espesor" },
+    { key: "espesor",          label: "Espesor" },
+    { key: "tipoDeUso",        label: "Tipo de uso" },
+    { key: "tono",             label: "Tono" },
+    { key: "mantoIncorporado", label: "Manto incorporado" },
+    { key: "bisel",            label: "Bisel" },
+    { key: "marca",            label: "Marca" },
   ],
   "pisos-vinilicos": [
-    { key: "categoriaTerciaria", label: "Tipo" },
-    { key: "marca",        label: "Marca" },
-    { key: "linea",        label: "Línea" },
-    { key: "origen",       label: "Origen" },
+    // "Tipo" y "Material" son las columnas E y F del maestro.
+    { key: "tipoProducto",     label: "Tipo" },
+    { key: "material",         label: "Material" },
+    { key: "espesorTotal",     label: "Espesor total" },
+    { key: "capaDeUso",        label: "Capa de uso" },
+    { key: "mantoIncorporado", label: "Manto incorporado" },
+    { key: "tono",             label: "Tono" },
+    { key: "bisel",            label: "Bisel" },
+  ],
+  "porcellanatos": [
+    { key: "acabado", label: "Acabado" },
+    { key: "diseno",  label: "Diseño" },
+    { key: "tono",    label: "Tono" },
+    { key: "ancho",   label: "Ancho" },
+    { key: "largo",   label: "Largo" },
+  ],
+  "revestimientos": [
+    { key: "uso",          label: "Uso" },
     { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "tipoDeUso",    label: "Tipo de uso" },
-    { key: "espesorTotal", label: "Espesor total" },
+    { key: "linea",        label: "Línea" },
+    { key: "material",     label: "Material" },
+    { key: "tono",         label: "Tono" },
   ],
   "pisos-madera": [
-    { key: "marca",       label: "Marca" },
-    { key: "linea",       label: "Línea" },
+    // El tipo de estructura es la columna D del maestro (categoría terciaria).
+    { key: "categoriaTerciaria", label: "Tipo de estructura" },
     { key: "especie",     label: "Especie" },
-    { key: "subtipo",     label: "Subtipo" },
-    { key: "acabado",     label: "Acabado" },
+    { key: "calidad",     label: "Calidad" },
     { key: "terminacion", label: "Terminación" },
-    { key: "origen",      label: "Origen" },
-    { key: "espesor",     label: "Espesor" },
+    { key: "acabado",     label: "Acabado" },
+    { key: "textura",     label: "Textura" },
   ],
   "decks": [
-    { key: "marca",              label: "Marca" },
-    { key: "linea",              label: "Línea" },
-    { key: "tipoProducto",       label: "Tipo de producto" },
-    { key: "material",           label: "Material" },
-    { key: "categoriaPrincipal", label: "Categoría" },
-    { key: "espesor",            label: "Espesor" },
+    { key: "material",     label: "Material" },
+    { key: "tipoProducto", label: "Tipo de producto" },
+    { key: "linea",        label: "Línea" },
+    { key: "tono",         label: "Tono" },
   ],
   "maderas": [
-    { key: "tipoProducto",         label: "Tipo de producto" },
+    // En maderas la especie ES el nombre del producto ("Lapacho", "Cedro"):
+    // asi viene el maestro, en la columna "nombre de madera".
+    { key: "nombre",               label: "Especie" },
     { key: "origen",               label: "Origen" },
-    { key: "secado",               label: "Secado" },
     { key: "espesoresDisponibles", label: "Espesores" },
+    { key: "secado",               label: "Secado" },
   ],
   "accesorios": [
-    { key: "tipoProducto", label: "Tipo de producto" },
-    { key: "subtipo",      label: "Subtipo" },
-    { key: "colores",      label: "Colores" },
-    { key: "espesor",      label: "Espesor" },
+    { key: "compatibleCon", label: "Compatible con" },
+    { key: "tipoProducto",  label: "Tipo de accesorio" },
+    { key: "composicion",   label: "Composición" },
   ],
 };
 
