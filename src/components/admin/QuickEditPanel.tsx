@@ -6,6 +6,7 @@ import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
+import { normalizarLinkDoc } from "@/lib/doc-links";
 import StickerPicker from "./StickerPicker";
 import { parseStickerIds, type Sticker } from "@/lib/stickers";
 
@@ -71,6 +72,9 @@ const FIELD_LABELS: Record<string, string> = {
   cajasPallet: "Cajas x pallet", pesoPallet: "Peso x pallet", stock: "Stock",
   garantia: "Garantía", fichaTecnica: "Ficha técnica", archivoInstalacion: "Archivo instalación",
 };
+
+/** Campos que la ficha del producto publica como link clickeable. */
+const CAMPOS_LINK = new Set(["garantia", "fichaTecnica", "archivoInstalacion"]);
 
 const NUMBER_FIELDS = new Set([
   "precioM2", "precio", "precioTabla", "precioMLineal", "precioMl",
@@ -440,9 +444,12 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     const payload: Record<string, unknown> = {};
     for (const key of availableKeys) {
       if (HIDDEN_FIELDS.has(key)) continue;
-      if (form[key] !== undefined && form[key] !== null && form[key] !== "") {
-        payload[key] = form[key];
-      }
+      const valor = form[key];
+      if (valor === undefined) continue;
+      // Un campo vaciado viaja como null a proposito. Antes se omitia, y omitir
+      // es "no lo toques": una vez guardado un dato no habia forma de borrarlo
+      // desde el panel — el link de garantia quedaba pegado para siempre.
+      payload[key] = valor === "" ? null : valor;
     }
     payload.sku = form.sku;
     payload.stickers = JSON.stringify(stickersElegidos);
@@ -472,6 +479,11 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     const isNum = NUMBER_FIELDS.has(key);
     const isTextarea = key === "descripcion";
     const val = form[key] ?? "";
+    // Los tres campos de documento terminan en un `href` de la ficha. Se avisa
+    // en el momento si lo pegado se va a poder abrir: escribir un link que no
+    // anda y enterarse mirando el catalogo es la peor forma de descubrirlo.
+    const esCampoDoc = CAMPOS_LINK.has(key);
+    const linkOk = esCampoDoc && String(val).trim() ? normalizarLinkDoc(val) : null;
     // El SKU bloqueado (edición) sigue siendo un input plano: no se toca.
     const bloqueado = key === "sku" && !isNew;
     const opciones = isNum || isTextarea || bloqueado ? [] : (sugerencias[key] ?? []);
@@ -502,6 +514,22 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
             disabled={key === "sku" && !isNew}
             className={`${fieldClass} ${key === "sku" && !isNew ? "bg-[#FAFAF8] text-[#aaa]" : ""}`}
           />
+        )}
+        {esCampoDoc && String(val).trim() !== "" && (
+          linkOk ? (
+            <a
+              href={linkOk}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-[9px] text-emerald-600 hover:underline"
+            >
+              Se abre como link ↗
+            </a>
+          ) : (
+            <p className="mt-1 text-[9px] text-[#bbb]">
+              No parece un link: se guarda como texto y no aparece en la ficha.
+            </p>
+          )
         )}
       </div>
     );

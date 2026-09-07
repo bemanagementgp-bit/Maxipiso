@@ -405,6 +405,52 @@ La ficha `/catalogo/[id]` es **server component**: resuelve el producto con `fin
 (recorre las 8 tablas secuencialmente hasta el primer match), arma las specs con
 `buildSpecsFromRow()` y muestra precios sólo si `getServerSession` devuelve sesión.
 
+#### La ficha del producto
+
+- **El país con su bandera quedó sólo en Maderas.** En el resto de las categorías lo
+  reemplazan los stickers (§8.2 ter): se eligen por producto y dicen más que el origen solo.
+  En Maderas la procedencia es parte de lo que se compra, así que ahí se queda. En la grilla
+  de datos de la ficha `Origen` sigue estando en todas: ahí es un dato técnico rotulado, no
+  una insignia.
+- **Los datos del producto se leen a 13/14 px**, no a 10/11. El público del rubro no es joven
+  y la grilla de specs es lo que más se mira de la ficha.
+- El precio dice **"+ IVA"**. Decía "mayorista", que no es información: el catálogo con
+  precios ya es sólo para clientes mayoristas.
+- Las migas de pan pasan a **gris** en hover. El naranja es el color de acción de la marca y
+  estaba compitiendo con los botones de verdad.
+
+#### Documentos del producto — garantía, ficha técnica, instalación
+
+`garantia`, `fichaTecnica` y `archivoInstalacion` son columnas de texto libre que carga el
+panel y también llegan por la importación de planillas. Ahora **si lo cargado es un link, la
+ficha muestra una tarjeta que lo abre**; si no, sigue siendo la consulta por WhatsApp de
+siempre, y sólo en Pisos — no tiene sentido ofrecerle una guía de instalación a un zócalo.
+
+`normalizarLinkDoc()` (`lib/doc-links.ts`) decide si algo es un link, y es deliberadamente
+tolerante en la entrada y estricta en la salida: acepta `www.krono.com/ficha.pdf` sin esquema
+—que es lo que alguien pega copiando de la barra del navegador— y devuelve `https://…`; acepta
+rutas relativas para archivos propios; y devuelve `null` para `javascript:`, para `data:` y
+para cualquier cosa sin pinta de dominio. **Lo que hay guardado no se toca**: hay `garantia`
+con "12 meses" cargado de planillas viejas, y eso es un dato válido que no es un link. La
+decisión se toma al renderizar, no al guardar, así que no hay migración ni riesgo de perder
+texto.
+
+El panel avisa en el momento, debajo del campo, si lo escrito se va a abrir como link o si se
+guarda como texto: enterarse de que el link no anda mirando el catálogo es la peor forma de
+descubrirlo.
+
+> **Un campo vaciado en el panel ahora se borra de verdad.** El payload omitía los valores
+> vacíos, y omitir es "no lo toques": una vez guardado un dato no había forma de sacarlo — el
+> link de garantía quedaba pegado para siempre. Ahora viaja como `null`.
+
+#### Productos complementarios
+
+Debajo de "Productos Similares" va un segundo carrusel. Similares es la misma tabla, o sea
+**otro modelo que compite con el que el cliente está mirando**; lo complementario es lo que le
+falta para terminar la obra. Por eso los accesorios encabezan casi todas las listas, y el deck
+llama a maderas y viceversa. El mapa está en la ficha, junto a la consulta, y ordena poniendo
+primero los que tienen foto: una tarjeta con el placeholder no vende nada.
+
 #### Navegación y estado de la vista
 
 Toda la vista vive en la query string (`categoria`, `search`, `filtros[...]`, `orden`, `page`),

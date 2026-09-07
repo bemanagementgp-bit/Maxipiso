@@ -25,6 +25,7 @@ import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
 import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } from "@/lib/stickers";
+import { CAMPOS_DOC, normalizarLinkDoc } from "@/lib/doc-links";
 
 /**
  * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
@@ -275,10 +276,10 @@ function getProductDetailPath(tableKey: string, raw: Record<string, unknown>): P
         text: entry.text,
         href: buildCatalogHref(tableKey, filters),
         className: allLarge
-          ? "text-[13px] font-semibold text-[#111111] hover:text-[#DF8635] transition-colors"
+          ? "text-[13px] font-semibold text-[#111111] hover:text-[#7A7A7A] transition-colors"
           : tipoProductoLarge && index === 1
-            ? "text-[12px] font-semibold text-[#111111] hover:text-[#DF8635] transition-colors"
-            : "text-[11px] text-[#111111] hover:text-[#DF8635] transition-colors",
+            ? "text-[12px] font-semibold text-[#111111] hover:text-[#7A7A7A] transition-colors"
+            : "text-[11px] text-[#111111] hover:text-[#7A7A7A] transition-colors",
       };
     });
 }
@@ -357,11 +358,25 @@ export default async function ProductPage({
   const specEntries = specs;
   const consultHref = buildWA(`Hola, quiero consultar precio y disponibilidad de ${product.nombre} (SKU: ${product.sku}). Me pueden asesorar?`);
 
-  const docCards = [
-    { title: "Instalación",   href: buildWA(`Hola, quiero la guia de instalacion de ${product.nombre}.`) },
-    { title: "Ficha Técnica", href: buildWA(`Hola, quiero la ficha tecnica de ${product.nombre}.`) },
-    { title: "Garantía",      href: buildWA(`Hola, quiero info de garantia de ${product.nombre}.`) },
-  ];
+  /**
+   * Documentos del producto.
+   *
+   * Si el panel tiene cargado un link para ese documento, la tarjeta lleva al
+   * archivo. Si no, sigue siendo la consulta por WhatsApp de siempre — pero
+   * sólo en Pisos, que es donde ya estaba: no tiene sentido ofrecerle una guía
+   * de instalación a un zócalo.
+   */
+  type DocCard = { title: string; href: string; esArchivo: boolean };
+  const docCards = CAMPOS_DOC.map(({ key, label }): DocCard | null => {
+    const link = normalizarLinkDoc(raw[key]);
+    if (link) return { title: label, href: link, esArchivo: true };
+    if (TABLE_CATEGORIA[tableKey] !== "Pisos") return null;
+    return {
+      title: label,
+      href: buildWA(`Hola, quiero ${label.toLowerCase()} de ${product.nombre}.`),
+      esArchivo: false,
+    };
+  }).filter((c): c is DocCard => c !== null);
 
   // Productos similares (misma tabla/tipo)
   const relatedRaw = await (prisma as any)[tableKey]
@@ -393,6 +408,37 @@ export default async function ProductPage({
 
   const related = (relatedRaw as Record<string, unknown>[]).map((r) => rowToPublic(r, tableKey));
 
+  /**
+   * Qué se le ofrece al lado de cada producto.
+   *
+   * "Similares" es la misma tabla —otro modelo del mismo tipo de piso—, y eso
+   * compite con lo que el cliente ya está mirando. Lo complementario es lo que
+   * le falta para terminar la obra: el zócalo y el perfil del piso, la madera
+   * del deck. Por eso los accesorios encabezan casi todas las listas.
+   */
+  const COMPLEMENTARIOS: Record<string, string[]> = {
+    pisoFlotante:  ["accesorio", "revestimiento"],
+    pisoVinilico:  ["accesorio", "revestimiento"],
+    pisoMadera:    ["accesorio", "revestimiento"],
+    porcellanato:  ["accesorio", "revestimiento"],
+    revestimiento: ["accesorio", "pisoFlotante"],
+    deck:          ["accesorio", "madera"],
+    madera:        ["accesorio", "deck"],
+    accesorio:     ["pisoFlotante", "porcellanato"],
+  };
+
+  const complementarios: CatalogPublicProduct[] = [];
+  for (const tk of COMPLEMENTARIOS[tableKey] ?? []) {
+    const filas = await (prisma as any)[tk]
+      .findMany({ where: { isActive: true }, take: 12 })
+      .catch(() => []);
+    // Primero las que tienen foto: una tarjeta con el placeholder no vende nada.
+    const ordenadas = (filas as Record<string, unknown>[]).sort(
+      (a, b) => Number(parseImagenes(b.imagenes as string).length > 0) - Number(parseImagenes(a.imagenes as string).length > 0),
+    );
+    for (const fila of ordenadas.slice(0, 6)) complementarios.push(rowToPublic(fila, tk));
+  }
+
   const productCatalogPath = getProductCatalogPath(tableKey, raw);
   const productDetailPath = getProductDetailPath(tableKey, raw);
   const badgeLabel = product.subcategoria ?? product.categoria ?? "Producto";
@@ -407,13 +453,13 @@ export default async function ProductPage({
             aria-label="Migas de pan"
             className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm md:text-[15px] text-gray-200"
           >
-            <Link href="/" className="hover:text-[#DF8635] transition-colors">Inicio</Link>
+            <Link href="/" className="hover:text-gray-400 transition-colors">Inicio</Link>
             <FiChevronRight size={14} className="text-gray-500 shrink-0" />
-            <Link href="/catalogo" className="hover:text-[#DF8635] transition-colors">Catálogo</Link>
+            <Link href="/catalogo" className="hover:text-gray-400 transition-colors">Catálogo</Link>
             {productCatalogPath.map((segment, index) => (
               <span key={`${segment.text}-${index}`} className="inline-flex items-center gap-2">
                 <FiChevronRight size={14} className="text-gray-500 shrink-0" />
-                <Link href={segment.href} className="hover:text-[#DF8635] transition-colors">
+                <Link href={segment.href} className="hover:text-gray-400 transition-colors">
                   {segment.text}
                 </Link>
               </span>
@@ -435,9 +481,13 @@ export default async function ProductPage({
               stickers={stickers}
             />
 
-            {/* PDF Cards — solo para categoría Pisos */}
-            {product.categoria === "Pisos" && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+            {/* Documentos: link cargado desde el panel, o consulta por WhatsApp */}
+            {docCards.length > 0 && (
+            <div
+              className={`grid grid-cols-1 gap-4 mt-8 ${
+                docCards.length === 1 ? "sm:grid-cols-1 sm:max-w-sm" : docCards.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
+              }`}
+            >
               {docCards.map((card) => (
                 <a
                   key={card.title}
@@ -451,8 +501,10 @@ export default async function ProductPage({
                     <span className="text-[10px] font-bold mt-0.5">PDF</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#111111] text-xs uppercase tracking-wide leading-tight">{card.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Descargar PDF</p>
+                    <p className="font-bold text-[#111111] text-sm uppercase tracking-wide leading-tight">{card.title}</p>
+                    <p className="text-[13px] text-gray-400 mt-0.5 truncate">
+                      {card.esArchivo ? "Abrir documento" : "Pedir por WhatsApp"}
+                    </p>
                   </div>
                   <FiChevronRight size={18} className="text-gray-400 shrink-0" />
                 </a>
@@ -498,8 +550,8 @@ export default async function ProductPage({
               <p className="text-[#DF8635] font-bold text-lg mb-1">
                 {product.precio > 500 ? "$" : "u$d"}{" "}
                 {product.precio.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                <span className="text-xs font-normal text-gray-400 ml-1">
-                  {product.unidadMedida ? `/${product.unidadMedida}` : "mayorista"}
+                <span className="text-sm font-normal text-gray-400 ml-1">
+                  {product.unidadMedida ? `/${product.unidadMedida} ` : ""}+ IVA
                 </span>
               </p>
             )}
@@ -514,19 +566,19 @@ export default async function ProductPage({
                   const isOrigin = label === "Origen";
                   const flagSrc = isOrigin ? getFlagUrl(value) : null;
                   return (
-                    <div key={label} className="flex items-start gap-2.5 py-2.5 border-b border-gray-100">
+                    <div key={label} className="flex items-start gap-3 py-3 border-b border-gray-100">
                       <div className="mt-0.5 shrink-0 text-gray-400">
-                        <Icon size={13} />
+                        <Icon size={16} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-[#111111] leading-tight">{label}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <p className="text-[11px] text-gray-500 leading-tight">{value}</p>
+                        <p className="text-[13px] font-bold text-[#111111] leading-tight">{label}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <p className="text-[14px] text-gray-600 leading-snug">{value}</p>
                           {flagSrc && (
                             <img
                               src={flagSrc}
                               alt={value}
-                              className="w-5 h-3.5 object-cover rounded-[2px] border border-gray-200 shrink-0"
+                              className="w-6 h-4 object-cover rounded-[2px] border border-gray-200 shrink-0"
                             />
                           )}
                         </div>
@@ -562,6 +614,18 @@ export default async function ProductPage({
         <div className="mt-12">
           <ProductCarousel title="Productos Similares" href="/catalogo" products={related} showPrices={isAuthenticated} />
         </div>
+
+        {/* Complementarios: lo que le falta para terminar la obra */}
+        {complementarios.length > 0 && (
+          <div className="mt-12">
+            <ProductCarousel
+              title="Productos Complementarios"
+              href="/catalogo"
+              products={complementarios}
+              showPrices={isAuthenticated}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

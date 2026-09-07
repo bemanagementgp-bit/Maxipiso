@@ -140,7 +140,10 @@ function ProductCardBase({
           </p>
         )}
 
-        {item.origen && (() => {
+        {/* El país con su bandera queda sólo en Maderas, donde la procedencia es
+            parte de lo que se compra. En el resto lo reemplazan los stickers,
+            que se eligen por producto y dicen más que el origen solo. */}
+        {item.origen && item._tabla === "maderas" && (() => {
           const flagSrc = getFlagUrl(item.origen);
           const label = formatOriginLabel(item.origen);
           return (
