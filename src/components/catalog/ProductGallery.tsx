@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { FiPackage } from "react-icons/fi";
 import SafeImage from "./SafeImage";
+import StickerOverlay from "./StickerOverlay";
+import type { Sticker } from "@/lib/stickers";
 
 type ProductGalleryProps = {
   productName: string;
   categoryLabel?: string | null;
   images: string[];
+  /** Se dibujan sobre la PRIMERA imagen, que es la portada del producto. */
+  stickers?: Sticker[];
 };
 
-export default function ProductGallery({ productName, categoryLabel, images }: ProductGalleryProps) {
+export default function ProductGallery({ productName, categoryLabel, images, stickers = [] }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const safeImages = images.filter(Boolean);
   const activeImage = safeImages[activeIndex];
@@ -50,6 +54,9 @@ export default function ProductGallery({ productName, categoryLabel, images }: P
             <FiPackage size={72} />
           </div>
         )}
+        {/* Solo sobre la portada: en el resto de las fotos taparian el detalle
+            que el cliente esta mirando. */}
+        {activeIndex === 0 && <StickerOverlay stickers={stickers} tamano="md" />}
       </div>
     </div>
   );

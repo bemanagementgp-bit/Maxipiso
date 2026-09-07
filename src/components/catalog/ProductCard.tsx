@@ -14,6 +14,8 @@ import Link from "next/link";
 import { FiPackage, FiSearch, FiX, FiChevronRight, FiChevronDown, FiArrowLeft } from "react-icons/fi";
 import SafeImage from "./SafeImage";
 import { getFlagUrl, formatOriginLabel } from "@/lib/flags";
+import StickerOverlay from "./StickerOverlay";
+import type { Sticker } from "@/lib/stickers";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,8 @@ export type CatalogItem = {
   origen?: string;
   imagen?: string;
   imagenes?: string;
+  /** Stickers ya resueltos por el servidor. */
+  stickersResueltos?: Sticker[];
   descripcion?: string;
   espesor?: string;
   ancho?: string;
@@ -107,9 +111,10 @@ function ProductCardBase({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-contain group-hover:scale-105 transition-transform duration-500"
         />
-        <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
+        <span className="absolute bottom-2 left-2 z-10 bg-black/60 text-white text-[9px] font-mono px-2 py-0.5 rounded">
           {item.sku}
         </span>
+        <StickerOverlay stickers={item.stickersResueltos ?? []} abajoIzq="bottom-9" />
       </Link>
 
       <div className="p-4 flex flex-col flex-1 gap-1.5">

@@ -3,12 +3,13 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiLogOut, FiBox, FiUploadCloud, FiBarChart2, FiDollarSign } from "react-icons/fi";
+import { FiLogOut, FiBox, FiUploadCloud, FiBarChart2, FiDollarSign, FiTag } from "react-icons/fi";
 import Link from "next/link";
 
 const NAV = [
   { href: "/panel", label: "Productos", icon: FiBox },
   { href: "/panel/precios", label: "Precios y stock", icon: FiDollarSign },
+  { href: "/panel/stickers", label: "Stickers", icon: FiTag },
   { href: "/panel/importacion", label: "Importación", icon: FiUploadCloud },
   { href: "/panel/reportes", label: "Reportes", icon: FiBarChart2 },
 ];

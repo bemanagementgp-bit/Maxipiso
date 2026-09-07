@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCached, setCached } from "@/lib/catalog-cache";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
+import { normalizarSticker, parseStickerIds, resolverStickers } from "@/lib/stickers";
 
 export const runtime = "nodejs";
 
@@ -385,6 +386,37 @@ export async function GET(req: NextRequest) {
       });
       if (unique.length > 0) {
         filtros[fd.key] = { label: fd.label, values: unique };
+      }
+    }
+
+    // Stickers: se resuelven en el servidor y viajan con cada producto.
+    //
+    // Una sola consulta para todo el catalogo (son pocos) y despues un map en
+    // memoria: pedirlos por producto seria una consulta por fila, y dejar que
+    // los resuelva el cliente lo obligaria a una request extra antes de poder
+    // dibujar la grilla.
+    const idsUsados = new Set<string>();
+    for (const p of allProducts) {
+      for (const id of parseStickerIds((p as Record<string, unknown>).stickers)) idsUsados.add(id);
+    }
+
+    if (idsUsados.size > 0) {
+      const filas = await prisma.sticker
+        .findMany({ where: { id: { in: [...idsUsados] }, isActive: true } })
+        .catch((err) => {
+          // Que fallen los stickers no puede dejar el catalogo sin productos.
+          console.error("[catalogo/todos] no se pudieron cargar los stickers:", err);
+          return [];
+        });
+      const catalogo = new Map(
+        filas.map((f) => {
+          const s = normalizarSticker(f as unknown as Record<string, unknown>);
+          return [s.id, s] as const;
+        }),
+      );
+      for (const p of allProducts) {
+        const fila = p as Record<string, unknown>;
+        fila.stickersResueltos = resolverStickers(parseStickerIds(fila.stickers), catalogo);
       }
     }
 

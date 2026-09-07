@@ -126,6 +126,7 @@ model PisoFlotante {
   pesoPallet          Float?
   stock               Int?
   imagenes            String? // JSON array de URLs
+  stickers            String? // JSON array de ids de Sticker
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -171,6 +172,7 @@ model Porcellanato {
   precioCaja          Float?
   stock               Int?
   imagenes            String? // JSON array de URLs
+  stickers            String? // JSON array de ids de Sticker
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -213,6 +215,7 @@ model Revestimiento {
   precioMl           Float?
   moneda             String?
   imagenes           String?
+  stickers           String? // JSON array de ids de Sticker
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -268,6 +271,7 @@ model PisoVinilico {
   pesoPallet           Float?
   stock                Int?
   imagenes             String? // JSON array de URLs
+  stickers             String? // JSON array de ids de Sticker
   precioEnvioCaja      Float?
   garantia             String?
   fichaTecnica         String?
@@ -318,6 +322,7 @@ model PisoMadera {
   precioCaja          Float?
   stock               Int?
   imagenes            String? // JSON array de URLs
+  stickers            String? // JSON array de ids de Sticker
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -358,6 +363,7 @@ model Deck {
   precioMLineal      Float?
   moneda             String?
   imagenes           String?
+  stickers           String? // JSON array de ids de Sticker
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -390,6 +396,7 @@ model Madera {
   moneda               String?
   stock                Int?
   imagenes             String?
+  stickers             String? // JSON array de ids de Sticker
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
@@ -416,6 +423,7 @@ model Accesorio {
   colores      String?
   stock        Int?
   imagenes     String?
+  stickers     String? // JSON array de ids de Sticker
   descripcion  String?
   metadatos    String? // JSON key-value extra
   isActive     Boolean  @default(true)
@@ -456,8 +464,6 @@ enum AuthEventType {
   TOTP_FAIL
 }
 
-
-
 // ==================== LEADS DEL CHATBOT ====================
 // Antes de esto los datos que "Nacho" recolectaba (nombre, WhatsApp, email)
 // solo viajaban dentro del texto del mensaje de WhatsApp y quedaban en el
@@ -488,4 +494,36 @@ enum LeadEstado {
   EN_CONTACTO
   COMPRO
   DESCARTADO
+}
+
+/// Etiqueta que se dibuja encima de la foto de portada de un producto.
+///
+/// Es una tabla y no una lista en el codigo porque el catalogo de stickers
+/// cambia con la campana comercial: hoy "Oferta" y "Mas vendido", manana otra
+/// cosa. Se administran desde /panel/stickers sin tocar el codigo ni deployar.
+///
+/// Un sticker es una imagen (banderas, logos: no se pueden dibujar con texto) o
+/// una etiqueta de texto con colores (Oferta, Novedad: no necesitan diseno).
+model Sticker {
+  id         String   @id @default(cuid())
+  /// Como se llama en el panel. Es lo que ve quien carga el producto.
+  nombre     String
+  /// "imagen" | "texto"
+  tipo       String   @default("texto")
+  /// Solo para tipo = "imagen".
+  imagenUrl  String?
+  /// Solo para tipo = "texto".
+  texto      String?
+  colorFondo String?
+  colorTexto String?
+  /// Esquina de la foto: "arriba-izq" | "arriba-der" | "abajo-izq" | "abajo-der"
+  posicion   String   @default("arriba-izq")
+  /// Orden dentro de la esquina, y en el selector del ABM.
+  orden      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("stickers")
 }

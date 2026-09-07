@@ -6,6 +6,8 @@ import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
+import StickerPicker from "./StickerPicker";
+import { parseStickerIds, type Sticker } from "@/lib/stickers";
 
 type Meta = { clave: string; valor: string };
 
@@ -94,11 +96,13 @@ function huellaFormulario(
   form: Record<string, unknown>,
   metadatos: Meta[],
   imagenes: ImagenItem[],
+  stickers: string[] = [],
 ): string {
   return JSON.stringify({
     form,
     metadatos,
     imagenes: imagenes.map((i) => (i.tipo === "url" ? i.url : `archivo:${i.clave}`)),
+    stickers,
   });
 }
 
@@ -107,7 +111,7 @@ function previewDe(item: ImagenItem): string {
   return item.tipo === "url" ? item.url : item.preview;
 }
 
-const HIDDEN_FIELDS = new Set(["id", "imagenes", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
+const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
 
 interface QuickEditPanelProps {
   isOpen: boolean;
@@ -170,6 +174,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
    * traer las 8 para mostrar una sería tirar el resto.
    */
   const [sugerencias, setSugerencias] = useState<Record<string, string[]>>({});
+  /** Catalogo de stickers disponibles, y los elegidos para este producto. */
+  const [stickersDisponibles, setStickersDisponibles] = useState<Sticker[]>([]);
+  const [stickersElegidos, setStickersElegidos] = useState<string[]>([]);
   /**
    * Foto del formulario recien cargado, para saber si hay cambios sin guardar.
    *
@@ -188,6 +195,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     setUrlInput("");
     setUrlError("");
     setConfirmandoCierre(false);
+    setStickersElegidos([]);
     snapshotRef.current = "";
 
     setCopiaDe("");
@@ -197,7 +205,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       setForm(vacio);
       setTabla("");
       setMetadatos([]);
-      snapshotRef.current = huellaFormulario(vacio, [], []);
+      setStickersElegidos([]);
+      snapshotRef.current = huellaFormulario(vacio, [], [], []);
       return;
     }
 
@@ -238,11 +247,26 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
           try { return original.metadatos ? JSON.parse(original.metadatos) : []; } catch { return []; }
         })();
         setMetadatos(metas);
-        snapshotRef.current = huellaFormulario(p, metas, items);
+        // Al duplicar tambien se copian los stickers: es parte de "el mismo
+        // producto en otro color".
+        const ids = parseStickerIds(original.stickers);
+        setStickersElegidos(ids);
+        snapshotRef.current = huellaFormulario(p, metas, items, ids);
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
   }, [isOpen, productId, isNew, duplicateOfId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelado = false;
+    fetch("/api/stickers")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelado) setStickersDisponibles(d?.data?.stickers ?? []); })
+      // Sin stickers el formulario sigue andando: solo no se ofrece la seccion.
+      .catch(() => { if (!cancelado) setStickersDisponibles([]); });
+    return () => { cancelado = true; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !tabla) { setSugerencias({}); return; }
@@ -257,7 +281,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   }, [isOpen, tabla]);
 
   const hayCambiosSinGuardar =
-    snapshotRef.current !== "" && huellaFormulario(form, metadatos, imagenes) !== snapshotRef.current;
+    snapshotRef.current !== "" &&
+    huellaFormulario(form, metadatos, imagenes, stickersElegidos) !== snapshotRef.current;
 
   /**
    * Cierre pedido por el usuario (click afuera, la X, Cancelar o Escape).
@@ -420,6 +445,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       }
     }
     payload.sku = form.sku;
+    payload.stickers = JSON.stringify(stickersElegidos);
     payload.isActive = form.isActive ?? true;
     payload._tabla = tabla;
     if (metaFiltrados.length > 0) payload.metadatos = JSON.stringify(metaFiltrados);
@@ -596,6 +622,18 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
                   value={metadatos}
                   onChange={setMetadatos}
                   tabla={tabla}
+                />
+              </div>
+            )}
+
+            {/* Stickers */}
+            {tabla && (
+              <div>
+                <label className={labelClass}>Stickers sobre la foto</label>
+                <StickerPicker
+                  disponibles={stickersDisponibles}
+                  elegidos={stickersElegidos}
+                  onChange={setStickersElegidos}
                 />
               </div>
             )}

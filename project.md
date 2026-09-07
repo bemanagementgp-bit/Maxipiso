@@ -533,6 +533,48 @@ exteriores e interiores también los acepten.
 > también lo necesita. Asignando los dos, el segundo pisaba al primero **sin ningún aviso**.
 > Ahora todas las condiciones se acumulan en un `AND`, que es lo que permite combinarlas.
 
+### 8.2 ter Stickers sobre la foto
+
+Etiquetas que se dibujan encima de la foto de **portada** de un producto: banderas de origen,
+"Oferta", "Más vendido", "Waterproof", el logo de importado.
+
+**Es una tabla (`stickers`), no una lista en el código**, porque el catálogo de etiquetas
+cambia con la campaña comercial. Se administran en `/panel/stickers` sin deployar.
+
+Un sticker es **imagen o texto**:
+
+- **Imagen** — PNG que se sube con el mismo `/api/upload` que las fotos de producto, así que
+  va a Cloudinary y se valida contra la misma lista de hosts. Es el único camino para las
+  banderas y los logos.
+- **Texto** — etiqueta con color de fondo y de letra elegibles. Cubre "Oferta" o "Novedad"
+  sin que nadie tenga que diseñar nada. Sólo se aceptan colores **hex de 3 o 6 dígitos**: es
+  lo único que entra a un `style` inline.
+
+Cada uno tiene **esquina** (las cuatro de la foto) y **orden** dentro de esa esquina, así que
+varios se apilan sin pisarse. En la card del catálogo la esquina inferior izquierda se corre
+hacia arriba, porque ahí ya está el chip del SKU.
+
+#### Cómo se guarda
+
+`stickers` es una **columna JSON con los ids** en cada una de las 8 tablas de producto,
+igual que `imagenes` es un JSON array de URLs. Va como columna y no como tabla de unión para
+que venga con la fila en las consultas que ya existen, sin sumar un join en cada listado.
+
+Los ids se resuelven **en el servidor** —una sola consulta por página de catálogo, no una por
+producto— y viajan resueltos en `stickersResueltos`. `resolverStickers()` descarta los que ya
+no existen o están apagados: **borrar un sticker no puede romper productos**, simplemente
+dejan de mostrarlo. Por eso el `DELETE` no recorre las 8 tablas limpiando arrays.
+
+#### Dónde se ven
+
+En la card del catálogo y sobre la imagen principal de la ficha, **sólo cuando la foto activa
+es la portada**: en el resto de las fotos taparían el detalle que el cliente está mirando. El
+overlay es `pointer-events-none`, porque la foto está dentro de un link al producto y un
+sticker que se comiera el click rompería la navegación.
+
+> La migración `20260907000000_stickers` crea la tabla y agrega la columna a las 8 de
+> producto. **Hay que aplicarla en Turso** antes de que el deploy sirva de algo.
+
 ### 8.2 bis Precios y stock — `/panel/precios`
 
 Grilla editable para actualizar listas de precios sin abrir producto por producto.

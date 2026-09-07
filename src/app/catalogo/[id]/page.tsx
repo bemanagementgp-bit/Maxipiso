@@ -24,6 +24,7 @@ import { getFlagUrl, getCountryLabel } from "@/lib/flags";
 import type { CatalogPublicProduct } from "@/lib/catalog-public";
 import ProductGallery from "@/components/catalog/ProductGallery";
 import ProductCarousel from "@/components/catalog/ProductCarousel";
+import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } from "@/lib/stickers";
 
 /**
  * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
@@ -304,6 +305,27 @@ export default async function ProductPage({
     ? [...imagenesArr, PLACA_INSTITUCIONAL]
     : [PLACA_INSTITUCIONAL];
 
+  // Stickers de la portada. Se resuelven acá, en el server component, para que
+  // lleguen ya listos con el HTML y no haya un salto visual al hidratar.
+  const stickerIds = parseStickerIds(raw.stickers);
+  let stickers: Sticker[] = [];
+  if (stickerIds.length > 0) {
+    const filas = await prisma.sticker
+      .findMany({ where: { id: { in: stickerIds }, isActive: true } })
+      .catch((err) => {
+        // Que fallen los stickers no puede dejar la ficha sin producto.
+        console.error("[catalogo/[id]] no se pudieron cargar los stickers:", err);
+        return [];
+      });
+    const catalogo = new Map(
+      filas.map((f) => {
+        const st = normalizarSticker(f as unknown as Record<string, unknown>);
+        return [st.id, st] as const;
+      }),
+    );
+    stickers = resolverStickers(stickerIds, catalogo);
+  }
+
   // Build specs from row fields
   const specs = buildSpecsFromRow(raw, tableKey);
 
@@ -410,6 +432,7 @@ export default async function ProductPage({
               productName={product.nombre}
               categoryLabel={badgeLabel}
               images={product.galeria}
+              stickers={stickers}
             />
 
             {/* PDF Cards — solo para categoría Pisos */}
