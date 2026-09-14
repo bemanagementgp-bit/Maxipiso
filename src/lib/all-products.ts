@@ -100,6 +100,8 @@ export type ProductDelegate = {
   findUnique(args: any): Promise<Record<string, unknown> | null>;
   create(args: any): Promise<Record<string, unknown>>;
   update(args: any): Promise<Record<string, unknown>>;
+  /** Para las ediciones en masa: una consulta en vez de una por fila. */
+  updateMany(args: any): Promise<{ count: number }>;
   count(args?: any): Promise<number>;
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */

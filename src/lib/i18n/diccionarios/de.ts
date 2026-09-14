@@ -233,6 +233,16 @@ export const de: Diccionario = {
     errorGenerico: "Die Anmeldung ist fehlgeschlagen. Bitte erneut versuchen.",
   },
 
+  whatsapp: {
+    abrir: "Per WhatsApp kontaktieren",
+    cerrar: "Schließen",
+    titulo: "Womit können wir helfen?",
+    consulta: "Ich habe eine Frage",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "Ich möchte Händler werden",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Katalog",
     subtitulo: "Entdecken Sie unser gesamtes Großhandelssortiment. Lieferung im ganzen Land.",

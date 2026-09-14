@@ -1199,6 +1199,53 @@ tomada de un sitio de terceros (Construex/Polyarq) y re-alojada**; queda anotado
 riesgo de derechos no desaparece por haberla copiado a un CDN propio. Reemplazarla por una foto
 propia o con licencia cuando haya una.
 
+### 8.6 bis Botón de WhatsApp, y el chat oculto
+
+El chat con IA **está oculto por decisión comercial**, no borrado: el componente, `/api/chat`
+y el prompt de Nacho siguen en el repo, y volver a mostrarlo es destapar dos líneas en
+`ShellLayout`. En su lugar, el botón flotante de WhatsApp abre dos opciones —*tengo una
+consulta* y *quiero ser distribuidor*— con el mensaje ya escrito, para que el vendedor sepa de
+entrada de cuál se trata.
+
+Los dos mensajes van **siempre en español**, aunque el sitio esté en otro idioma: los lee el
+vendedor, no el cliente. Mismo criterio que el resto de los links de WhatsApp (§8.0).
+
+### 8.2 septies El tono, y cómo se completó el catálogo
+
+El campo `tono` ofrece en el ABM una **lista cerrada de nueve** (`lib/opciones-fijas.ts`):
+Beige, Blanco, Cremas, Gris, Gris Oscuro, Marrón, Marrón Oscuro, Negro y Rojizo.
+
+Sigue siendo un `Combobox` y no un `<select>`: se puede escribir un valor que no esté, porque
+el catálogo cambia antes que la lista. Lo que se gana es que el valor de siempre esté a un
+click y **escrito igual todas las veces** — y eso importa de verdad, porque los filtros del
+catálogo se arman con los valores distintos que hay cargados: "Gris" y "gris" serían dos
+opciones separadas en el filtro. Lo ya cargado que no esté en la lista igual aparece: si un
+producto viejo dice "Arena", editarlo no puede perderlo en silencio.
+
+#### Completar el tono de lo que ya estaba cargado
+
+Miles de productos tienen el tono en el nombre ("Roble Gris Oscuro") pero no en la columna.
+`lib/tono-detector.ts` lo deduce, y el panel lo aplica en masa desde **Productos → Completar
+el tono automáticamente**.
+
+Dos decisiones que lo hacen usable:
+
+1. **Muestra qué va a hacer antes de hacerlo.** `GET` no escribe: devuelve el reparto por tono
+   y ejemplos de cada uno. Es una adivinanza sobre miles de filas, y aplicada a ciegas llenaría
+   el catálogo de tonos plausibles y equivocados — peor que la columna vacía.
+2. **No se mapean especies de madera.** "Roble" puede ser claro u oscuro según el acabado, y
+   "Nogal" igual. Sólo entran palabras que nombran un color. Por eso "Teca Natural" no se
+   detecta, y está bien que no se detecte.
+
+Nunca pisa un tono cargado a mano: sólo completa los vacíos, así que correrlo dos veces no
+cambia nada la segunda. Los compuestos se prueban antes que los simples —"gris oscuro" antes
+que "gris"— o *Roble Gris Oscuro* caería en Gris.
+
+El `select` de cada tabla se arma desde el DMMF quedándose con las columnas que esa tabla
+tiene: no todas comparten los mismos campos (`acabado` no existe en pisos flotantes,
+`categoriaTerciaria` no existe en decks) y Prisma rechaza el `select` entero si se le nombra
+uno que falta.
+
 ### 8.7 Chatbot "Nacho"
 
 `ChatWidget` → `POST /api/chat` → Groq.

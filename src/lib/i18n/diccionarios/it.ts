@@ -233,6 +233,16 @@ export const it: Diccionario = {
     errorGenerico: "Accesso non riuscito. Riprova.",
   },
 
+  whatsapp: {
+    abrir: "Contattaci su WhatsApp",
+    cerrar: "Chiudi",
+    titulo: "Come possiamo aiutarti?",
+    consulta: "Ho una domanda",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "Voglio diventare distributore",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Catalogo",
     subtitulo: "Esplora tutto il nostro stock all'ingrosso. Consegna in tutto il paese.",

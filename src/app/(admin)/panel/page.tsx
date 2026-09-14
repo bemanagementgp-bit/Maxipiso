@@ -7,6 +7,7 @@ import {
 } from "react-icons/fi";
 import Link from "next/link";
 import { ProductTable } from "../../../components/admin/ProductTable";
+import DetectarTonos from "@/components/admin/DetectarTonos";
 import { QuickEditPanel } from "../../../components/admin/QuickEditPanel";
 import { HistorialModal } from "../../../components/admin/HistorialModal";
 
@@ -254,6 +255,9 @@ export default function ProductosPage() {
           </button>
         </div>
       </div>
+
+      {/* Completar tonos: operacion de una sola vez sobre el catalogo cargado */}
+      <DetectarTonos onAplicado={() => setTableRefreshKey((k) => k + 1)} />
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2">

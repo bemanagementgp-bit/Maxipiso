@@ -248,6 +248,16 @@ export const es = {
     errorGenerico: "No se pudo iniciar sesión. Intentá nuevamente.",
   },
 
+  whatsapp: {
+    abrir: "Contactar por WhatsApp",
+    cerrar: "Cerrar",
+    titulo: "¿Con qué te ayudamos?",
+    consulta: "Tengo una consulta",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "Quiero ser distribuidor",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Catálogo",
     subtitulo: "Explorá todo nuestro stock mayorista. Entrega en todo el país.",

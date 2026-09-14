@@ -233,6 +233,16 @@ export const fr: Diccionario = {
     errorGenerico: "La connexion a échoué. Réessayez.",
   },
 
+  whatsapp: {
+    abrir: "Nous contacter sur WhatsApp",
+    cerrar: "Fermer",
+    titulo: "Comment pouvons-nous vous aider ?",
+    consulta: "J'ai une question",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "Je veux devenir distributeur",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Catalogue",
     subtitulo: "Découvrez tout notre stock de gros. Livraison dans tout le pays.",

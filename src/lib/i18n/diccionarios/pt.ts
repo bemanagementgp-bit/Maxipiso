@@ -237,6 +237,16 @@ export const pt: Diccionario = {
     errorGenerico: "Não foi possível entrar. Tente novamente.",
   },
 
+  whatsapp: {
+    abrir: "Falar pelo WhatsApp",
+    cerrar: "Fechar",
+    titulo: "Como podemos ajudar?",
+    consulta: "Tenho uma dúvida",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "Quero ser distribuidor",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Catálogo",
     subtitulo: "Explore todo o nosso estoque de atacado. Entrega em todo o país.",

@@ -7,6 +7,7 @@ import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
 import { normalizarLinkDoc } from "@/lib/doc-links";
+import { opcionesDe } from "@/lib/opciones-fijas";
 import StickerPicker from "./StickerPicker";
 import ComplementariosPicker from "./ComplementariosPicker";
 import { parseStickerIds, type Sticker } from "@/lib/stickers";
@@ -505,7 +506,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     const linkOk = esCampoDoc && String(val).trim() ? normalizarLinkDoc(val) : null;
     // El SKU bloqueado (edición) sigue siendo un input plano: no se toca.
     const bloqueado = key === "sku" && !isNew;
-    const opciones = isNum || isTextarea || bloqueado ? [] : (sugerencias[key] ?? []);
+    const opciones = isNum || isTextarea || bloqueado ? [] : opcionesDe(key, sugerencias[key] ?? []);
 
     return (
       <div key={key}>

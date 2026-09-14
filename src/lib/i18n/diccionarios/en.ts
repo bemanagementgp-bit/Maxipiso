@@ -240,6 +240,16 @@ export const en: Diccionario = {
     errorGenerico: "We couldn't log you in. Please try again.",
   },
 
+  whatsapp: {
+    abrir: "Contact us on WhatsApp",
+    cerrar: "Close",
+    titulo: "How can we help?",
+    consulta: "I have a question",
+    consultaMensaje: "Hola, tengo una consulta de la web",
+    distribuidor: "I want to be a distributor",
+    distribuidorMensaje: "Hola, quiero ser distribuidor",
+  },
+
   catalogo: {
     titulo: "Catalogue",
     subtitulo: "Browse our full wholesale stock. We deliver across the country.",
