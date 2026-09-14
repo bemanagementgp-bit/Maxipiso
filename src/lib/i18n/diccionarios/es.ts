@@ -295,6 +295,7 @@ export const es = {
     masIva: "+ IVA",
     calcularEnvio: "Calculá tu envío",
     similares: "Productos Similares",
+    variantes: "Variantes",
     complementarios: "Productos Complementarios",
     verProducto: "Ver producto",
     verTodos: "Ver todos",

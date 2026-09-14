@@ -549,6 +549,47 @@ descubrirlo.
 > vacíos, y omitir es "no lo toques": una vez guardado un dato no había forma de sacarlo — el
 > link de garantía quedaba pegado para siempre. Ahora viaja como `null`.
 
+#### Variantes: el mismo producto en otro color o medida
+
+Un piso que viene en ocho colores ocupaba **ocho cards y ocho fichas**. Ahora ocupa una, y la
+ficha ofrece las ocho — como cualquier tienda.
+
+**Una variante ES un producto**, no un dato adentro de otro. Tiene su foto, su precio, su
+stock, su SKU y su ficha, y se edita en el ABM como cualquier otro. Lo único que se agrega es
+a qué grupo pertenece:
+
+- `varianteDe` — el SKU del principal del grupo. Vacío significa que ésta *es* la principal.
+- `varianteEtiqueta` — cómo se llama en el selector ("Roble", "120x20"). Si está vacía cae al
+  nombre del producto: peor que un rótulo corto, mucho mejor que un botón en blanco.
+
+**Por qué agrupar filas y no meter las opciones como JSON adentro del principal**: el catálogo
+**ya tiene esos productos cargados por separado** — ése es exactamente el problema que se está
+resolviendo. Agruparlos es completar una columna. Meterlos adentro de otro habría obligado a
+borrar siete productos y recargar a mano sus precios, fotos y medidas, y a que el ABM, la
+grilla de precios, los stickers y la importación aprendieran a editar un producto dentro de
+otro. Todo lo que ya existe sigue funcionando sobre cada variante.
+
+El grupo se arma con el **SKU del principal** y no con un código generado, porque el SKU es lo
+que la persona conoce y escribe en la planilla; un código habría que buscarlo antes de poder
+cargar nada.
+
+El listado del catálogo excluye las variantes (`varianteDe` vacío) — de ahí la card única. El
+selector de la ficha son **links, no botones con estado**: cada variante conserva su propia
+URL, se puede compartir y Google la indexa, y con `<Link prefetch>` el cambio es navegación
+del lado del cliente, sin recargar. Muestra la miniatura de cada una, porque en pisos la
+diferencia entre "Roble" y "Nogal" se ve, no se lee.
+
+> **Un `variante de` que apunta a un SKU inexistente esconde el producto**: el listado oculta
+> las variantes y el grupo al que cree pertenecer no existe. Un error de tipeo en una celda
+> deja un producto invisible, que es la clase de problema que se descubre semanas después. La
+> importación lo avisa, nombrando los productos afectados. No lo corrige sola: puede ser un
+> SKU que todavía no se cargó.
+
+> La migración `20260914000000_variantes` agrega las dos columnas y un índice por `varianteDe`
+> a las 8 tablas — la ficha busca los hermanos del grupo en cada carga, y sin índice son ocho
+> escaneos completos de tabla por producto abierto. **Hay que aplicarla en Turso antes de
+> deployar.**
+
 #### Productos complementarios
 
 Debajo de la ficha van dos carruseles. **Complementarios va primero**: "Similares" es la misma

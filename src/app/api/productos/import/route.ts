@@ -240,6 +240,34 @@ export async function POST(req: NextRequest) {
    * Lo que no se encuentra se avisa y se descarta. Una celda con un sticker mal
    * escrito no puede tirar abajo una importacion de 500 filas.
    */
+  /**
+   * Un `variante de` que apunta a un SKU inexistente esconde el producto del
+   * catalogo sin decir nada: el listado oculta las variantes, y el grupo al que
+   * cree pertenecer no existe. Un error de tipeo en una celda deja un producto
+   * invisible, que es la clase de problema que se descubre semanas despues.
+   *
+   * Se avisa; no se corrige solo. Puede ser un SKU que todavia no se cargo.
+   */
+  {
+    const referencias = new Map<string, string[]>();
+    for (const row of allRows) {
+      const padre = String((row as Record<string, unknown>).varianteDe ?? "").trim();
+      if (!padre) continue;
+      if (!referencias.has(padre)) referencias.set(padre, []);
+      referencias.get(padre)!.push(String(row.sku));
+    }
+    if (referencias.size > 0) {
+      const existentes = await resolverProductosPorSku([...referencias.keys()]);
+      const huerfanos = [...referencias.entries()].filter(([padre]) => !existentes.has(padre.toLowerCase()));
+      if (huerfanos.length > 0) {
+        warnings.push(
+          `Estos productos quedan como variante de un SKU que no existe, y por eso no van a aparecer en el catálogo: ` +
+            huerfanos.map(([padre, hijos]) => `${hijos.join(", ")} → "${padre}"`).join(" · "),
+        );
+      }
+    }
+  }
+
   if (pendientes.length > 0) {
     const skusComplementarios = [...new Set(pendientes.flatMap((p) => p.complementarios))];
 

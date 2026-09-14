@@ -68,6 +68,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -109,6 +111,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -144,6 +148,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -192,6 +198,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:              "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -234,6 +242,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -268,6 +278,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:            "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -295,6 +307,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       "archivo instalacion":  "archivoInstalacion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 
@@ -320,6 +334,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       descripcion:      "descripcion",
       stickers:               "stickers",
       complementarios:        "complementarios",
+      "variante de":     "varianteDe",
+      "etiqueta variante": "varianteEtiqueta",
     },
   },
 ];

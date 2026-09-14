@@ -280,6 +280,7 @@ export const it: Diccionario = {
     masIva: "+ IVA",
     calcularEnvio: "Calcola la spedizione",
     similares: "Prodotti simili",
+    variantes: "Varianti",
     complementarios: "Da abbinare",
     verProducto: "Vedi prodotto",
     verTodos: "Vedi tutti",

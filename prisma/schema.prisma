@@ -129,6 +129,10 @@ model PisoFlotante {
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
   complementarios     String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe          String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -143,6 +147,7 @@ model PisoFlotante {
   @@index([sku])
   @@index([marca])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("pisos_flotantes")
 }
 
@@ -178,6 +183,10 @@ model Porcellanato {
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
   complementarios     String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe          String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -192,6 +201,7 @@ model Porcellanato {
   @@index([sku])
   @@index([marca])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("porcellanatos")
 }
 
@@ -223,6 +233,10 @@ model Revestimiento {
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
   complementarios    String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe         String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta   String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -238,6 +252,7 @@ model Revestimiento {
   @@index([marca])
   @@index([categoriaPrincipal])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("revestimientos")
 }
 
@@ -281,6 +296,10 @@ model PisoVinilico {
   imagenes             String? // JSON array de URLs
   stickers             String? // JSON array de ids de Sticker
   complementarios      String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe           String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta     String?
   precioEnvioCaja      Float?
   garantia             String?
   fichaTecnica         String?
@@ -295,6 +314,7 @@ model PisoVinilico {
   @@index([sku])
   @@index([marca])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("pisos_vinilicos")
 }
 
@@ -334,6 +354,10 @@ model PisoMadera {
   imagenes            String? // JSON array de URLs
   stickers            String? // JSON array de ids de Sticker
   complementarios     String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe          String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -348,6 +372,7 @@ model PisoMadera {
   @@index([sku])
   @@index([marca])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("pisos_madera")
 }
 
@@ -377,6 +402,10 @@ model Deck {
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
   complementarios    String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe         String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta   String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -391,6 +420,7 @@ model Deck {
   @@index([sku])
   @@index([marca])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("decks")
 }
 
@@ -411,6 +441,10 @@ model Madera {
   imagenes             String?
   stickers             String? // JSON array de ids de Sticker
   complementarios      String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe           String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta     String?
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
@@ -422,34 +456,40 @@ model Madera {
 
   @@index([sku])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("maderas")
 }
 
 // ── 8. ACCESORIOS ──────────────────────────────────────────────
 model Accesorio {
-  id              String   @id @default(cuid())
-  sku             String   @unique
-  tipoProducto    String?
-  subtipo         String?
-  composicion     String?
-  compatibleCon   String?
-  nombre          String
-  espesor         String?
-  dimensiones     String?
-  colores         String?
-  stock           Int?
-  imagenes        String?
-  stickers        String? // JSON array de ids de Sticker
-  complementarios String? // JSON array de ids de productos
-  descripcion     String?
-  metadatos       String? // JSON key-value extra
-  isActive        Boolean  @default(true)
-  sortOrder       Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  sku              String   @unique
+  tipoProducto     String?
+  subtipo          String?
+  composicion      String?
+  compatibleCon    String?
+  nombre           String
+  espesor          String?
+  dimensiones      String?
+  colores          String?
+  stock            Int?
+  imagenes         String?
+  stickers         String? // JSON array de ids de Sticker
+  complementarios  String? // JSON array de ids de productos
+  /// SKU del producto principal del grupo. Vacio = es el principal.
+  varianteDe       String?
+  /// Como se llama esta variante en el selector: "Roble", "120x20".
+  varianteEtiqueta String?
+  descripcion      String?
+  metadatos        String? // JSON key-value extra
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([sku])
   @@index([isActive])
+  @@index([varianteDe])
   @@map("accesorios")
 }
 

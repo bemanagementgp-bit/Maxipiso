@@ -280,6 +280,7 @@ export const de: Diccionario = {
     masIva: "zzgl. MwSt.",
     calcularEnvio: "Versand berechnen",
     similares: "Ähnliche Produkte",
+    variantes: "Varianten",
     complementarios: "Passt dazu",
     verProducto: "Produkt ansehen",
     verTodos: "Alle ansehen",

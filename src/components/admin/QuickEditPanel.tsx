@@ -50,6 +50,10 @@ const SECTIONS = [
     ],
   },
   {
+    title: "Variantes",
+    keys: ["varianteDe", "varianteEtiqueta"],
+  },
+  {
     title: "Archivos y garantía",
     keys: ["garantia", "fichaTecnica", "archivoInstalacion"],
   },
@@ -79,6 +83,7 @@ const FIELD_LABELS: Record<string, string> = {
   precioEnvioCaja: "Envío x caja", flete: "Flete", pesoCaja: "Peso x caja",
   cajasPallet: "Cajas x pallet", pesoPallet: "Peso x pallet", stock: "Stock",
   garantia: "Garantía", fichaTecnica: "Ficha técnica", archivoInstalacion: "Archivo instalación",
+  varianteDe: "Variante de (SKU)", varianteEtiqueta: "Etiqueta variante",
 };
 
 /** Campos que la ficha del producto publica como link clickeable. */

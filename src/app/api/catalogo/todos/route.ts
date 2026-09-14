@@ -285,7 +285,18 @@ export async function GET(req: NextRequest) {
     const tablasQueFallaron = new Map<string, string>();
     const productPromises = tablesToQuery.map(async (table) => {
       const d = table.delegate() as any;
-      const where: Record<string, unknown> = { isActive: true, AND: [{ imagenes: { not: null } }, { imagenes: { not: "" } }, { imagenes: { not: "[]" } }] };
+      // Las variantes no se listan: el mismo piso en ocho colores tiene que
+      // ocupar una card, no ocho. Se ven entrando al producto principal, que es
+      // el unico del grupo que aparece aca (`varianteDe` vacio).
+      const where: Record<string, unknown> = {
+        isActive: true,
+        AND: [
+          { imagenes: { not: null } },
+          { imagenes: { not: "" } },
+          { imagenes: { not: "[]" } },
+          { OR: [{ varianteDe: null }, { varianteDe: "" }] },
+        ],
+      };
       for (const [key, val] of Object.entries(activeFilters)) {
         if (MULTI_VALUE_FIELDS.has(key)) {
           where[key] = { contains: val };

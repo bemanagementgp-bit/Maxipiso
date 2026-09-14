@@ -27,6 +27,8 @@ import ProductCarousel from "@/components/catalog/ProductCarousel";
 import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } from "@/lib/stickers";
 import { CAMPOS_DOC, normalizarLinkDoc } from "@/lib/doc-links";
 import { textos } from "@/lib/i18n/servidor";
+import SelectorVariantes from "@/components/catalog/SelectorVariantes";
+import { variantesDelGrupo } from "@/lib/variantes";
 import { parseImagenes } from "@/lib/imagenes";
 
 /**
@@ -416,6 +418,9 @@ export default async function ProductPage({
    * Van arriba de "Similares" porque los similares compiten con el producto que
    * el cliente ya esta mirando; esto lo suma.
    */
+  // Las variantes del grupo: el mismo producto en otro color o medida.
+  const variantes = await variantesDelGrupo(tableKey, raw);
+
   const idsComplementarios = parseComplementarios(raw.complementarios);
   const filasComplementarias = await findRowsByIds(idsComplementarios);
   const complementarios: CatalogPublicProduct[] = filasComplementarias.map(({ raw: fila, tableKey: tk }) =>
@@ -520,6 +525,8 @@ export default async function ProductPage({
             <h1 className="text-[22px] md:text-[26px] font-bold text-[#111111] leading-[1.1] mb-2">
               {product.nombre}
             </h1>
+
+            <SelectorVariantes variantes={variantes} titulo={t.producto.variantes} />
 
             {product.descripcion && (
               <div className="mb-5">
