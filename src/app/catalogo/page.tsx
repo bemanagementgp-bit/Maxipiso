@@ -623,21 +623,15 @@ function CatalogoPage() {
                     {t.catalogo.todasLasCategorias}
                   </button>
 
-                  <div className="bg-[#DF8635]/10 rounded-xl px-3 py-2.5 mb-5">
-                    <p className="text-[10px] text-[#DF8635] font-bold uppercase tracking-widest mb-0.5">Categoría</p>
-                    <p className="text-sm font-bold text-[#111111]">{selectedCatLabel}</p>
+                  <div className="bg-[#3D3D3D] rounded-xl px-3 py-2.5 mb-5">
+                    <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest mb-0.5">{t.catalogo.categoria}</p>
+                    <p className="text-sm font-bold text-white">{selectedCatLabel}</p>
                   </div>
                 </div>
               )}
 
               {/* Filtros */}
-              {hasFilters && (() => {
-                const gateKey = (selectedCategoria === "pisos-flotantes" || selectedCategoria === "pisos-vinilicos") ? "categoriaTerciaria" : null;
-                const gateSelected = gateKey ? !!activeFilters[gateKey] : true;
-                const gateFilter = gateKey ? filtros[gateKey] : null;
-                const restFilters = Object.entries(filtros).filter(([key]) => key !== gateKey);
-
-                return (
+              {hasFilters && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-xs font-bold text-[#111111] uppercase tracking-widest">{t.catalogo.filtros}</h3>
@@ -652,35 +646,7 @@ function CatalogoPage() {
                     </div>
 
                     <div className="space-y-3">
-                      {/* Gate filter (Tipo for pisos-flotantes) */}
-                      {gateFilter && (
-                        <div>
-                          <label className="text-[11px] font-bold text-[#111111] uppercase tracking-wide mb-1.5 block">
-                            {gateFilter.label}
-                          </label>
-                          <div className="flex flex-col gap-1.5">
-                            {gateFilter.values.map((val) => {
-                              const active = activeFilters[gateKey!] === val;
-                              return (
-                                <button
-                                  key={val}
-                                  onClick={() => handleToggleFilter(gateKey!, val)}
-                                  className={`w-full text-left px-3 py-2 rounded-xl border text-[12px] font-semibold transition-colors ${
-                                    active
-                                      ? "border-[#DF8635] bg-[#DF8635]/10 text-[#DF8635]"
-                                      : "border-gray-200 bg-white text-gray-700 hover:border-[#DF8635]/50"
-                                  }`}
-                                >
-                                  {val}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Rest of filters — only shown after gate is selected (or if no gate) */}
-                      {gateSelected && restFilters.map(([key, group]) => (
+                      {Object.entries(filtros).map(([key, group]) => (
                         <div key={key}>
                           <label className="text-[11px] font-bold text-[#111111] uppercase tracking-wide mb-1 block">
                             {group.label}
@@ -706,8 +672,7 @@ function CatalogoPage() {
                       ))}
                     </div>
                   </div>
-                );
-              })()}
+              )}
             </div>
           </aside>
 
@@ -725,31 +690,9 @@ function CatalogoPage() {
                 </select>
                 <FiChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
-              {hasFilters && (() => {
-                const gateKey = (selectedCategoria === "pisos-flotantes" || selectedCategoria === "pisos-vinilicos") ? "categoriaTerciaria" : null;
-                const gateSelected = gateKey ? !!activeFilters[gateKey] : true;
-                const gateFilter = gateKey ? filtros[gateKey] : null;
-                const restFilters = Object.entries(filtros).filter(([k]) => k !== gateKey);
-
-                return (
+              {hasFilters && (
                   <div className="flex gap-2 overflow-x-auto pb-1">
-                    {gateFilter && gateFilter.values.map((val) => {
-                      const active = activeFilters[gateKey!] === val;
-                      return (
-                        <button
-                          key={val}
-                          onClick={() => handleToggleFilter(gateKey!, val)}
-                          className={`shrink-0 px-3 py-2 rounded-full border text-xs font-semibold transition-colors ${
-                            active
-                              ? "border-[#DF8635] bg-[#DF8635]/10 text-[#DF8635]"
-                              : "border-gray-200 bg-white text-gray-700"
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      );
-                    })}
-                    {gateSelected && restFilters.map(([key, group]) => (
+                    {Object.entries(filtros).map(([key, group]) => (
                       <div key={key} className="relative shrink-0">
                         <select
                           value={activeFilters[key] ?? ""}
@@ -767,8 +710,7 @@ function CatalogoPage() {
                       </div>
                     ))}
                   </div>
-                );
-              })()}
+              )}
             </div>
 
             {/* Sort bar */}

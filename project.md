@@ -625,6 +625,21 @@ falta para terminar la obra. Por eso los accesorios encabezan casi todas las lis
 llama a maderas y viceversa. El mapa está en la ficha, junto a la consulta, y ordena poniendo
 primero los que tienen foto: una tarjeta con el placeholder no vende nada.
 
+#### Los filtros se muestran todos juntos
+
+Al entrar a una categoría aparecen **todos los filtros a la vez**, y el de subcategoría —"Tipo"—
+es el primero de la lista, como uno más.
+
+Antes ese primero funcionaba como **compuerta**: en pisos flotantes y vinílicos se dibujaba
+aparte, con botones grandes, y el resto de los filtros **no aparecía hasta elegirlo**. Quien
+entraba a Pisos Flotantes veía una sola cosa y no sabía que detrás había espesor, tono, marca.
+
+Que quede primero no necesita ninguna lógica especial: el orden lo da `FILTER_FIELDS_BY_TABLE`
+en la API, y ahí el de subcategoría ya encabeza cada lista.
+
+El chip de la categoría elegida es **gris oscuro** y no naranja claro. El naranja es el color
+de acción de la marca; ese bloque es contexto, dice dónde estás parado.
+
 #### Navegación y estado de la vista
 
 Toda la vista vive en la query string (`categoria`, `search`, `filtros[...]`, `orden`, `page`),
