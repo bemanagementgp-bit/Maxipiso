@@ -18,6 +18,7 @@ import StickerOverlay from "./StickerOverlay";
 import type { Sticker } from "@/lib/stickers";
 import { useT } from "@/components/providers/IdiomaProvider";
 import { interpolar } from "@/lib/i18n";
+import { primeraImagen } from "@/lib/imagenes";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -59,20 +60,7 @@ function normalizeImageUrl(src: string): string {
 }
 
 function firstImage(item: CatalogItem): string | null {
-  if (item.imagenes) {
-    const raw = item.imagenes as string;
-    const trimmed = raw.trim();
-    if (trimmed.startsWith("[")) {
-      try {
-        const arr = JSON.parse(trimmed);
-        if (Array.isArray(arr) && arr[0]) return normalizeImageUrl(arr[0]);
-      } catch { /* ignore */ }
-    } else {
-      const first = trimmed.split(/[;,]/)[0]?.trim();
-      if (first) return normalizeImageUrl(first);
-    }
-  }
-  return null;
+  return primeraImagen(item.imagenes);
 }
 
 function displayName(item: CatalogItem): string {

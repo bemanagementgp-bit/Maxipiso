@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FiSearch, FiX, FiLoader } from "react-icons/fi";
+import { primeraImagen } from "@/lib/imagenes";
 
 /**
  * Elige a mano los productos complementarios de un producto.
@@ -25,16 +26,7 @@ type Props = {
   productoActualId?: string | null;
 };
 
-function primeraImagen(crudo: unknown): string | null {
-  const texto = String(crudo ?? "").trim();
-  if (!texto) return null;
-  try {
-    const arr = JSON.parse(texto);
-    return Array.isArray(arr) && arr[0] ? String(arr[0]) : null;
-  } catch {
-    return texto.split(/[;,]/)[0]?.trim() || null;
-  }
-}
+
 
 function aElegido(p: Record<string, unknown>): Elegido {
   return {

@@ -27,6 +27,7 @@ import ProductCarousel from "@/components/catalog/ProductCarousel";
 import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } from "@/lib/stickers";
 import { CAMPOS_DOC, normalizarLinkDoc } from "@/lib/doc-links";
 import { textos } from "@/lib/i18n/servidor";
+import { parseImagenes } from "@/lib/imagenes";
 
 /**
  * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
@@ -36,20 +37,6 @@ import { textos } from "@/lib/i18n/servidor";
 const PLACA_INSTITUCIONAL =
   "https://res.cloudinary.com/dnaom2evd/image/upload/v1787856931/imagen-productos-1_zjbjhl.jpg";
 
-function parseImagenes(val: string | null | undefined): string[] {
-  if (!val) return [];
-  const trimmed = val.trim();
-  let parts: string[];
-  if (trimmed.startsWith("[")) {
-    try { parts = JSON.parse(trimmed); } catch { parts = []; }
-  } else {
-    parts = trimmed.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
-  }
-  return parts.map((s) => {
-    if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")) return s;
-    return `/${s}`;
-  });
-}
 
 // Mapa de labels de spec → icono
 const SPEC_ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as XLSX from "xlsx";
-import { SHEET_SCHEMAS, type SheetSchema } from "@/lib/sheet-schemas";
+import { SHEET_SCHEMAS } from "@/lib/sheet-schemas";
+// Mismo armador que la exportacion: la plantilla y el archivo exportado tienen
+// que tener las columnas identicas, o el ida y vuelta se rompe.
+import { encabezadosDe } from "@/lib/planilla-export";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -14,27 +17,6 @@ export const runtime = "nodejs";
  * encabezados salen del `fieldMap` del schema, que es el mismo que lee la
  * importacion: la plantilla y el parser no pueden desincronizarse.
  */
-
-/**
- * Un encabezado por columna de la base.
- *
- * El `fieldMap` tiene varias claves que apuntan al mismo campo —`imagen` e
- * `imagenes` son la misma columna— para aceptar las dos formas al importar. En
- * la plantilla se emite **una sola**, la primera de cada campo en el orden del
- * maestro. Antes se filtraba literalmente `"imagen"`, y las categorias cuya
- * unica clave era esa (revestimientos, deck, maderas) quedaban sin ninguna
- * columna de foto.
- */
-function encabezadosDe(schema: SheetSchema): string[] {
-  const vistos = new Set<string>();
-  const headers: string[] = [];
-  for (const [header, campo] of Object.entries(schema.fieldMap)) {
-    if (vistos.has(campo)) continue;
-    vistos.add(campo);
-    headers.push(header);
-  }
-  return headers;
-}
 
 function titulo(header: string): string {
   return header.charAt(0).toUpperCase() + header.slice(1);
@@ -59,7 +41,7 @@ async function hojaDeInstrucciones(): Promise<string[][]> {
     ["Stickers", "Nombres de los stickers separados por |. Ej: Oferta | Waterproof"],
     ["Complementarios", "SKUs de los productos complementarios separados por |. Ej: ZOC-001 | PERF-220"],
     [],
-    ["", "En Stickers y Complementarios también sirven la coma y el punto y coma."],
+    ["", "En las tres columnas también sirven la coma y el punto y coma."],
     ["", "Lo que no se encuentre se avisa al terminar y se ignora: la fila entra igual."],
     ["", "Un complementario puede ser de cualquier categoría, no sólo accesorios."],
     [],

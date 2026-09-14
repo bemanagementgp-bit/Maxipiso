@@ -6,6 +6,7 @@
  * import from here.
  */
 import { prisma } from "@/lib/prisma";
+import { primeraImagen } from "@/lib/imagenes";
 import { formatOriginLabel } from "@/lib/flags";
 
 // ─── Table registry ──────────────────────────────────────────────────────────
@@ -132,18 +133,7 @@ export interface NormalizedProduct {
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function firstImage(row: Record<string, unknown>): string | null {
-  if (row.imagenes) {
-    const raw = String(row.imagenes).trim();
-    if (raw.startsWith("[")) {
-      try {
-        const arr = JSON.parse(raw);
-        return Array.isArray(arr) && arr[0] ? (arr[0] as string) : null;
-      } catch {}
-    }
-    const first = raw.split(/[;,]/)[0]?.trim();
-    if (first) return first;
-  }
-  return null;
+  return primeraImagen(row.imagenes);
 }
 
 function firstPrice(row: Record<string, unknown>): number {

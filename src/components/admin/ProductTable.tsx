@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { primeraImagen } from "@/lib/imagenes";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight, FiCopy } from "react-icons/fi";
@@ -151,21 +152,8 @@ export interface ProductTableProps {
   refreshKey?: number;
 }
 
-/** Primera URL de un campo `imagenes` que puede venir como JSON array o CSV. */
-function parseFirstImage(value: unknown): string | null {
-  if (typeof value !== "string" || !value.trim()) return null;
-  const raw = value.trim();
-  if (raw.startsWith("[")) {
-    try {
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) && typeof arr[0] === "string" ? arr[0] : null;
-    } catch {
-      return null;
-    }
-  }
-  const first = raw.split(/[;,]/)[0]?.trim();
-  return first || null;
-}
+/** Primera URL de un campo `imagenes`. Ver `lib/imagenes.ts`. */
+const parseFirstImage = primeraImagen;
 
 export function ProductTable({
   onEdit, onDelete, onViewHistory, onDuplicate, onNotify,

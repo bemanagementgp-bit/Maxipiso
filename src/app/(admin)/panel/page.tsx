@@ -188,17 +188,31 @@ export default function ProductosPage() {
     }
   };
 
+  /**
+   * Baja el catalogo como Excel, con la misma forma que la plantilla.
+   *
+   * Si hay una categoria elegida en el filtro, exporta solo esa: es lo que la
+   * pantalla esta mostrando, y bajarse las ocho hojas cuando se esta mirando
+   * una sola sorprende.
+   */
   const handleExport = async () => {
     try {
-      const res = await fetch("/api/productos/export");
+      const url = tablaFilter
+        ? `/api/productos/export?categoria=${encodeURIComponent(tablaFilter)}`
+        : "/api/productos/export";
+      const res = await fetch(url);
       if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      // El nombre lo decide el servidor, que sabe si es una categoria o todas.
+      const nombre =
+        res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1] ??
+        `catalogo-maxipiso-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `productos-maxipiso-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.href = objectUrl;
+      a.download = nombre;
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(objectUrl);
       addToast("success", "Exportación completada");
     } catch {
       addToast("error", "Error al exportar");

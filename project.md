@@ -983,6 +983,42 @@ categorías", `tabla` va vacío y el endpoint devuelve 400.
 
 ### 8.4 Importación desde Excel
 
+#### La exportación tiene la forma de la plantilla
+
+`GET /api/productos/export` devuelve **una hoja por categoría con exactamente las mismas
+columnas que la plantilla**, en el mismo orden. Una columna sin cargar —`tono`, por ejemplo—
+viaja vacía pero viaja: lo que se exporta se completa en Excel y se vuelve a importar sin
+tocar encabezados. **Ese ida y vuelta es el punto.**
+
+Antes devolvía una sola hoja con ocho columnas genéricas (SKU, nombre, marca, precio…), que
+servía para mirar pero no para volver a cargar.
+
+Los encabezados salen de `encabezadosDe()`, que **comparten la plantilla y la exportación**,
+y el `fieldMap` del que salen es el mismo que lee el parser de importación: los tres no se
+pueden desincronizar.
+
+Las tres columnas especiales se escriben como la plantilla dice usarlas —**nombres de sticker,
+SKUs de complementario y URLs separadas por ` | `**— y no como los ids que guarda la base: un
+archivo con cuids no se puede leer ni editar, y al reimportarlo la columna quedaría mal.
+
+`?categoria=` exporta una sola y acepta tanto el id del schema (`pisos-flotantes`) como el
+nombre de tabla (`pisos_flotantes`), que es lo que el panel tiene a mano. Por defecto van
+**todos los productos, no sólo los activos**: quien exporta para editar en masa no quiere
+perder de vista los apagados.
+
+#### Un solo lector de `imagenes`
+
+La columna `imagenes` puede venir como JSON array (lo que escribe el ABM), como lista separada
+por `|`, `;` o `,` (lo que se carga por planilla), o como una URL suelta de las cargas viejas.
+
+Eso vivía **copiado en cinco archivos** —la card, la ficha, la grilla del panel, el selector de
+complementarios y `all-products`— y **ninguna copia aceptaba el `|`, que es justo el separador
+que la plantilla dice usar**: una planilla cargada como la plantilla indicaba dejaba el
+producto con una sola imagen rota. Ahora es `lib/imagenes.ts` y nada más.
+
+El `|` es el separador recomendado porque es el único que no puede aparecer dentro de una URL:
+la coma sí aparece en las transformaciones de Cloudinary (`f_auto,q_auto,w_384`).
+
 #### La plantilla y las columnas que no son texto
 
 Los encabezados de la plantilla salen del mismo `fieldMap` que lee el parser, así que **no se
