@@ -848,9 +848,35 @@ Un sticker es **imagen o texto**:
   sin que nadie tenga que diseñar nada. Sólo se aceptan colores **hex de 3 o 6 dígitos**: es
   lo único que entra a un `style` inline.
 
+El tipo **se cambia después de creado**, desde la misma fila de la tabla, y cambiarlo no
+borra el otro lado: el texto y la URL de la imagen se guardan los dos, y se dibuja el que diga
+`tipo`. Antes, pasar un sticker a texto perdía el archivo subido y había que volver a subirlo
+para deshacer la prueba. Cada fila sube su propia imagen, así que reemplazar un PNG ya no
+obliga a borrar el sticker y crearlo de nuevo.
+
 Cada uno tiene **esquina** (las cuatro de la foto) y **orden** dentro de esa esquina, así que
 varios se apilan sin pisarse. En la card del catálogo la esquina inferior izquierda se corre
 hacia arriba, porque ahí ya está el chip del SKU.
+
+#### Tamaño
+
+`escala` es un porcentaje del tamaño base, de 75% a 200%, y **100 es exactamente como se veía
+antes de que la columna existiera**: los que ya estaban cargados no cambian solos. Hacía falta
+porque no todos los stickers se leen igual —un "WATER RESISTANT" entra cómodo donde una
+bandera queda diminuta— y el tamaño único los dejaba a todos en el peor promedio.
+
+Es una **lista cerrada y no un número libre**: lo que se necesita es "éste se ve chico,
+agrandálo un poco", y con un campo abierto se carga 400 y el sticker tapa media foto.
+
+El overlay pasó de clases de Tailwind (`h-6`, `text-[9px]`) a **medidas en píxeles como estilo
+inline**, porque la escala multiplica la base y `h-6` no se multiplica por 1,25. Armar el
+nombre de la clase en tiempo de ejecución tampoco servía: Tailwind no genera lo que no ve
+escrito. La vista previa del panel aplica el mismo factor, así que el tamaño se elige mirando,
+sin ir al catálogo a abrir un producto.
+
+> Se sugiere subir los PNG a **200 px de alto**: el sticker se dibuja a 36 px como máximo, al
+> 200% son 72, y 200 deja margen para pantallas retina sin que el archivo pese de más. El
+> ancho sale solo, porque lo que se fija es el alto.
 
 #### Cómo se guarda
 
@@ -871,7 +897,11 @@ overlay es `pointer-events-none`, porque la foto está dentro de un link al prod
 sticker que se comiera el click rompería la navegación.
 
 > La migración `20260907000000_stickers` crea la tabla y agrega la columna a las 8 de
-> producto. **Hay que aplicarla en Turso** antes de que el deploy sirva de algo.
+> producto. **Hay que aplicarla en Turso** antes de que el deploy sirva de algo. La
+> `20260915000000_escala_sticker` agrega `escala`: sin ella el panel de Stickers responde
+> error al listarlos, aunque el catálogo sigue andando —las consultas de stickers tienen
+> `.catch()` y los productos se muestran sin etiqueta— porque que fallen los stickers no
+> puede dejar el catálogo sin productos.
 
 ### 8.2 quinquies Estado de la base — `/panel/diagnostico`
 

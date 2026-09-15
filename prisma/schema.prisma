@@ -577,6 +577,8 @@ model Sticker {
   posicion   String   @default("arriba-izq")
   /// Orden dentro de la esquina, y en el selector del ABM.
   orden      Int      @default(0)
+  /// Tamano relativo, en porcentaje. 100 = el de siempre.
+  escala     Int      @default(100)
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

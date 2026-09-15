@@ -1,6 +1,6 @@
 import { sanitizeText } from "@/lib/security";
 import { validateImageRef } from "@/lib/image-hosts";
-import { esPosicionValida } from "@/lib/stickers";
+import { ESCALA_DEFECTO, esEscalaValida, esPosicionValida } from "@/lib/stickers";
 
 /**
  * Validacion de un sticker que llega del panel.
@@ -30,23 +30,34 @@ export function validarSticker(raw: Record<string, unknown>): { data: Record<str
 
   const tipo = raw.tipo === "imagen" ? "imagen" : "texto";
 
+  // Se guardan los dos lados, no solo el del tipo elegido. Un sticker se pasa a
+  // texto para probar y se vuelve a imagen: si al pasar a texto se borraba la
+  // URL, había que volver a subir el archivo. Se dibuja el que dice `tipo`.
   let imagenUrl: string | null = null;
-  let texto: string | null = null;
-
-  if (tipo === "imagen") {
-    const ref = validateImageRef(String(raw.imagenUrl ?? ""));
+  const urlCruda = String(raw.imagenUrl ?? "").trim();
+  if (urlCruda) {
+    const ref = validateImageRef(urlCruda);
     // Se valida contra la misma lista de hosts que el resto de las imágenes:
     // un sticker es una imagen más y no merece una puerta propia.
     if (!ref.ok) return { error: `Imagen inválida: ${ref.error}` };
     imagenUrl = ref.url;
-  } else {
-    texto = sanitizeText(raw.texto, 30);
-    if (!texto) return { error: "El texto de la etiqueta es obligatorio" };
+  }
+
+  const texto = sanitizeText(raw.texto, 30) || null;
+
+  if (tipo === "imagen" && !imagenUrl) {
+    return { error: "Subí la imagen del sticker, o cambiálo a etiqueta de texto" };
+  }
+  if (tipo === "texto" && !texto) {
+    return { error: "El texto de la etiqueta es obligatorio" };
   }
 
   const posicion = esPosicionValida(raw.posicion) ? raw.posicion : "arriba-izq";
   const ordenCrudo = Number(raw.orden);
   const orden = Number.isFinite(ordenCrudo) ? Math.max(0, Math.min(999, Math.round(ordenCrudo))) : 0;
+
+  const escalaCruda = Number(raw.escala);
+  const escala = esEscalaValida(escalaCruda) ? escalaCruda : ESCALA_DEFECTO;
 
   return {
     data: {
@@ -58,6 +69,7 @@ export function validarSticker(raw: Record<string, unknown>): { data: Record<str
       colorTexto: limpiarColor(raw.colorTexto),
       posicion,
       orden,
+      escala,
       isActive: raw.isActive !== false,
     },
   };

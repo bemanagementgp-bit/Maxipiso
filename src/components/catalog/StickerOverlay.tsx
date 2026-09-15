@@ -1,6 +1,7 @@
 import {
   COLOR_FONDO_DEFECTO,
   COLOR_TEXTO_DEFECTO,
+  ESCALA_DEFECTO,
   agruparPorPosicion,
   type PosicionSticker,
   type Sticker,
@@ -23,6 +24,19 @@ const CLASES_POSICION: Record<PosicionSticker, string> = {
   "abajo-der": "bottom-2 right-2 items-end",
 };
 
+/**
+ * Medidas base, antes de aplicar la escala de cada sticker.
+ *
+ * Van en píxeles y como estilo inline —no como clases de Tailwind— porque la
+ * escala es un número que sale de la base: `h-6` no se puede multiplicar por
+ * 1.25, y una clase por cada combinación de tamaño y escala serían diez clases
+ * que Tailwind además no generaría, al armarse el nombre en tiempo de ejecución.
+ */
+const BASE = {
+  sm: { alto: 24, fuente: 9, padY: 2, padX: 8, radio: 4 },
+  md: { alto: 36, fuente: 11, padY: 4, padX: 10, radio: 6 },
+} as const;
+
 type Props = {
   stickers: Sticker[];
   /** `sm` para la card del catálogo, `md` para la ficha del producto. */
@@ -40,11 +54,7 @@ export default function StickerOverlay({ stickers, tamano = "sm", abajoIzq }: Pr
   if (stickers.length === 0) return null;
 
   const grupos = agruparPorPosicion(stickers);
-  const altoImagen = tamano === "md" ? "h-9" : "h-6";
-  const textoClase =
-    tamano === "md"
-      ? "text-[11px] px-2.5 py-1 rounded-md"
-      : "text-[9px] px-2 py-0.5 rounded";
+  const base = BASE[tamano];
 
   return (
     <>
@@ -60,8 +70,9 @@ export default function StickerOverlay({ stickers, tamano = "sm", abajoIzq }: Pr
                 : CLASES_POSICION[posicion]
             }`}
           >
-            {delGrupo.map((s) =>
-              s.tipo === "imagen" && s.imagenUrl ? (
+            {delGrupo.map((s) => {
+              const factor = (s.escala || ESCALA_DEFECTO) / 100;
+              return s.tipo === "imagen" && s.imagenUrl ? (
                 // `img` crudo y no `next/image`: son PNG chicos, de tamaño
                 // variable, y pasarlos por el optimizador no compensa.
                 // eslint-disable-next-line @next/next/no-img-element
@@ -69,23 +80,27 @@ export default function StickerOverlay({ stickers, tamano = "sm", abajoIzq }: Pr
                   key={s.id}
                   src={s.imagenUrl}
                   alt={s.nombre}
-                  className={`${altoImagen} w-auto object-contain drop-shadow-sm`}
+                  className="w-auto object-contain drop-shadow-sm"
+                  style={{ height: `${base.alto * factor}px` }}
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <span
                   key={s.id}
-                  className={`${textoClase} font-bold uppercase tracking-wide leading-none shadow-sm whitespace-nowrap`}
+                  className="font-bold uppercase tracking-wide leading-none shadow-sm whitespace-nowrap"
                   style={{
                     backgroundColor: s.colorFondo ?? COLOR_FONDO_DEFECTO,
                     color: s.colorTexto ?? COLOR_TEXTO_DEFECTO,
+                    fontSize: `${base.fuente * factor}px`,
+                    padding: `${base.padY * factor}px ${base.padX * factor}px`,
+                    borderRadius: `${base.radio * factor}px`,
                   }}
                 >
                   {s.texto ?? s.nombre}
                 </span>
-              ),
-            )}
+              );
+            })}
           </div>
         );
       })}

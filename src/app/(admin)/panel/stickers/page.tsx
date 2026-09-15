@@ -5,6 +5,8 @@ import { FiPlus, FiTrash2, FiUpload, FiLoader, FiAlertCircle, FiCheck, FiDownloa
 import {
   COLOR_FONDO_DEFECTO,
   COLOR_TEXTO_DEFECTO,
+  ESCALAS,
+  ESCALA_DEFECTO,
   POSICIONES,
   type PosicionSticker,
   type Sticker,
@@ -28,6 +30,7 @@ type Borrador = {
   colorTexto: string;
   posicion: PosicionSticker;
   orden: number;
+  escala: number;
   isActive: boolean;
 };
 
@@ -40,26 +43,55 @@ const VACIO: Borrador = {
   colorTexto: COLOR_TEXTO_DEFECTO,
   posicion: "arriba-izq",
   orden: 0,
+  escala: ESCALA_DEFECTO,
   isActive: true,
 };
+
+/**
+ * Medidas recomendadas del archivo.
+ *
+ * El sticker se dibuja a 36 px de alto como maximo, y al 200% a 72: 200 px deja
+ * margen para pantallas retina sin que el archivo pese de mas. El ancho sale
+ * solo, porque lo que se fija es el alto.
+ */
+const MEDIDAS_SUGERIDAS = "PNG con fondo transparente, 200 px de alto (el ancho, el que quede). Hasta 5 MB.";
 
 const input =
   "w-full px-2.5 py-1.5 text-[12px] border border-[#E0DED8] bg-white focus:outline-none focus:border-[#DF8635] rounded-sm";
 const label = "block text-[9px] uppercase tracking-[0.08em] text-[#aaa] mb-1";
 
+/**
+ * Como se va a ver sobre la foto.
+ *
+ * Aplica la escala igual que `StickerOverlay`, asi que subir el tamano se ve
+ * en el panel sin tener que ir al catalogo a mirar un producto.
+ */
 function Vista({ s }: { s: Borrador }) {
+  const f = (s.escala || ESCALA_DEFECTO) / 100;
   if (s.tipo === "imagen") {
     return s.imagenUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={s.imagenUrl} alt="" className="h-7 w-auto object-contain" referrerPolicy="no-referrer" />
+      <img
+        src={s.imagenUrl}
+        alt=""
+        className="w-auto object-contain"
+        style={{ height: `${28 * f}px` }}
+        referrerPolicy="no-referrer"
+      />
     ) : (
       <span className="text-[10px] text-[#ccc]">sin imagen</span>
     );
   }
   return (
     <span
-      className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded leading-none whitespace-nowrap"
-      style={{ backgroundColor: s.colorFondo || COLOR_FONDO_DEFECTO, color: s.colorTexto || COLOR_TEXTO_DEFECTO }}
+      className="font-bold uppercase tracking-wide leading-none whitespace-nowrap"
+      style={{
+        backgroundColor: s.colorFondo || COLOR_FONDO_DEFECTO,
+        color: s.colorTexto || COLOR_TEXTO_DEFECTO,
+        fontSize: `${9 * f}px`,
+        padding: `${2 * f}px ${8 * f}px`,
+        borderRadius: `${4 * f}px`,
+      }}
     >
       {s.texto || s.nombre || "etiqueta"}
     </span>
@@ -74,7 +106,8 @@ export default function StickersPage() {
   const [nuevo, setNuevo] = useState<Borrador>(VACIO);
   const [creando, setCreando] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
-  const [subiendo, setSubiendo] = useState(false);
+  /** Id de la fila que esta subiendo, o "nuevo" para el alta. */
+  const [subiendo, setSubiendo] = useState<string | null>(null);
   const [confirmarBorrar, setConfirmarBorrar] = useState<string | null>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   const [cargandoSugeridos, setCargandoSugeridos] = useState(false);
@@ -102,9 +135,15 @@ export default function StickersPage() {
     return () => clearTimeout(t);
   }, [aviso]);
 
-  /** Sube el PNG y deja la URL en el borrador. Reusa el mismo endpoint que las fotos. */
-  const subirImagen = async (file: File) => {
-    setSubiendo(true);
+  /**
+   * Sube el PNG y entrega la URL a quien la haya pedido. Reusa el mismo endpoint
+   * que las fotos de producto.
+   *
+   * Recibe el destino como callback porque suben tanto el alta como cada fila
+   * de la tabla: sin eso, un sticker ya creado no podia cambiar su imagen.
+   */
+  const subirImagen = async (file: File, destino: (url: string) => void, quien: string) => {
+    setSubiendo(quien);
     setError("");
     try {
       const fd = new FormData();
@@ -112,11 +151,11 @@ export default function StickersPage() {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ?? `El servidor rechazó la imagen (HTTP ${res.status})`);
-      setNuevo((p) => ({ ...p, tipo: "imagen", imagenUrl: json.data.url }));
+      destino(json.data.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo subir la imagen");
     } finally {
-      setSubiendo(false);
+      setSubiendo(null);
       if (archivoRef.current) archivoRef.current.value = "";
     }
   };
@@ -207,7 +246,7 @@ export default function StickersPage() {
   };
 
   return (
-    <div className="px-6 lg:px-10 py-8 max-w-[1100px]">
+    <div className="px-6 lg:px-10 py-8 max-w-[1320px]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
         <h1 className="text-[22px] font-bold text-[#111] tracking-tight">Stickers</h1>
@@ -300,18 +339,24 @@ export default function StickersPage() {
             </>
           ) : (
             <div>
-              <label className={label}>Imagen (PNG con fondo transparente)</label>
-              <label className="flex items-center gap-2 h-[30px] px-3 border border-dashed border-[#E0DED8] hover:border-[#aaa] cursor-pointer rounded-sm">
-                {subiendo ? <FiLoader size={12} className="animate-spin" /> : <FiUpload size={12} className="text-[#ccc]" />}
+              <label className={label}>Imagen</label>
+              <label
+                title={MEDIDAS_SUGERIDAS}
+                className="flex items-center gap-2 h-[30px] px-3 border border-dashed border-[#E0DED8] hover:border-[#aaa] cursor-pointer rounded-sm"
+              >
+                {subiendo === "nuevo" ? <FiLoader size={12} className="animate-spin" /> : <FiUpload size={12} className="text-[#ccc]" />}
                 <span className="text-[10px] uppercase tracking-[0.06em] text-[#999]">
-                  {subiendo ? "Subiendo..." : nuevo.imagenUrl ? "Cambiar" : "Subir"}
+                  {subiendo === "nuevo" ? "Subiendo..." : nuevo.imagenUrl ? "Cambiar" : "Subir"}
                 </span>
                 <input
                   ref={archivoRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) subirImagen(f); }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) subirImagen(f, (url) => setNuevo((p) => ({ ...p, tipo: "imagen", imagenUrl: url })), "nuevo");
+                  }}
                 />
               </label>
             </div>
@@ -328,24 +373,39 @@ export default function StickersPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 px-3 h-[30px] border border-[#E0DED8] bg-[#FAFAF8] rounded-sm">
+          <div>
+            <label className={label}>Tamaño</label>
+            <select
+              value={nuevo.escala}
+              onChange={(e) => setNuevo({ ...nuevo, escala: Number(e.target.value) })}
+              className={input}
+            >
+              {ESCALAS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 min-h-[30px] py-1 border border-[#E0DED8] bg-[#FAFAF8] rounded-sm">
             <span className="text-[9px] uppercase tracking-[0.06em] text-[#aaa]">Se ve así</span>
             <Vista s={nuevo} />
           </div>
 
           <button
             onClick={crear}
-            disabled={creando || subiendo}
+            disabled={creando || subiendo !== null}
             className="flex items-center gap-1.5 h-[30px] px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:opacity-40 rounded-sm"
           >
             {creando ? <FiLoader size={12} className="animate-spin" /> : <FiPlus size={12} />}
             Crear
           </button>
         </div>
+
+        <p className="mt-3 text-[10px] text-[#bbb]">
+          Imagen: {MEDIDAS_SUGERIDAS}
+        </p>
       </div>
 
       {/* Listado */}
-      <div className="border border-[#E0DED8] bg-white">
+      <div className="border border-[#E0DED8] bg-white overflow-x-auto">
         {cargando ? (
           <div className="px-4 py-10 text-center text-[12px] text-[#999]">Cargando...</div>
         ) : stickers.length === 0 ? (
@@ -358,9 +418,11 @@ export default function StickersPage() {
               <tr className="border-b border-[#E0DED8] text-[10px] uppercase tracking-[0.06em] text-[#888]">
                 <th className="text-left px-3 py-2.5">Vista</th>
                 <th className="text-left px-3 py-2.5">Nombre</th>
+                <th className="text-left px-3 py-2.5">Tipo</th>
                 <th className="text-left px-3 py-2.5">Texto / imagen</th>
                 <th className="text-left px-3 py-2.5">Colores</th>
                 <th className="text-left px-3 py-2.5">Esquina</th>
+                <th className="text-left px-3 py-2.5">Tamaño</th>
                 <th className="text-left px-3 py-2.5 w-16">Orden</th>
                 <th className="text-left px-3 py-2.5">Estado</th>
                 <th className="px-3 py-2.5 w-24"></th>
@@ -376,18 +438,52 @@ export default function StickersPage() {
                     <input
                       value={s.nombre}
                       onChange={(e) => editar(s.id, { nombre: e.target.value })}
-                      className={`${input} w-40`}
+                      className={`${input} w-36`}
                     />
                   </td>
                   <td className="px-3 py-2">
+                    {/* Cambiar de tipo no borra el otro lado: el texto y la URL
+                        se guardan los dos, y se dibuja el que diga `tipo`. */}
+                    <select
+                      value={s.tipo}
+                      onChange={(e) => editar(s.id, { tipo: e.target.value as TipoSticker })}
+                      className={`${input} w-[104px]`}
+                    >
+                      <option value="texto">Texto</option>
+                      <option value="imagen">Imagen</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
                     {s.tipo === "imagen" ? (
-                      <span className="text-[10px] text-[#aaa] font-mono truncate block max-w-[180px]" title={s.imagenUrl ?? ""}>
-                        {(s.imagenUrl ?? "").split("/").pop()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <label
+                          title={MEDIDAS_SUGERIDAS}
+                          className="shrink-0 flex items-center gap-1.5 h-[28px] px-2 border border-dashed border-[#E0DED8] hover:border-[#aaa] cursor-pointer rounded-sm"
+                        >
+                          {subiendo === s.id ? <FiLoader size={11} className="animate-spin" /> : <FiUpload size={11} className="text-[#ccc]" />}
+                          <span className="text-[10px] uppercase tracking-[0.06em] text-[#999]">
+                            {subiendo === s.id ? "Subiendo..." : s.imagenUrl ? "Cambiar" : "Subir"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) subirImagen(f, (url) => editar(s.id, { imagenUrl: url }), s.id);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        <span className="text-[10px] text-[#bbb] font-mono truncate max-w-[110px]" title={s.imagenUrl ?? ""}>
+                          {(s.imagenUrl ?? "").split("/").pop() || "sin archivo"}
+                        </span>
+                      </div>
                     ) : (
                       <input
                         value={s.texto ?? ""}
                         onChange={(e) => editar(s.id, { texto: e.target.value })}
+                        placeholder="OFERTA"
                         className={`${input} w-28`}
                       />
                     )}
@@ -421,6 +517,15 @@ export default function StickersPage() {
                       className={`${input} w-40`}
                     >
                       {POSICIONES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={s.escala}
+                      onChange={(e) => editar(s.id, { escala: Number(e.target.value) })}
+                      className={`${input} w-32`}
+                    >
+                      {ESCALAS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-2">

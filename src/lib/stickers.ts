@@ -19,6 +19,29 @@ const POSICIONES_VALIDAS = new Set<string>(POSICIONES.map((p) => p.value));
 
 export type TipoSticker = "imagen" | "texto";
 
+/**
+ * Tamano del sticker sobre la foto, en porcentaje del tamano base.
+ *
+ * Es una lista cerrada y no un numero libre porque lo que hace falta es "este
+ * se ve chico, agrandalo un poco": con un campo abierto se cargaba 400 y el
+ * sticker tapaba media foto.
+ */
+export const ESCALAS: { value: number; label: string }[] = [
+  { value: 75, label: "Chico (75%)" },
+  { value: 100, label: "Normal (100%)" },
+  { value: 125, label: "Grande (125%)" },
+  { value: 150, label: "Muy grande (150%)" },
+  { value: 200, label: "Enorme (200%)" },
+];
+
+export const ESCALA_DEFECTO = 100;
+
+const ESCALAS_VALIDAS = new Set<number>(ESCALAS.map((e) => e.value));
+
+export function esEscalaValida(valor: unknown): boolean {
+  return typeof valor === "number" && ESCALAS_VALIDAS.has(valor);
+}
+
 export type Sticker = {
   id: string;
   nombre: string;
@@ -29,6 +52,8 @@ export type Sticker = {
   colorTexto: string | null;
   posicion: PosicionSticker;
   orden: number;
+  /** Tamano relativo en porcentaje. Ver `ESCALAS`. */
+  escala: number;
   isActive: boolean;
 };
 
@@ -59,6 +84,9 @@ export function normalizarSticker(row: Record<string, unknown>): Sticker {
     colorTexto: (row.colorTexto as string | null) ?? null,
     posicion: esPosicionValida(row.posicion) ? row.posicion : "arriba-izq",
     orden: Number(row.orden ?? 0),
+    // Una base sin la columna `escala` todavia devuelve undefined: vale el
+    // tamano de siempre, que es exactamente como se veia antes de que existiera.
+    escala: esEscalaValida(Number(row.escala)) ? Number(row.escala) : ESCALA_DEFECTO,
     isActive: row.isActive !== false,
   };
 }

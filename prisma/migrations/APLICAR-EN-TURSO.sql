@@ -176,3 +176,17 @@ CREATE INDEX IF NOT EXISTS "pisos_madera_varianteDe_idx" ON "pisos_madera"("vari
 CREATE INDEX IF NOT EXISTS "decks_varianteDe_idx" ON "decks"("varianteDe");
 CREATE INDEX IF NOT EXISTS "maderas_varianteDe_idx" ON "maderas"("varianteDe");
 CREATE INDEX IF NOT EXISTS "accesorios_varianteDe_idx" ON "accesorios"("varianteDe");
+
+-- ── 7. TAMANO DEL STICKER (20260915000000) ────────────────── URGENTE ───
+-- APLICAR ANTES DE DEPLOYAR: sin esta columna el panel de Stickers responde
+-- error al listarlos. El catalogo sigue andando (los productos se muestran sin
+-- sticker), pero no se pueden editar hasta correrla.
+--
+-- Los stickers se dibujaban todos al mismo tamano, y no todos se leen igual: un
+-- "WATER RESISTANT" entra comodo donde una bandera queda diminuta. `escala` es
+-- un porcentaje del tamano base, y 100 es exactamente como se veia antes, asi
+-- que los diez que ya estan cargados no cambian solos.
+--
+-- Es una linea sola.
+
+ALTER TABLE "stickers" ADD COLUMN "escala" INTEGER NOT NULL DEFAULT 100;
