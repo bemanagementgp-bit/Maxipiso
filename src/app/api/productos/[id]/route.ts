@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { findProductById, getDelegate } from "@/lib/all-products";
+import { parseOpciones, serializarOpciones } from "@/lib/variantes";
 import { getCategoryConfig } from "@/lib/category-fields";
 import { prisma } from "@/lib/prisma";
 import { clearCatalogCache } from "@/lib/catalog-cache";
@@ -67,6 +68,15 @@ function sanitizeProductData(tablaNombre: string, raw: Record<string, unknown>) 
       } else if (value === null) {
         data[key] = null;
       }
+      continue;
+    }
+
+    if (key === "varianteOpciones") {
+      // "Color: Roble ; Medidas: 120x20" se guarda normalizado: tipos repetidos
+      // fuera, espacios parejos. Es la unica forma de que la ficha agrupe bien,
+      // venga del ABM o de una planilla cargada a mano.
+      const normalizado = serializarOpciones(parseOpciones(value));
+      data[key] = normalizado || null;
       continue;
     }
 

@@ -125,13 +125,17 @@ INSERT OR IGNORE INTO "stickers" ("id","nombre","tipo","imagenUrl","texto","colo
 -- APLICAR ANTES DE DEPLOYAR: el codigo lee estas columnas en cada consulta de
 -- producto, y si faltan el catalogo vuelve a quedar en cero.
 --
+-- Si ya corriste una version anterior de esta parte, la que tenia
+-- `varianteEtiqueta`: esa columna quedo sin uso y no molesta. Corre igual
+-- estas lineas; las que digan "duplicate column name" ya estaban.
+--
 -- Variantes de producto: el mismo producto en otro color, otra medida.
 --
 -- No son una tabla nueva: una variante ES un producto, con su foto, su precio,
 -- su stock y su SKU. Lo unico que hace falta es decir a que grupo pertenece.
 --
 --   varianteDe        SKU del producto principal del grupo. Vacio = principal.
---   varianteEtiqueta  Como se llama en el selector: "Roble", "120x20".
+--   varianteOpciones  En que se diferencia: "Color: Roble ; Medidas: 120x20".
 --
 -- Se eligio el SKU del principal y no un codigo de grupo generado porque el SKU
 -- es lo que la persona conoce y escribe en la planilla; un codigo habria que
@@ -150,14 +154,17 @@ ALTER TABLE "decks" ADD COLUMN "varianteDe" TEXT;
 ALTER TABLE "maderas" ADD COLUMN "varianteDe" TEXT;
 ALTER TABLE "accesorios" ADD COLUMN "varianteDe" TEXT;
 
-ALTER TABLE "pisos_flotantes" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "porcellanatos" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "revestimientos" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "pisos_vinilicos" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "pisos_madera" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "decks" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "maderas" ADD COLUMN "varianteEtiqueta" TEXT;
-ALTER TABLE "accesorios" ADD COLUMN "varianteEtiqueta" TEXT;
+-- Las opciones son pares tipo/valor y no un rotulo suelto porque un producto
+-- puede variar en dos cosas a la vez: seis filas pueden ser tres colores por dos
+-- medidas, y la ficha tiene que mostrar dos filas de botones, no seis sueltos.
+ALTER TABLE "pisos_flotantes" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "porcellanatos" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "revestimientos" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "pisos_vinilicos" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "pisos_madera" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "decks" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "maderas" ADD COLUMN "varianteOpciones" TEXT;
+ALTER TABLE "accesorios" ADD COLUMN "varianteOpciones" TEXT;
 
 -- La ficha busca los hermanos del grupo en cada carga: sin indice son ocho
 -- escaneos completos de tabla por producto abierto.

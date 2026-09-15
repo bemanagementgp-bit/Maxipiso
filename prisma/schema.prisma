@@ -132,7 +132,7 @@ model PisoFlotante {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe          String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta    String?
+  varianteOpciones    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -186,7 +186,7 @@ model Porcellanato {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe          String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta    String?
+  varianteOpciones    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -236,7 +236,7 @@ model Revestimiento {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe         String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta   String?
+  varianteOpciones   String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -299,7 +299,7 @@ model PisoVinilico {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe           String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta     String?
+  varianteOpciones     String?
   precioEnvioCaja      Float?
   garantia             String?
   fichaTecnica         String?
@@ -357,7 +357,7 @@ model PisoMadera {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe          String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta    String?
+  varianteOpciones    String?
   precioEnvioCaja     Float?
   garantia            String?
   fichaTecnica        String?
@@ -405,7 +405,7 @@ model Deck {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe         String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta   String?
+  varianteOpciones   String?
   flete              Float?
   stock              Int?
   fichaTecnica       String?
@@ -444,7 +444,7 @@ model Madera {
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe           String?
   /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta     String?
+  varianteOpciones     String?
   descripcion          String?
   fichaTecnica         String?
   archivoInstalacion   String?
@@ -478,8 +478,8 @@ model Accesorio {
   complementarios  String? // JSON array de ids de productos
   /// SKU del producto principal del grupo. Vacio = es el principal.
   varianteDe       String?
-  /// Como se llama esta variante en el selector: "Roble", "120x20".
-  varianteEtiqueta String?
+  /// En que se diferencia: "Color: Roble ; Medidas: 120x20".
+  varianteOpciones String?
   descripcion      String?
   metadatos        String? // JSON key-value extra
   isActive         Boolean  @default(true)

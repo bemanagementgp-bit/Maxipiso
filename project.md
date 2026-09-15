@@ -559,8 +559,25 @@ stock, su SKU y su ficha, y se edita en el ABM como cualquier otro. Lo único qu
 a qué grupo pertenece:
 
 - `varianteDe` — el SKU del principal del grupo. Vacío significa que ésta *es* la principal.
-- `varianteEtiqueta` — cómo se llama en el selector ("Roble", "120x20"). Si está vacía cae al
-  nombre del producto: peor que un rótulo corto, mucho mejor que un botón en blanco.
+- `varianteOpciones` — en qué se diferencia, como pares tipo/valor:
+  `Color: Roble ; Medidas: 120x20`.
+
+**Las opciones son pares tipo/valor y no un rótulo suelto.** Con un rótulo libre, ocho
+variantes daban ocho botones en una sola fila y "Roble 120x20" y "120x20 Roble" eran dos
+cosas distintas; con pares, la ficha arma **una fila de botones por tipo** —Color arriba,
+Medidas abajo— y elegir un color mantiene la medida que ya estaba elegida. `ejesDeVariantes`
+hace ese cruce: cada botón apunta a la hermana que coincide en todos los otros ejes, y un eje
+con un solo valor no se dibuja (no es una opción, es un dato del producto).
+
+En el ABM el tipo sale de un desplegable —**Color** y **Medidas** vienen armados, más los
+tipos que ya se usaron en el catálogo, más "Otro…" para inventar uno— y el valor se escribe.
+Sin eso, "Color", "color" y "COLOR" terminaban siendo tres ejes distintos en la misma ficha.
+En la planilla es una sola celda con el mismo formato, así que un tipo nuevo se inventa igual
+de fácil desde Excel.
+
+> Elegir "Otro…" **conserva el tipo que había** (arranca seleccionado, escribir encima lo
+> pisa): tocar el desplegable sin querer no puede borrar "Medidas". Y una fila a medio llenar
+> avisa antes de guardar, porque al serializar se descarta y el dato se perdía en silencio.
 
 **Por qué agrupar filas y no meter las opciones como JSON adentro del principal**: el catálogo
 **ya tiene esos productos cargados por separado** — ése es exactamente el problema que se está
@@ -576,8 +593,13 @@ cargar nada.
 El listado del catálogo excluye las variantes (`varianteDe` vacío) — de ahí la card única. El
 selector de la ficha son **links, no botones con estado**: cada variante conserva su propia
 URL, se puede compartir y Google la indexa, y con `<Link prefetch>` el cambio es navegación
-del lado del cliente, sin recargar. Muestra la miniatura de cada una, porque en pisos la
-diferencia entre "Roble" y "Nogal" se ve, no se lee.
+del lado del cliente, sin recargar. Las miniaturas aparecen **sólo en el eje donde las fotos
+difieren**: en Color se ve la diferencia entre "Roble" y "Nogal", en Medidas serían seis veces
+la misma foto al lado de números distintos.
+
+Los filtros del catálogo también miran sólo a las principales. Listaban los valores de todas
+las filas, variantes incluidas, así que la barra lateral ofrecía opciones que al tildarlas no
+devolvían ninguna card.
 
 > **Un `variante de` que apunta a un SKU inexistente esconde el producto**: el listado oculta
 > las variantes y el grupo al que cree pertenecer no existe. Un error de tipeo en una celda

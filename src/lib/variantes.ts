@@ -1,3 +1,4 @@
+import { sanitizeText } from "@/lib/security";
 import { getDelegate, type TableKey } from "@/lib/all-products";
 import { primeraImagen } from "@/lib/imagenes";
 
@@ -5,65 +6,189 @@ import { primeraImagen } from "@/lib/imagenes";
  * Variantes de producto: el mismo producto en otro color, otra medida.
  *
  * **Una variante ES un producto**, no un dato adentro de otro. Tiene su foto,
- * su precio, su stock, su SKU y su ficha, y se edita en el ABM como cualquier
- * otro. Lo único que se agrega es a qué grupo pertenece.
+ * su precio, su stock, su SKU y su ficha, y se edita como cualquier otro. Lo
+ * único que se agrega es a qué grupo pertenece y en qué se diferencia:
  *
- * Se eligió así y no un JSON con las opciones adentro del principal por una
- * razón concreta: **el catálogo ya tiene esos productos cargados por separado**.
- * Agruparlos es completar una columna; meterlos adentro de otro habría obligado
- * a borrar siete y recargar sus precios, fotos y medidas a mano.
+ *   varianteDe        SKU del principal del grupo. Vacío = es el principal.
+ *   varianteOpciones  "Color: Roble ; Medidas: 120x20"
  *
- * El grupo se arma con el **SKU del principal**, que es lo que la persona
- * conoce y escribe en la planilla. Un código de grupo generado habría que
- * buscarlo antes de poder cargar nada.
+ * Se eligió agrupar filas y no meter las opciones como JSON adentro del
+ * principal porque **el catálogo ya tiene esos productos cargados por
+ * separado** — ése es el problema que se está resolviendo. Agruparlos es
+ * completar dos columnas; meterlos adentro de otro habría obligado a borrar
+ * siete productos y recargar a mano sus precios, fotos y medidas.
  *
- * El listado del catálogo muestra sólo los principales, así que el mismo piso
- * en ocho colores ocupa una card en vez de ocho; la ficha ofrece las ocho.
+ * Las opciones son **pares tipo/valor** y no un rótulo suelto, porque un
+ * producto puede variar en dos cosas a la vez: seis filas pueden ser tres
+ * colores por dos medidas, y la ficha tiene que mostrar dos filas de botones,
+ * no seis botones sueltos.
  */
 
-export type Variante = {
-  id: string;
-  sku: string;
-  etiqueta: string;
-  imagen: string | null;
-  /** La que se está viendo. */
-  actual: boolean;
-};
+export type Opcion = { tipo: string; valor: string };
+
+/** Los tipos que el ABM ofrece de entrada. No es una lista cerrada. */
+export const TIPOS_SUGERIDOS = ["Color", "Medidas"] as const;
+
+const MAX_TIPO = 30;
+const MAX_VALOR = 40;
+/** Tope de seguridad: lo que llega del panel y de las planillas no se confía. */
+const MAX_OPCIONES = 6;
+
+function limpiar(texto: unknown, largo: number): string {
+  return sanitizeText(texto, largo).replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Lee la columna: `"Color: Roble ; Medidas: 120x20"`.
+ *
+ * `;` separa opciones y `:` separa el tipo de su valor — la misma familia de
+ * separadores que Stickers y Complementarios, para no tener que recordar una
+ * convención distinta por columna.
+ *
+ * Lo que no tiene `:` se ignora en vez de romper la fila. Un tipo repetido se
+ * queda con el primero: "Color" dos veces en la misma variante no significa
+ * nada.
+ */
+export function parseOpciones(valor: unknown): Opcion[] {
+  const crudo = String(valor ?? "").trim();
+  if (!crudo) return [];
+
+  const vistos = new Set<string>();
+  const salida: Opcion[] = [];
+  for (const parte of crudo.split(";")) {
+    const corte = parte.indexOf(":");
+    if (corte === -1) continue;
+    const tipo = limpiar(parte.slice(0, corte), MAX_TIPO);
+    const val = limpiar(parte.slice(corte + 1), MAX_VALOR);
+    if (!tipo || !val) continue;
+    const clave = tipo.toLowerCase();
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    salida.push({ tipo, valor: val });
+    if (salida.length >= MAX_OPCIONES) break;
+  }
+  return salida;
+}
+
+/** Lo que se guarda en la columna. Cadena vacía cuando no hay nada. */
+export function serializarOpciones(opciones: Opcion[]): string {
+  return opciones
+    .map((o) => ({ tipo: limpiar(o.tipo, MAX_TIPO), valor: limpiar(o.valor, MAX_VALOR) }))
+    .filter((o) => o.tipo && o.valor)
+    .slice(0, MAX_OPCIONES)
+    .map((o) => `${o.tipo}: ${o.valor}`)
+    .join(" ; ");
+}
 
 /** El SKU del principal del grupo, o `null` si esta fila ES la principal. */
 export function skuDelPrincipal(fila: Record<string, unknown>): string | null {
-  const valor = String(fila.varianteDe ?? "").trim();
-  return valor || null;
+  return String(fila.varianteDe ?? "").trim() || null;
+}
+
+// ─── Lo que necesita la ficha ────────────────────────────────────────────────
+
+export type VarianteFila = {
+  id: string;
+  sku: string;
+  opciones: Opcion[];
+  imagen: string | null;
+  actual: boolean;
+};
+
+/** Un tipo con todos sus valores: una fila de botones en la ficha. */
+export type EjeVariante = {
+  tipo: string;
+  valores: {
+    valor: string;
+    /** A qué producto lleva este botón. */
+    id: string;
+    imagen: string | null;
+    elegido: boolean;
+  }[];
+};
+
+/**
+ * Arma los ejes del selector a partir de las filas del grupo.
+ *
+ * Un eje por tipo ("Color", "Medidas"), y en cada uno sus valores distintos.
+ *
+ * **A qué producto lleva cada botón**: al que tiene ese valor y **coincide en
+ * todo lo demás** con lo que está elegido ahora. Elegir "Nogal" tiene que
+ * mantener la medida que el cliente venía mirando, no mandarlo a una fila al
+ * azar. Si esa combinación no existe —no todas se fabrican— cae al primero que
+ * tenga ese valor, que es preferible a un botón muerto.
+ */
+export function ejesDeVariantes(filas: VarianteFila[]): EjeVariante[] {
+  const actual = filas.find((f) => f.actual);
+  const tipos: string[] = [];
+  for (const f of filas) {
+    for (const o of f.opciones) {
+      if (!tipos.some((t) => t.toLowerCase() === o.tipo.toLowerCase())) tipos.push(o.tipo);
+    }
+  }
+
+  const valorDe = (f: VarianteFila, tipo: string) =>
+    f.opciones.find((o) => o.tipo.toLowerCase() === tipo.toLowerCase())?.valor ?? "";
+
+  return tipos
+    .map((tipo) => {
+      const vistos = new Set<string>();
+      const valores: EjeVariante["valores"] = [];
+
+      for (const f of filas) {
+        const valor = valorDe(f, tipo);
+        if (!valor || vistos.has(valor.toLowerCase())) continue;
+        vistos.add(valor.toLowerCase());
+
+        // Entre las filas que tienen este valor, la que más coincide con la
+        // combinación que se está viendo.
+        const candidatas = filas.filter((c) => valorDe(c, tipo).toLowerCase() === valor.toLowerCase());
+        const mejor = actual
+          ? candidatas.reduce((a, b) => (coincidencias(b, actual, tipo, valorDe) > coincidencias(a, actual, tipo, valorDe) ? b : a))
+          : candidatas[0];
+
+        valores.push({
+          valor,
+          id: mejor.id,
+          imagen: mejor.imagen,
+          elegido: !!actual && valorDe(actual, tipo).toLowerCase() === valor.toLowerCase(),
+        });
+      }
+      return { tipo, valores };
+    })
+    // Un tipo con un solo valor no es una opción: no se muestra.
+    .filter((eje) => eje.valores.length > 1);
+}
+
+/** Cuántos tipos, además del que se está cambiando, comparte con la actual. */
+function coincidencias(
+  candidata: VarianteFila,
+  actual: VarianteFila,
+  tipoQueCambia: string,
+  valorDe: (f: VarianteFila, tipo: string) => string,
+): number {
+  let n = 0;
+  for (const o of actual.opciones) {
+    if (o.tipo.toLowerCase() === tipoQueCambia.toLowerCase()) continue;
+    if (valorDe(candidata, o.tipo).toLowerCase() === o.valor.toLowerCase()) n++;
+  }
+  return n;
 }
 
 /**
- * Cómo se llama una variante en el selector.
+ * Todas las filas del grupo al que pertenece un producto, la principal incluida.
  *
- * Si nadie le puso etiqueta cae al nombre del producto: es peor que un rótulo
- * corto, pero muchísimo mejor que un botón en blanco.
+ * Devuelve lista vacía cuando el producto no tiene hermanas: la ficha no dibuja
+ * el selector para un producto suelto.
+ *
+ * Son dos consultas sobre la misma tabla y no ocho como los complementarios:
+ * una variante siempre está en la tabla de su principal, porque un piso
+ * flotante no es variante de un porcelanato.
  */
-export function etiquetaDe(fila: Record<string, unknown>): string {
-  const etiqueta = String(fila.varianteEtiqueta ?? "").trim();
-  if (etiqueta) return etiqueta;
-  const nombre = String(fila.nombre ?? fila.especie ?? "").trim();
-  return nombre || String(fila.sku ?? "");
-}
-
-/**
- * Todas las variantes del grupo al que pertenece un producto, el principal
- * incluido y en primer lugar.
- *
- * Devuelve lista vacía cuando el producto no tiene hermanos: la ficha no
- * dibuja el selector para un producto que no es parte de ningún grupo.
- *
- * Son dos consultas sobre la misma tabla —el principal y sus variantes— y no
- * ocho como los complementarios: una variante siempre está en la tabla de su
- * principal, porque un piso flotante no es variante de un porcelanato.
- */
-export async function variantesDelGrupo(
+export async function filasDelGrupo(
   tabla: TableKey,
   fila: Record<string, unknown>,
-): Promise<Variante[]> {
+): Promise<VarianteFila[]> {
   const idActual = String(fila.id ?? "");
   const skuPropio = String(fila.sku ?? "").trim();
   const skuPrincipal = skuDelPrincipal(fila) ?? skuPropio;
@@ -84,27 +209,25 @@ export async function variantesDelGrupo(
       }),
   ]);
 
-  const filas = [principal, ...(hermanas as Record<string, unknown>[])].filter(
+  const crudas = [principal, ...(hermanas as Record<string, unknown>[])].filter(
     (f): f is Record<string, unknown> => Boolean(f),
   );
-  // Una sola fila no es un grupo: es un producto suelto.
-  if (filas.length < 2) return [];
 
   const vistos = new Set<string>();
-  const variantes: Variante[] = [];
-  for (const f of filas) {
+  const salida: VarianteFila[] = [];
+  for (const f of crudas) {
     const id = String(f.id ?? "");
     if (!id || vistos.has(id)) continue;
-    // El principal desactivado no se muestra, pero su grupo sigue en pie.
+    // La principal desactivada no se muestra, pero su grupo sigue en pie.
     if (id !== idActual && f.isActive === false) continue;
     vistos.add(id);
-    variantes.push({
+    salida.push({
       id,
       sku: String(f.sku ?? ""),
-      etiqueta: etiquetaDe(f),
+      opciones: parseOpciones(f.varianteOpciones),
       imagen: primeraImagen(f.imagenes),
       actual: id === idActual,
     });
   }
-  return variantes.length >= 2 ? variantes : [];
+  return salida.length >= 2 ? salida : [];
 }

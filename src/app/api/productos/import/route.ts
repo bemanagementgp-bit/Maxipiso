@@ -9,6 +9,7 @@ import { verifyOrigin } from "@/lib/security";
 import { norm, detectSchema, parseRowWithSchema } from "@/lib/sheet-schemas";
 import { getDelegate, tableKeyFromDbName } from "@/lib/all-products";
 import { partirLista, mapaDeStickers, resolverProductosPorSku, resolverConMapa } from "@/lib/import-relaciones";
+import { parseOpciones, serializarOpciones } from "@/lib/variantes";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,9 @@ function cleanRow(raw: Record<string, unknown>): Record<string, unknown> {
     } else if (["tablasPorCaja","cajasPallet","stock"].includes(k)) {
       const n = toNumber(v);
       if (n !== undefined) out[k] = Math.round(n);
+    } else if (k === "varianteOpciones") {
+      const normalizado = serializarOpciones(parseOpciones(v));
+      if (normalizado) out[k] = normalizado;
     } else {
       const s = String(v ?? "").trim();
       if (s !== "") out[k] = s;

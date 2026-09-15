@@ -252,6 +252,11 @@ export async function GET(req: NextRequest) {
       ? TABLES.filter((t) => t.key === categoria)
       : TABLES;
 
+    // Las variantes no se listan como cards (ver el `where` de productos, mas
+    // abajo), asi que tampoco pueden aportar valores a los filtros: una opcion
+    // que solo existe en una variante no devuelve ninguna card al tildarla.
+    const soloPrincipales = { OR: [{ varianteDe: null }, { varianteDe: "" }] };
+
     // Build filter queries (run in parallel with product queries)
     const filterTable = categoria && filterFields.length > 0 ? tablesToQuery[0] : null;
     const filterPromises = filterTable
@@ -268,7 +273,7 @@ export async function GET(req: NextRequest) {
           }
           return timeout(
             (filterTable.delegate() as any).findMany({
-              where: { isActive: true, ...otherFilters },
+              where: { isActive: true, ...otherFilters, AND: [soloPrincipales] },
               select: { [fd.key]: true },
             }) as Promise<Record<string, unknown>[]>,
             QUERY_TIMEOUT_MS,
@@ -294,7 +299,7 @@ export async function GET(req: NextRequest) {
           { imagenes: { not: null } },
           { imagenes: { not: "" } },
           { imagenes: { not: "[]" } },
-          { OR: [{ varianteDe: null }, { varianteDe: "" }] },
+          soloPrincipales,
         ],
       };
       for (const [key, val] of Object.entries(activeFilters)) {
