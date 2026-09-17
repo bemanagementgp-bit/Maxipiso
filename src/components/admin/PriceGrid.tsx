@@ -77,14 +77,21 @@ function aTexto(valor: unknown): string {
 }
 
 const fmt = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtCorto = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
+const fmtEntero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 
-/** Importe con separador de miles, para leer la grilla de un vistazo. */
+/**
+ * Importe con separador de miles, para leer la grilla de un vistazo.
+ *
+ * Los centavos van siempre con dos dígitos o con ninguno: sin el mínimo,
+ * 12500.50 se mostraba "12.500,5" al lado de "13.800,75", y la columna se leía
+ * como si un precio tuviera un decimal y el otro dos. Un importe redondo se
+ * queda sin coma, que es como se escribe un precio en pesos.
+ */
 function aTextoLegible(valor: unknown): string {
   if (valor === null || valor === undefined || valor === "") return "";
   const n = Number(valor);
   if (!Number.isFinite(n)) return "";
-  return fmtCorto.format(n);
+  return Number.isInteger(n) ? fmtEntero.format(n) : fmt.format(n);
 }
 
 // ─── Deteccion de moneda ─────────────────────────────────────────────────────
@@ -334,16 +341,32 @@ export default function PriceGrid({ onNotify }: Props) {
 
   // ─── Escritura en el buffer ────────────────────────────────────────────────
 
-  const escribir = useCallback((id: string, tablaFila: string, campo: string, valor: number | string | null) => {
-    // Si la celda tenía texto a medio tipear, la operación en lote manda: se
-    // descarta el borrador para que el input muestre el valor nuevo.
-    setBorradores((prev) => {
-      const clave = `${id}|${campo}`;
-      if (!prev.has(clave)) return prev;
-      const s = new Map(prev);
-      s.delete(clave);
-      return s;
-    });
+  /**
+   * Anota un cambio pendiente.
+   *
+   * `conservarBorrador` distingue quién escribe. Una operación en lote manda
+   * sobre lo que haya a medio tipear, así que borra el borrador y el input
+   * muestra el valor nuevo. Pero cuando lo que escribe es la celda misma, el
+   * borrador ES lo que la persona está tipeando: borrarlo redibujaba el input
+   * desde el número parseado y se perdía la tecla recién apretada. Con eso,
+   * escribir "2," volvía a "2" y el decimal no se podía cargar.
+   */
+  const escribir = useCallback((
+    id: string,
+    tablaFila: string,
+    campo: string,
+    valor: number | string | null,
+    conservarBorrador = false,
+  ) => {
+    if (!conservarBorrador) {
+      setBorradores((prev) => {
+        const clave = `${id}|${campo}`;
+        if (!prev.has(clave)) return prev;
+        const s = new Map(prev);
+        s.delete(clave);
+        return s;
+      });
+    }
     setPendientes((prev) => {
       const siguiente = new Map(prev);
       const actual = { ...(siguiente.get(id) ?? {}) };
@@ -390,7 +413,7 @@ export default function PriceGrid({ onNotify }: Props) {
           : Number(original) === parsed;
 
       if (iguales) olvidar(fila.id, campo);
-      else escribir(fila.id, fila._tabla, campo, parsed);
+      else escribir(fila.id, fila._tabla, campo, parsed, true);
 
       // Moneda deducida del precio recién tipeado. Solo completa lo vacío:
       // una moneda ya elegida no se pisa nunca.
@@ -1075,7 +1098,23 @@ export default function PriceGrid({ onNotify }: Props) {
                               onChange={(e) => onCelda(fila, c.key, e.target.value)}
                               onKeyDown={(e) => onTeclaCelda(e, i, c.key)}
                               onFocus={(e) => { setCeldaFoco(clave); e.target.select(); }}
-                              onBlur={() => setCeldaFoco((f) => (f === clave ? null : f))}
+                              onBlur={() => {
+                                setCeldaFoco((f) => (f === clave ? null : f));
+                                // Al salir, el borrador ya cumplió: el valor vive
+                                // en pendientes. Se descarta para que la celda
+                                // vuelva a mostrarse con separador de miles y la
+                                // grilla se lea de un vistazo. Si quedó texto que
+                                // no es un número, se conserva para poder verlo
+                                // y corregirlo.
+                                setBorradores((prev) => {
+                                  const borrador = prev.get(clave);
+                                  if (borrador === undefined) return prev;
+                                  if (parsearNumero(borrador) === "invalido") return prev;
+                                  const s = new Map(prev);
+                                  s.delete(clave);
+                                  return s;
+                                });
+                              }}
                               inputMode="decimal"
                               placeholder="—"
                               className={`${celdaBase} ${

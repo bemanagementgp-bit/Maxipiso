@@ -49,6 +49,20 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Aplica el tema del panel antes del primer pintado.
+ *
+ * Va acá, en el layout raíz, y no en el del panel: un `<script>` dentro de un
+ * componente cliente no se ejecuta, y este tiene que correr mientras el
+ * navegador parsea el HTML para que el atributo ya esté puesto cuando pinte.
+ *
+ * Sólo toca `/panel`. El tema oscuro reasigna clases que el sitio público
+ * también usa (`bg-white`, `text-[#111]`), así que dejar el atributo puesto
+ * fuera del panel le pintaría el catálogo de negro a quien eligió oscuro para
+ * administrar.
+ */
+const SCRIPT_TEMA_PANEL = `try{if(location.pathname.indexOf('/panel')===0){var t=localStorage.getItem('admin_theme');if(t==='dark')document.documentElement.dataset.theme='dark'}}catch(e){}`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -56,7 +70,18 @@ export default async function RootLayout({
 }>) {
   const idioma = await idiomaActual();
   return (
-    <html lang={idioma} className={`${geist.variable} h-full antialiased`} data-scroll-behavior="smooth">
+    // `suppressHydrationWarning`: el script de abajo le agrega `data-theme` a
+    // <html> antes de hidratar, y React avisa por un atributo que no venia del
+    // servidor. Es el caso para el que existe la prop, y tapa solo este nodo.
+    <html
+      lang={idioma}
+      className={`${geist.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_PANEL }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <IdiomaProvider inicial={idioma}>
           <AuthSessionProvider>

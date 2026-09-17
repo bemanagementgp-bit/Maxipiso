@@ -386,7 +386,9 @@ export default function StickersPage() {
 
           <div className="flex items-center gap-2 px-3 min-h-[30px] py-1 border border-[#E0DED8] bg-[#FAFAF8] rounded-sm">
             <span className="text-[9px] uppercase tracking-[0.06em] text-[#aaa]">Se ve así</span>
-            <Vista s={nuevo} />
+            <span className="inline-flex items-center justify-center px-2 py-1.5 rounded-sm bg-[#8A8A8A]">
+              <Vista s={nuevo} />
+            </span>
           </div>
 
           <button
@@ -432,7 +434,12 @@ export default function StickersPage() {
               {stickers.map((s) => (
                 <tr key={s.id} className="border-b border-[#F0EEE9] hover:bg-[#FAFAF8]">
                   <td className="px-3 py-2">
-                    <Vista s={{ ...VACIO, ...s, imagenUrl: s.imagenUrl ?? "", texto: s.texto ?? "", colorFondo: s.colorFondo ?? "", colorTexto: s.colorTexto ?? "" }} />
+                    {/* Fondo gris fijo, igual en los dos temas: el sticker se
+                        dibuja sobre una foto, y un "MÁS VENDIDO" negro sobre el
+                        panel oscuro desaparecía. */}
+                    <span className="inline-flex items-center justify-center px-2 py-1.5 rounded-sm bg-[#8A8A8A]">
+                      <Vista s={{ ...VACIO, ...s, imagenUrl: s.imagenUrl ?? "", texto: s.texto ?? "", colorFondo: s.colorFondo ?? "", colorTexto: s.colorTexto ?? "" }} />
+                    </span>
                   </td>
                   <td className="px-3 py-2">
                     <input

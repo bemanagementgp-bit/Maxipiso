@@ -995,6 +995,18 @@ corregir tres filas a mano), revisar el total y recién ahí impactarlo en una s
 
 - Edición inline con teclado (Enter y flechas mueven entre filas, Escape revierte la celda).
   Se acepta coma o punto como separador decimal, porque en la práctica se pega de planillas.
+
+  > **Lo que se está tipeando manda sobre lo parseado.** Cada tecla anota un cambio pendiente,
+  > y esa anotación descartaba el borrador de la celda para que una operación en lote pudiera
+  > pisar texto a medio escribir. Pero cuando quien escribe es la celda misma, el borrador *es*
+  > lo que la persona está tipeando: descartarlo redibujaba el input desde el número parseado
+  > y se perdía la tecla recién apretada. Escribir "2," volvía a "2" al instante, y así **no se
+  > podía cargar ningún decimal**. Ahora el borrador sólo se descarta cuando el cambio viene de
+  > afuera, y al salir de la celda, ya formateado con separador de miles.
+  >
+  > Los centavos se muestran con dos dígitos o con ninguno. Sin el mínimo, 12500.50 salía
+  > "12.500,5" al lado de "13.800,75" y la columna se leía como si un precio tuviera un decimal
+  > y el otro dos.
 - **Las columnas se arman según las categorías visibles**, y cada celda se habilita sólo
   donde la columna existe. Las 8 tablas no comparten los campos: `maderas` tiene `precio` a
   secas, `revestimientos` usa `precioMl` y `decks` `precioMLineal` para lo mismo, y
@@ -1338,6 +1350,45 @@ El `select` de cada tabla se arma desde el DMMF quedándose con las columnas que
 tiene: no todas comparten los mismos campos (`acabado` no existe en pisos flotantes,
 `categoriaTerciaria` no existe en decks) y Prisma rechaza el `select` entero si se le nombra
 uno que falta.
+
+### 8.6 ter Claro y oscuro en el panel
+
+Dos temas, elegidos desde la barra superior y guardados en `localStorage`. Hubo un tercero,
+"Grises", que apagaba el naranja de la marca y dejaba todo en la misma escala: no resolvía
+nada que no resolviera el claro, y era una variante más que mantener en cada pantalla nueva.
+
+**El tema no se implementa en los componentes sino en `globals.css`**, reasignando las clases
+literales que usa el panel (`bg-white`, `text-[#888]`, `border-emerald-200`). Un solo lugar
+donde mirar, y las pantallas nuevas heredan el tema sin acordarse de nada. El precio es que
+una clase que no esté en esa lista queda clara sobre fondo oscuro, así que la lista cubre
+todas las que el panel usa hoy y hay que sumar las que aparezcan.
+
+Tres casos no se pueden resolver con esa reasignación, y cada uno tiene su salida:
+
+- **Colores en `style` inline.** Le ganan a cualquier regla. Las barras de los gráficos pasan
+  su color por `style`, así que el neutro sale de la variable `--admin-dato-neutro`, que el
+  tema redefine. En claro es el negro del panel; en oscuro, un gris claro, o la barra
+  desaparece contra el fondo.
+- **SVG de Recharts.** Los colores viajan como atributos `fill` y `stroke`, y en un atributo
+  de presentación `var()` no se resuelve: tienen que llegar como un hex. Para eso está
+  `lib/tema-panel.ts`, que lee `data-theme` del DOM y vuelve a renderizar cuando cambia. No
+  hay contexto ni provider: el DOM ya es la fuente de verdad del tema, y duplicarla daría dos
+  lugares que se desincronizan.
+- **Texto sin clase de color.** Hereda el `--foreground` del `body`. El tema oscuro redefine
+  esa variable, que es la red de contención para lo que se escapó de la lista: el título del
+  modal de historial, por ejemplo, no declaraba color y quedaba negro sobre negro.
+
+**`bg-[#111]` hace dos trabajos** y hay que distinguirlos. En un botón es el primario y en
+oscuro se invierte para seguir siendo lo más destacado; en un `<tr>` de encabezado es una
+banda oscura, y invertirla la dejaba blanca y más brillante que todo lo demás. La inversión
+se limita a `button`, `a` y `label`.
+
+> **El atributo vive en `<html>`, no en el div del panel.** Un `<script>` en el layout raíz lo
+> escribe antes del primer pintado, leyendo `localStorage`: si se aplicara al hidratar, quien
+> tuviera oscuro vería un destello blanco en cada navegación. Ese script **sólo toca `/panel`**
+> —el tema reasigna clases que el sitio público también usa, y dejarlo puesto afuera le
+> pintaría el catálogo de negro— y el layout del panel lo borra al desmontarse. `<html>` lleva
+> `suppressHydrationWarning` porque React no renderizó ese atributo.
 
 ### 8.7 Chatbot "Nacho"
 

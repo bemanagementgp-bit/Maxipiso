@@ -16,14 +16,28 @@ const NAV = [
   { href: "/panel/diagnostico", label: "Estado de la base", icon: FiActivity },
 ];
 
-type Theme = "warm" | "gray" | "dark";
+type Theme = "warm" | "dark";
 
+/**
+ * Claro y oscuro, nada más.
+ *
+ * Hubo un tercer tema de grises que apagaba el naranja de la marca y dejaba
+ * todo en la misma escala: no resolvía nada que no resolviera el claro y era
+ * una tercera variante que mantener en cada pantalla nueva.
+ */
 const THEMES: { id: Theme; label: string; preview: string }[] = [
   { id: "warm", label: "Claro",  preview: "#FAFAF8" },
-  { id: "gray", label: "Grises", preview: "#BFBFBF" },
-  { id: "dark", label: "Oscuro", preview: "#1C1C1C" },
+  { id: "dark", label: "Oscuro", preview: "#17181A" },
 ];
 
+/**
+ * Cambia el tema.
+ *
+ * Los colores van en clases y no en `style` inline: el tema se aplica con CSS
+ * que reasigna esas clases, y un `style` inline le gana a todo, así que un
+ * color escrito ahí se quedaba claro en modo oscuro. La única excepción es el
+ * punto de color de cada opción, que justamente muestra el color del tema.
+ */
 function ThemeSwitcher({ current, onChange }: { current: Theme; onChange: (t: Theme) => void }) {
   const [open, setOpen] = useState(false);
   const cur = THEMES.find((t) => t.id === current)!;
@@ -32,11 +46,13 @@ function ThemeSwitcher({ current, onChange }: { current: Theme; onChange: (t: Th
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 h-7 px-2.5 border border-[#E0DED8] hover:border-[#bbb] transition-colors text-[#aaa] hover:text-[#555]"
+        className="flex items-center gap-2 h-7 px-2.5 border border-[#E0DED8] hover:border-[#bbb] transition-colors text-[#aaa] hover:text-[#555] rounded-sm"
         title="Cambiar tema"
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
         <span
-          className="w-3 h-3 rounded-full border border-[#E0DED8] flex-shrink-0"
+          className="w-3 h-3 rounded-full border border-[#E0DED8] shrink-0"
           style={{ background: cur.preview }}
         />
         <span className="text-[10px] uppercase tracking-[0.08em] hidden sm:block">{cur.label}</span>
@@ -45,22 +61,26 @@ function ThemeSwitcher({ current, onChange }: { current: Theme; onChange: (t: Th
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#E0DED8] shadow-lg overflow-hidden w-32" style={{ backgroundColor: "#ffffff", borderColor: "#E0DED8" }}>
+          <div
+            role="listbox"
+            className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#E0DED8] shadow-lg overflow-hidden w-32 rounded-sm"
+          >
             {THEMES.map((t) => (
               <button
                 key={t.id}
+                role="option"
+                aria-selected={t.id === current}
                 onClick={() => { onChange(t.id); setOpen(false); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] transition-colors hover:bg-[#FAFAF8] ${
                   t.id === current ? "text-[#111] font-medium" : "text-[#777]"
                 }`}
-                style={{ color: t.id === current ? "#111111" : "#777777" }}
               >
                 <span
                   className="w-3 h-3 rounded-full border border-[#E0DED8] shrink-0"
-                  style={{ background: t.preview, borderColor: "#E0DED8" }}
+                  style={{ background: t.preview }}
                 />
                 {t.label}
-                {t.id === current && <span className="ml-auto text-[10px]" style={{ color: "#DF8635" }}>✓</span>}
+                {t.id === current && <span className="ml-auto text-[10px] text-[#DF8635]">✓</span>}
               </button>
             ))}
           </div>
@@ -77,9 +97,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [theme, setTheme] = useState<Theme>("warm");
 
   useEffect(() => {
-    const saved = (localStorage.getItem("admin_theme") as Theme) ?? "warm";
-    setTheme(saved);
+    // Lo guardado puede ser "gray", el tema que ya no existe, o cualquier cosa
+    // si alguien tocó el storage: lo que no sea un tema válido vuelve a claro,
+    // y se reescribe para no quedar arrastrando un valor muerto.
+    const saved = localStorage.getItem("admin_theme");
+    const valido: Theme = saved === "dark" ? "dark" : "warm";
+    setTheme(valido);
+    if (saved !== valido) localStorage.setItem("admin_theme", valido);
   }, []);
+
+  // El atributo vive en <html>, puesto a mano y no renderizado por React: el
+  // script del layout raíz ya lo dejó escrito antes de hidratar, y si además
+  // saliera del JSX el HTML del servidor diría "warm" contra un DOM que dice
+  // "dark". Eso es un desajuste de hidratación, y React no lo corrige.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  // Al salir del panel se quita: el tema oscuro reasigna clases que el sitio
+  // público también usa, y quedaría el catálogo en negro.
+  useEffect(() => () => { delete document.documentElement.dataset.theme; }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/login");
@@ -92,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#FAFAF8]">
+      <div className="admin-page flex items-center justify-center min-h-screen">
         <div className="w-5 h-5 border-[1.5px] border-[#111]/20 border-t-[#111] rounded-full animate-spin" />
       </div>
     );
@@ -100,24 +137,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!session) return null;
 
-  const headerBg = theme === "dark" ? "#0A0A0A" : theme === "gray" ? "#1E1E1E" : "#ffffff";
-  const headerBorder = theme === "dark" ? "#1E1E1E" : theme === "gray" ? "#333333" : "#E0DED8";
-  const headerText = theme === "dark" || theme === "gray" ? "#EEEEEE" : "#111111";
-  const headerSubText = theme === "dark" || theme === "gray" ? "#666666" : "#aaaaaa";
-  const pageBg = theme === "dark" ? "#111111" : theme === "gray" ? "#E4E4E4" : "#FAFAF8";
-  const sidebarBg = theme === "dark" ? "#0A0A0A" : theme === "gray" ? "#1A1A1A" : "#111111";
-
   return (
-    <div
-      data-theme={theme}
-      className="min-h-screen flex"
-      style={{ backgroundColor: pageBg }}
-    >
+    <div className="admin-page min-h-screen flex">
       {/* Sidebar */}
-      <aside
-        className="w-[200px] shrink-0 flex flex-col sticky top-0 h-screen"
-        style={{ backgroundColor: sidebarBg }}
-      >
+      <aside className="admin-sidebar w-[200px] shrink-0 flex flex-col sticky top-0 h-screen">
         <div className="flex items-center px-5 h-[52px] shrink-0 border-b border-white/5">
           <span className="text-[18px] font-bold tracking-tight shrink-0"><span style={{ color: "#ffffff" }}>MAXI</span><span style={{ color: "#DF8635" }}>PISO</span></span>
         </div>
@@ -159,8 +182,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
         <header
-          className="flex items-center justify-end px-6 lg:px-10 shrink-0 sticky top-0 z-30"
-          style={{ height: "52px", backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}` }}
+          className="admin-header flex items-center justify-end px-6 lg:px-10 shrink-0 sticky top-0 z-30"
+          style={{ height: "52px" }}
         >
           <div className="flex items-center gap-4">
             <ThemeSwitcher current={theme} onChange={handleThemeChange} />

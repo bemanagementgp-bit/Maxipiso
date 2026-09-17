@@ -63,130 +63,319 @@ html {
 
 /* ═══════════════════════════════════════════
    ADMIN PANEL — THEME SYSTEM
-   data-theme="warm" (default) | "gray" | "dark"
+   data-theme="warm" (default) | "dark"
 ═══════════════════════════════════════════ */
 
-/* ── GRAY theme ──────────────────────────── */
-[data-theme="gray"] {
-  color-scheme: light;
-}
-/* Surfaces */
-[data-theme="gray"] .bg-white { background-color: #EFEFEF; }
-[data-theme="gray"] .bg-\[\#FAFAF8\] { background-color: #E4E4E4; }
-[data-theme="gray"] .bg-\[\#F0EEE8\] { background-color: #D8D8D8; }
-[data-theme="gray"] .bg-\[\#F5F4F1\] { background-color: #E2E2E2; }
-[data-theme="gray"] .bg-\[\#F4F4F2\] { background-color: #E0E0E0; }
-/* Borders */
-[data-theme="gray"] .border-\[\#E0DED8\] { border-color: #BFBFBF; }
-[data-theme="gray"] .border-\[\#F0EEE8\] { border-color: #D2D2D2; }
-[data-theme="gray"] .divide-\[\#F0EEE8\] > * + * { border-color: #D2D2D2; }
-/* Text */
-[data-theme="gray"] .text-\[\#111\] { color: #111111; }
-[data-theme="gray"] .text-\[\#222\] { color: #222222; }
-[data-theme="gray"] .text-\[\#333\] { color: #333333; }
-[data-theme="gray"] .text-\[\#444\] { color: #444444; }
-[data-theme="gray"] .text-\[\#555\] { color: #555555; }
-[data-theme="gray"] .text-\[\#777\] { color: #666666; }
-[data-theme="gray"] .text-\[\#888\] { color: #777777; }
-[data-theme="gray"] .text-\[\#999\] { color: #777777; }
-[data-theme="gray"] .text-\[\#aaa\] { color: #888888; }
-[data-theme="gray"] .text-\[\#bbb\] { color: #999999; }
-[data-theme="gray"] .text-\[\#ccc\] { color: #AAAAAA; }
-/* Orange → dark gray in gray theme */
-[data-theme="gray"] .text-\[\#DF8635\] { color: #333333; }
-[data-theme="gray"] .bg-\[\#DF8635\] { background-color: #333333; }
-[data-theme="gray"] .hover\:bg-\[\#c97220\]:hover { background-color: #111111 !important; }
-[data-theme="gray"] .bg-\[\#3D3D3D\] { background-color: #555555; }
-[data-theme="gray"] .border-\[\#DF8635\] { border-color: #333333; }
-/* Row hover */
-[data-theme="gray"] .hover\:bg-\[\#FAFAF8\]:hover { background-color: #E0E0E0 !important; }
-[data-theme="gray"] .hover\:bg-\[\#F0EEE8\]:hover { background-color: #D4D4D4 !important; }
-/* Inputs */
-[data-theme="gray"] input:not([type="file"]),
-[data-theme="gray"] textarea,
-[data-theme="gray"] select {
-  background-color: #E8E8E8;
-  border-color: #BFBFBF;
-  color: #111111;
-}
-/* Category badge skeleton */
-[data-theme="gray"] .bg-stone-100 { background-color: #DCDCDC; }
-[data-theme="gray"] .text-stone-600 { color: #444444; }
+/* ── DARK theme ───────────────────────────────────────────────────────────────
 
-/* ── DARK theme ──────────────────────────── */
+   El panel está escrito con colores literales de Tailwind (`bg-white`,
+   `text-[#888]`, `border-emerald-200`). El tema oscuro los reasigna acá en vez
+   de tocar cada componente: un solo lugar donde mirar, y las pantallas nuevas
+   heredan el tema sin acordarse de nada.
+
+   El precio de eso es que una clase que no esté en esta lista queda clara sobre
+   fondo oscuro. Por eso la lista cubre TODAS las clases de color que usa el
+   panel hoy; si aparece una nueva, va acá.
+
+   La escala de grises apunta a 4.5:1 como mínimo contra la superficie donde se
+   usa, y a 5:1 o más en los textos chicos, que en el panel son casi todos.
+
+   Superficies, de atrás para adelante:
+     #0E0E0F  fondo de página     #17181A  tarjetas y tablas
+     #1E1F22  bloques internos    #232428  hover de fila
+     #121315  campos de carga
+*/
 [data-theme="dark"] {
   color-scheme: dark;
+  /* El texto que no declara color lo hereda del body, que lee estas dos
+     variables. Sin redefinirlas, un título sin clase —el del modal de
+     historial, por ejemplo— quedaba casi negro sobre el panel oscuro. Cubrir
+     eso clase por clase no alcanza: el caso es justamente no tener ninguna. */
+  --foreground: #EDEDED;
+  --background: #0E0E0F;
 }
-/* Surfaces */
-[data-theme="dark"] .bg-white { background-color: #1C1C1C; }
-[data-theme="dark"] .bg-\[\#FAFAF8\] { background-color: #111111; }
-[data-theme="dark"] .bg-\[\#F0EEE8\] { background-color: #252525; }
-[data-theme="dark"] .bg-\[\#F5F4F1\] { background-color: #1E1E1E; }
-[data-theme="dark"] .bg-\[\#F4F4F2\] { background-color: #222222; }
-[data-theme="dark"] .bg-\[\#FAFAF8\]\/50 { background-color: rgba(17,17,17,0.5); }
-/* Borders */
-[data-theme="dark"] .border-\[\#E0DED8\] { border-color: #2D2D2D; }
-[data-theme="dark"] .border-\[\#F0EEE8\] { border-color: #222222; }
-[data-theme="dark"] .divide-\[\#F0EEE8\] > * + * { border-color: #222222; }
-[data-theme="dark"] .divide-\[\#E0DED8\] > * + * { border-color: #2D2D2D; }
-/* Text */
-[data-theme="dark"] .text-\[\#111\] { color: #F0F0F0; }
-[data-theme="dark"] .text-\[\#222\] { color: #E0E0E0; }
-[data-theme="dark"] .text-\[\#333\] { color: #D0D0D0; }
-[data-theme="dark"] .text-\[\#444\] { color: #C0C0C0; }
-[data-theme="dark"] .text-\[\#555\] { color: #B0B0B0; }
-[data-theme="dark"] .text-\[\#777\] { color: #999999; }
-[data-theme="dark"] .text-\[\#888\] { color: #909090; }
-[data-theme="dark"] .text-\[\#999\] { color: #888888; }
-[data-theme="dark"] .text-\[\#aaa\] { color: #808080; }
-[data-theme="dark"] .text-\[\#bbb\] { color: #909090; }
-[data-theme="dark"] .text-\[\#ccc\] { color: #808080; }
-/* Tailwind text colors */
-[data-theme="dark"] .text-gray-500 { color: #999999; }
-[data-theme="dark"] .text-gray-600 { color: #AAAAAA; }
-[data-theme="dark"] .text-gray-700 { color: #BBBBBB; }
-[data-theme="dark"] .text-gray-800 { color: #CCCCCC; }
-[data-theme="dark"] .text-gray-900 { color: #E0E0E0; }
-[data-theme="dark"] .text-stone-600 { color: #AAAAAA; }
-[data-theme="dark"] .text-stone-700 { color: #BBBBBB; }
-/* Orange accent stays in dark mode */
-[data-theme="dark"] .text-\[\#DF8635\] { color: #F09040; }
-[data-theme="dark"] .bg-\[\#DF8635\] { background-color: #DF8635; }
-[data-theme="dark"] .hover\:bg-\[\#c97220\]:hover { background-color: #E8903A !important; }
-/* Primary black buttons → invert to light in dark mode */
-[data-theme="dark"] .bg-\[\#111\] { background-color: #EEEEEE; color: #111111; }
-[data-theme="dark"] .bg-\[\#111\] * { color: #111111; }
-[data-theme="dark"] .hover\:bg-\[\#2a2a2a\]:hover { background-color: #CCCCCC !important; }
-/* Export dark button → medium gray */
-[data-theme="dark"] .bg-\[\#3D3D3D\] { background-color: #3A3A3A; }
-[data-theme="dark"] .hover\:bg-\[\#555\]:hover { background-color: #4A4A4A !important; }
-/* Row hover */
-[data-theme="dark"] .hover\:bg-\[\#FAFAF8\]:hover { background-color: #222222 !important; }
-[data-theme="dark"] .hover\:bg-\[\#F0EEE8\]:hover { background-color: #2A2A2A !important; }
-/* Red hover on delete icon */
-[data-theme="dark"] .hover\:bg-red-50:hover { background-color: rgba(220,38,38,0.15) !important; }
-/* Inputs */
-[data-theme="dark"] input:not([type="file"]),
+
+
+/* Color de los datos neutros de los gráficos —barras, series, marcas—, el que
+   acompaña al naranja de la marca. En claro es el negro del panel; en oscuro
+   tiene que ser claro o la barra desaparece contra el fondo. Va como variable
+   porque esos colores se pasan en `style` inline a cada barra, y el `style`
+   inline le gana a cualquier regla del tema. */
+:root                  { --admin-dato-neutro: #111111; }
+[data-theme="dark"]    { --admin-dato-neutro: #C4C4C4; }
+
+/* Las tres superficies del armazón del panel.
+   Van como clases y no como `style` inline para que las pinte el mismo CSS que
+   el resto: con el color calculado en React, el primer pintado usaba siempre el
+   tema claro y se veía un destello blanco antes de hidratar. */
+.admin-page    { background-color: #FAFAF8; }
+.admin-sidebar { background-color: #111111; }
+.admin-header  { background-color: #ffffff; border-bottom: 1px solid #E0DED8; }
+[data-theme="dark"] .admin-page    { background-color: #0E0E0F; }
+[data-theme="dark"] .admin-sidebar { background-color: #141517; }
+[data-theme="dark"] .admin-header  { background-color: #141517; border-bottom-color: #2E3034; }
+
+/* ── Superficies ──────────────────────────────────────────────────────────── */
+[data-theme="dark"] .bg-white                { background-color: #17181A; }
+[data-theme="dark"] .focus\:bg-white:focus   { background-color: #1E1F22 !important; }
+[data-theme="dark"] .hover\:bg-white:hover   { background-color: #1E1F22 !important; }
+[data-theme="dark"] .bg-\[\#FAFAF8\]         { background-color: #0E0E0F; }
+[data-theme="dark"] .bg-\[\#FAFAF8\]\/50     { background-color: rgba(14,14,15,0.5); }
+[data-theme="dark"] .bg-\[\#F0EEE8\]         { background-color: #232428; }
+[data-theme="dark"] .bg-\[\#F5F4F1\]         { background-color: #1E1F22; }
+[data-theme="dark"] .bg-\[\#F5F4F0\]         { background-color: #1E1F22; }
+[data-theme="dark"] .bg-\[\#F4F4F2\]         { background-color: #1E1F22; }
+[data-theme="dark"] .bg-\[\#F4F2ED\]         { background-color: #1E1F22; }
+[data-theme="dark"] .bg-\[\#FCFBF9\]         { background-color: #1A1B1D; }
+[data-theme="dark"] .bg-\[\#f8fafc\]         { background-color: #1A1B1D; }
+[data-theme="dark"] .bg-\[\#E0DED8\]         { background-color: #2E3034; }
+[data-theme="dark"] .bg-\[\#ccc\]            { background-color: #4A4C50; }
+[data-theme="dark"] .bg-gray-50              { background-color: #1A1B1D; }
+[data-theme="dark"] .bg-gray-100             { background-color: #1E1F22; }
+[data-theme="dark"] .bg-gray-200             { background-color: #2A2C30; }
+[data-theme="dark"] .bg-gray-300             { background-color: #35373C; }
+[data-theme="dark"] .bg-stone-50             { background-color: #1A1B1D; }
+[data-theme="dark"] .bg-stone-100            { background-color: #2A2C30; }
+
+/* Hover de filas y de bloques clicables. */
+[data-theme="dark"] .hover\:bg-\[\#FAFAF8\]:hover  { background-color: #232428 !important; }
+[data-theme="dark"] .hover\:bg-\[\#F0EEE8\]:hover  { background-color: #2A2C30 !important; }
+[data-theme="dark"] .hover\:bg-\[\#FFFCFA\]:hover  { background-color: #1E1F22 !important; }
+[data-theme="dark"] .hover\:bg-gray-50:hover       { background-color: #1E1F22 !important; }
+[data-theme="dark"] .hover\:bg-gray-100:hover      { background-color: #232428 !important; }
+[data-theme="dark"] .hover\:bg-gray-200:hover      { background-color: #2A2C30 !important; }
+
+/* ── Bordes ───────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .border-\[\#E0DED8\]      { border-color: #2E3034; }
+[data-theme="dark"] .border-\[\#E8E6E0\]      { border-color: #2A2C30; }
+[data-theme="dark"] .border-\[\#D0CEC8\]      { border-color: #3A3C41; }
+[data-theme="dark"] .border-\[\#DDD\]         { border-color: #2E3034; }
+[data-theme="dark"] .border-\[\#F0EEE8\]      { border-color: #232427; }
+[data-theme="dark"] .border-\[\#F0EEE9\]      { border-color: #232427; }
+[data-theme="dark"] .border-\[\#888\]         { border-color: #55585E; }
+[data-theme="dark"] .border-gray-100          { border-color: #232427; }
+[data-theme="dark"] .border-gray-200          { border-color: #2E3034; }
+/* Los dos selectores de `divide-*`: Tailwind v4 lo aplica con
+   `:not(:last-child)` y v3 con `* + *`. Con uno solo, la primera fila de cada
+   tabla se quedaba con el gris claro original y quedaba una línea blanca
+   cruzando la grilla. */
+[data-theme="dark"] .divide-\[\#F0EEE8\] > * + *,
+[data-theme="dark"] .divide-\[\#F0EEE8\] > :not(:last-child) { border-color: #232427; }
+[data-theme="dark"] .divide-\[\#E0DED8\] > * + *,
+[data-theme="dark"] .divide-\[\#E0DED8\] > :not(:last-child) { border-color: #2E3034; }
+[data-theme="dark"] .divide-gray-100 > * + *,
+[data-theme="dark"] .divide-gray-100 > :not(:last-child)  { border-color: #232427; }
+[data-theme="dark"] .hover\:border-\[\#bbb\]:hover      { border-color: #55585E !important; }
+[data-theme="dark"] .hover\:border-\[\#aaa\]:hover      { border-color: #55585E !important; }
+[data-theme="dark"] .hover\:border-\[\#444\]:hover      { border-color: #6A6D73 !important; }
+[data-theme="dark"] .hover\:border-\[\#E0DED8\]:hover   { border-color: #3A3C41 !important; }
+[data-theme="dark"] .hover\:border-gray-300:hover       { border-color: #3A3C41 !important; }
+
+/* `border-[#111]` marca lo elegido: en claro es un borde negro sobre blanco, y
+   acá tiene que ser lo mismo al revés. Incluye el spinner, que se dibuja con
+   ese negro al 20% mas la tapa superior opaca. */
+[data-theme="dark"] .border-\[\#111\]         { border-color: #E4E4E4; }
+[data-theme="dark"] .border-\[\#111\]\/10     { border-color: rgba(228,228,228,0.10); }
+[data-theme="dark"] .border-\[\#111\]\/20     { border-color: rgba(228,228,228,0.20); }
+[data-theme="dark"] .border-t-\[\#111\]       { border-top-color: #E4E4E4; }
+[data-theme="dark"] .hover\:border-\[\#111\]:hover { border-color: #E4E4E4 !important; }
+[data-theme="dark"] .focus\:border-\[\#111\]:focus { border-color: #E4E4E4 !important; }
+[data-theme="dark"] .focus\:border-gray-400:focus  { border-color: #6A6D73 !important; }
+[data-theme="dark"] .focus\:border-\[\#aaa\]:focus { border-color: #6A6D73 !important; }
+
+/* ── Texto ────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .text-\[\#111\]      { color: #EDEDED; }
+[data-theme="dark"] .text-\[\#1a1a1a\]   { color: #EDEDED; }
+[data-theme="dark"] .text-\[\#222\]      { color: #E4E4E4; }
+[data-theme="dark"] .text-\[\#333\]      { color: #D8D8D8; }
+[data-theme="dark"] .text-\[\#444\]      { color: #C8C8C8; }
+[data-theme="dark"] .text-\[\#555\]      { color: #B4B4B4; }
+[data-theme="dark"] .text-\[\#777\]      { color: #9E9E9E; }
+[data-theme="dark"] .text-\[\#888\]      { color: #9A9A9A; }
+[data-theme="dark"] .text-\[\#999\]      { color: #949494; }
+[data-theme="dark"] .text-\[\#aaa\]      { color: #8E8E8E; }
+[data-theme="dark"] .text-\[\#bbb\]      { color: #888888; }
+[data-theme="dark"] .text-\[\#ccc\]      { color: #7E7E7E; }
+[data-theme="dark"] .text-\[\#ddd\]      { color: #6E6E6E; }
+[data-theme="dark"] .text-\[\#D0CEC8\]   { color: #6E6E6E; }
+[data-theme="dark"] .text-\[\#E0DED8\]   { color: #6E6E6E; }
+[data-theme="dark"] .text-\[\#8a7a68\]   { color: #A59684; }
+[data-theme="dark"] .text-gray-200       { color: #E4E4E4; }
+[data-theme="dark"] .text-gray-300       { color: #D8D8D8; }
+[data-theme="dark"] .text-gray-400       { color: #9A9A9A; }
+[data-theme="dark"] .text-gray-500       { color: #9E9E9E; }
+[data-theme="dark"] .text-gray-600       { color: #B0B0B0; }
+[data-theme="dark"] .text-gray-700       { color: #C0C0C0; }
+[data-theme="dark"] .text-gray-800       { color: #D2D2D2; }
+[data-theme="dark"] .text-gray-900       { color: #E4E4E4; }
+[data-theme="dark"] .text-stone-600      { color: #B0B0B0; }
+[data-theme="dark"] .text-stone-700      { color: #C0C0C0; }
+[data-theme="dark"] .hover\:text-\[\#111\]:hover { color: #FFFFFF !important; }
+[data-theme="dark"] .hover\:text-\[\#444\]:hover { color: #E4E4E4 !important; }
+[data-theme="dark"] .hover\:text-\[\#555\]:hover { color: #DCDCDC !important; }
+[data-theme="dark"] .hover\:text-\[\#666\]:hover { color: #D2D2D2 !important; }
+[data-theme="dark"] .hover\:text-\[\#777\]:hover { color: #C8C8C8 !important; }
+[data-theme="dark"] .hover\:text-gray-500:hover  { color: #B0B0B0 !important; }
+[data-theme="dark"] .hover\:text-gray-600:hover  { color: #C0C0C0 !important; }
+[data-theme="dark"] .hover\:text-gray-700:hover  { color: #D2D2D2 !important; }
+
+/* ── Naranja de marca ─────────────────────────────────────────────────────── */
+/* Como texto se aclara: el #DF8635 sobre negro queda en 4:1 y son textos de
+   9 px. Como fondo se mantiene, que es el color de la marca. */
+[data-theme="dark"] .text-\[\#DF8635\]              { color: #F0964A; }
+[data-theme="dark"] .hover\:text-\[\#DF8635\]:hover { color: #F0964A !important; }
+[data-theme="dark"] .bg-\[\#DF8635\]                { background-color: #DF8635; }
+[data-theme="dark"] .hover\:bg-\[\#DF8635\]:hover   { background-color: #DF8635 !important; color: #17181A !important; }
+[data-theme="dark"] .hover\:bg-\[\#c97220\]:hover   { background-color: #E8903A !important; }
+[data-theme="dark"] .hover\:bg-\[\#c9752d\]:hover   { background-color: #E8903A !important; }
+[data-theme="dark"] .border-\[\#DF8635\]            { border-color: #DF8635; }
+[data-theme="dark"] .hover\:border-\[\#DF8635\]:hover { border-color: #DF8635 !important; }
+[data-theme="dark"] .ring-\[\#DF8635\]              { --tw-ring-color: #DF8635; }
+[data-theme="dark"] .focus\:ring-\[\#DF8635\]:focus { --tw-ring-color: #DF8635; }
+[data-theme="dark"] .focus\:border-\[\#DF8635\]:focus { border-color: #DF8635 !important; }
+/* Tintes naranjas: seleccionado, resaltado, fila con cambios sin guardar. */
+[data-theme="dark"] .bg-\[\#FFF8F1\]        { background-color: rgba(223,134,53,0.14); }
+[data-theme="dark"] .bg-\[\#FFFDF3\]        { background-color: rgba(223,134,53,0.07); }
+[data-theme="dark"] .bg-\[\#FDEFC8\]        { background-color: rgba(245,158,11,0.20); }
+[data-theme="dark"] .hover\:bg-\[\#FDEFC8\]:hover { background-color: rgba(245,158,11,0.26) !important; }
+[data-theme="dark"] .text-\[\#b08040\]      { color: #E0A860; }
+
+/* ── Negro de marca: botón primario y encabezado de tabla ─────────────────── */
+/* `bg-[#111]` hace dos trabajos distintos en el panel. En un botón es el
+   primario —negro con letra blanca— y en oscuro tiene que invertirse para
+   seguir siendo el elemento más destacado de la pantalla. En un `<tr>` de
+   encabezado es una banda oscura, y ahí invertir la dejaba blanca y más
+   brillante que todo lo demás. Por eso la inversión se limita a lo que se
+   clickea, y el encabezado se queda oscuro con su propio tono. */
+[data-theme="dark"] button.bg-\[\#111\],
+[data-theme="dark"] a.bg-\[\#111\],
+[data-theme="dark"] label.bg-\[\#111\]             { background-color: #EDEDED; color: #111111; }
+[data-theme="dark"] button.bg-\[\#111\] *,
+[data-theme="dark"] a.bg-\[\#111\] *,
+[data-theme="dark"] label.bg-\[\#111\] *           { color: #111111; }
+[data-theme="dark"] thead .bg-\[\#111\],
+[data-theme="dark"] tr.bg-\[\#111\]                { background-color: #1E1F22; }
+[data-theme="dark"] div.bg-\[\#111\],
+[data-theme="dark"] span.bg-\[\#111\]              { background-color: #2A2C30; }
+
+[data-theme="dark"] .hover\:bg-\[\#2a2a2a\]:hover  { background-color: #D2D2D2 !important; }
+[data-theme="dark"] button:hover.hover\:bg-\[\#333\],
+[data-theme="dark"] a:hover.hover\:bg-\[\#333\]    { background-color: #D2D2D2 !important; color: #111111 !important; }
+[data-theme="dark"] button:hover.hover\:bg-\[\#333\] *,
+[data-theme="dark"] a:hover.hover\:bg-\[\#333\] *  { color: #111111 !important; }
+/* Botón fantasma que se rellena al pasar por encima. */
+[data-theme="dark"] .hover\:bg-\[\#111\]:hover     { background-color: #EDEDED !important; color: #111111 !important; }
+[data-theme="dark"] .hover\:bg-\[\#111\]:hover *   { color: #111111 !important; }
+[data-theme="dark"] .hover\:text-white:hover       { color: #111111 !important; }
+/* Deshabilitado: en claro es gris claro sobre blanco; acá, gris sobre oscuro. */
+[data-theme="dark"] .disabled\:bg-gray-300:disabled { background-color: #2E3034 !important; }
+[data-theme="dark"] .disabled\:text-gray-500:disabled { color: #6A6D73 !important; }
+/* Botón secundario oscuro (Exportar): en claro ya es gris oscuro. */
+[data-theme="dark"] .bg-\[\#3D3D3D\]               { background-color: #2E3034; }
+[data-theme="dark"] .hover\:bg-\[\#555\]:hover     { background-color: #3A3C41 !important; }
+
+/* ── Campos de carga ──────────────────────────────────────────────────────── */
+[data-theme="dark"] input:not([type="file"]):not([type="color"]):not([type="checkbox"]),
 [data-theme="dark"] textarea,
 [data-theme="dark"] select {
-  background-color: #141414;
-  border-color: #2D2D2D;
-  color: #EEEEEE;
+  background-color: #121315;
+  border-color: #2E3034;
+  color: #EDEDED;
 }
 [data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder { color: #444444; }
-/* Category badge */
-[data-theme="dark"] .bg-stone-100 { background-color: #2A2A2A; }
-[data-theme="dark"] .bg-gray-50 { background-color: #1E1E1E; }
-[data-theme="dark"] .bg-gray-100 { background-color: #252525; }
-/* Skeleton */
-[data-theme="dark"] .animate-pulse { background-color: #252525; }
-/* Emerald badges - stays readable in dark */
-[data-theme="dark"] .bg-emerald-50 { background-color: rgba(16,185,129,0.15); }
-[data-theme="dark"] .text-emerald-700 { color: #34d399; }
-[data-theme="dark"] .bg-amber-50 { background-color: rgba(245,158,11,0.15); }
-[data-theme="dark"] .text-amber-700 { color: #fbbf24; }
-[data-theme="dark"] .bg-red-50 { background-color: rgba(239,68,68,0.15); }
-[data-theme="dark"] .text-red-700 { color: #f87171; }
-/* Focus ring */
-[data-theme="dark"] *:focus { outline-color: #DF8635; }
+[data-theme="dark"] textarea::placeholder { color: #6A6D73; }
+[data-theme="dark"] select option { background-color: #17181A; color: #EDEDED; }
+[data-theme="dark"] input[type="checkbox"] { accent-color: #DF8635; }
+[data-theme="dark"] *:focus-visible { outline-color: #DF8635; }
+
+/* ── Estados: verde, rojo, ámbar, azul y el resto de los avisos ───────────── */
+/* Los tintes van translúcidos y no en color plano: así se apoyan sobre la
+   superficie que tengan debajo —tarjeta o fila resaltada— sin quedar como un
+   parche de otro tono. El texto usa el escalón 300/400, que es el que aguanta
+   fondo oscuro. */
+[data-theme="dark"] .bg-emerald-50   { background-color: rgba(16,185,129,0.14); }
+[data-theme="dark"] .bg-emerald-100  { background-color: rgba(16,185,129,0.20); }
+[data-theme="dark"] .hover\:bg-emerald-100:hover { background-color: rgba(16,185,129,0.24) !important; }
+[data-theme="dark"] .border-emerald-200 { border-color: rgba(16,185,129,0.34); }
+[data-theme="dark"] .border-emerald-300 { border-color: rgba(16,185,129,0.44); }
+[data-theme="dark"] .border-emerald-400 { border-color: rgba(16,185,129,0.55); }
+[data-theme="dark"] .hover\:border-emerald-300:hover { border-color: rgba(16,185,129,0.50) !important; }
+[data-theme="dark"] .text-emerald-500 { color: #34D399; }
+[data-theme="dark"] .text-emerald-600 { color: #34D399; }
+[data-theme="dark"] .text-emerald-700 { color: #34D399; }
+[data-theme="dark"] .hover\:text-emerald-300:hover { color: #6EE7B7 !important; }
+
+[data-theme="dark"] .bg-red-50    { background-color: rgba(239,68,68,0.14); }
+[data-theme="dark"] .bg-red-100   { background-color: rgba(239,68,68,0.20); }
+[data-theme="dark"] .hover\:bg-red-50:hover { background-color: rgba(239,68,68,0.18) !important; }
+[data-theme="dark"] .border-red-100 { border-color: rgba(239,68,68,0.24); }
+[data-theme="dark"] .border-red-200 { border-color: rgba(239,68,68,0.34); }
+[data-theme="dark"] .text-red-400 { color: #F87171; }
+[data-theme="dark"] .text-red-500 { color: #F87171; }
+[data-theme="dark"] .text-red-600 { color: #F87171; }
+[data-theme="dark"] .text-red-700 { color: #F87171; }
+[data-theme="dark"] .text-red-800 { color: #FCA5A5; }
+[data-theme="dark"] .text-\[\#b91c1c\] { color: #F87171; }
+[data-theme="dark"] .hover\:text-red-300:hover { color: #FCA5A5 !important; }
+[data-theme="dark"] .hover\:text-red-500:hover { color: #F87171 !important; }
+[data-theme="dark"] .hover\:text-red-700:hover { color: #FCA5A5 !important; }
+[data-theme="dark"] .ring-red-400 { --tw-ring-color: #F87171; }
+
+[data-theme="dark"] .bg-amber-50    { background-color: rgba(245,158,11,0.14); }
+[data-theme="dark"] .border-amber-200 { border-color: rgba(245,158,11,0.34); }
+[data-theme="dark"] .text-amber-600 { color: #FBBF24; }
+[data-theme="dark"] .text-amber-700 { color: #FBBF24; }
+[data-theme="dark"] .text-\[\#B45309\] { color: #FBBF24; }
+
+[data-theme="dark"] .bg-blue-50     { background-color: rgba(59,130,246,0.14); }
+[data-theme="dark"] .bg-blue-100    { background-color: rgba(59,130,246,0.20); }
+[data-theme="dark"] .border-blue-200 { border-color: rgba(59,130,246,0.34); }
+[data-theme="dark"] .text-blue-700  { color: #60A5FA; }
+[data-theme="dark"] .text-blue-800  { color: #93C5FD; }
+
+[data-theme="dark"] .bg-green-50    { background-color: rgba(34,197,94,0.14); }
+[data-theme="dark"] .bg-green-100   { background-color: rgba(34,197,94,0.20); }
+[data-theme="dark"] .border-green-200 { border-color: rgba(34,197,94,0.34); }
+[data-theme="dark"] .text-green-700 { color: #4ADE80; }
+[data-theme="dark"] .text-green-800 { color: #86EFAC; }
+
+[data-theme="dark"] .bg-orange-50   { background-color: rgba(249,115,22,0.14); }
+[data-theme="dark"] .border-orange-200 { border-color: rgba(249,115,22,0.34); }
+[data-theme="dark"] .text-orange-600 { color: #FB923C; }
+[data-theme="dark"] .text-orange-700 { color: #FB923C; }
+
+[data-theme="dark"] .bg-pink-50     { background-color: rgba(236,72,153,0.14); }
+[data-theme="dark"] .border-pink-200 { border-color: rgba(236,72,153,0.34); }
+[data-theme="dark"] .text-pink-700  { color: #F472B6; }
+
+[data-theme="dark"] .bg-teal-50     { background-color: rgba(20,184,166,0.14); }
+[data-theme="dark"] .border-teal-200 { border-color: rgba(20,184,166,0.34); }
+[data-theme="dark"] .text-teal-700  { color: #2DD4BF; }
+
+[data-theme="dark"] .bg-violet-50   { background-color: rgba(139,92,246,0.14); }
+[data-theme="dark"] .border-violet-200 { border-color: rgba(139,92,246,0.34); }
+[data-theme="dark"] .text-violet-700 { color: #A78BFA; }
+
+[data-theme="dark"] .bg-stone-50\/60 { background-color: rgba(26,27,29,0.6); }
+[data-theme="dark"] .border-stone-200 { border-color: #2E3034; }
+
+/* Zona de soltar al arrastrar un producto a la página siguiente. */
+[data-theme="dark"] .bg-orange-50\/50 { background-color: rgba(249,115,22,0.10); }
+/* El anillo del modal es un negro al 5% que sobre oscuro no se ve. */
+[data-theme="dark"] .ring-black\/5 { --tw-ring-color: rgba(255,255,255,0.08); }
+
+/* Los iconos de acción de cada fila descansan al 25% y se encienden al pasar por
+   encima. Sobre blanco eso deja un gris tenue que igual se ve; sobre negro, el
+   25% los funde con el fondo y la fila parece no tener acciones. Sube sólo
+   dentro de la tabla: el mismo 25% marca botones deshabilitados en otras
+   pantallas, y ahí desvanecerse es justamente lo que tiene que pasar. */
+[data-theme="dark"] td .opacity-25 { opacity: 0.6; }
+
+/* El velo de los modales es un negro al 20%: sobre blanco alcanza para separar,
+   sobre negro casi no se nota y la pantalla de atrás sigue compitiendo con el
+   panel. Se sube, y se le suma un borde al panel para que su límite se vea. */
+[data-theme="dark"] .bg-black\/20 { background-color: rgba(0,0,0,0.60); }
+[data-theme="dark"] .bg-opacity-50 { --tw-bg-opacity: 0.7; }
+
+/* ── Esqueletos de carga ──────────────────────────────────────────────────── */
+[data-theme="dark"] .animate-pulse { background-color: #232428; }

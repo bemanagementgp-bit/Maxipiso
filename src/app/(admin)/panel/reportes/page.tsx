@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, ReferenceLine, Cell,
 } from "recharts";
+import { COLORES_GRAFICO, useTemaPanel } from "@/lib/tema-panel";
 import { FiSearch, FiTrendingUp, FiTrendingDown, FiMinus } from "react-icons/fi";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -91,9 +92,9 @@ function EditorialStats({ c }: { c: any }) {
 function CatalogHealth({ c }: { c: any }) {
   if (!c) return null;
   const items = [
-    { label: "Productos activos",      val: c.activos,      total: c.total,    color: "#111" },
+    { label: "Productos activos",      val: c.activos,      total: c.total,    color: "var(--admin-dato-neutro)" },
     { label: "Con imagen cargada",     val: c.conImagen,    total: c.total,    color: "#DF8635" },
-    { label: "Con categoría asignada", val: c.conCategoria, total: c.total,    color: "#111" },
+    { label: "Con categoría asignada", val: c.conCategoria, total: c.total,    color: "var(--admin-dato-neutro)" },
     { label: "Con stock registrado",   val: c.conStock,     total: c.total,    color: "#DF8635" },
   ];
   return (
@@ -175,8 +176,11 @@ function DistribucionCategorias({ data }: { data: any[] }) {
           </div>
           <div className="h-1.5 bg-[#F0EEE8] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#111] rounded-full transition-all duration-700"
-              style={{ width: max > 0 ? `${(d.count / max) * 100}%` : "0%" }}
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: max > 0 ? `${(d.count / max) * 100}%` : "0%",
+                background: "var(--admin-dato-neutro)",
+              }}
             />
           </div>
         </div>
@@ -187,6 +191,7 @@ function DistribucionCategorias({ data }: { data: any[] }) {
 
 // ── Buscador de historial de precios ──────────────────────────────────────────
 function PrecioHistorico() {
+  const g = COLORES_GRAFICO[useTemaPanel()];
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
@@ -298,16 +303,16 @@ function PrecioHistorico() {
             <div className="px-5 pt-5 pb-4">
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={serie} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={g.grilla} vertical={false} />
                   <XAxis
                     dataKey="fecha"
                     tickFormatter={(v) => fmtDate(v)}
-                    tick={{ fontSize: 10, fill: "#bbb" }}
+                    tick={{ fontSize: 10, fill: g.ejes }}
                     axisLine={false} tickLine={false}
                   />
                   <YAxis
                     tickFormatter={(v) => "$" + (v >= 1000 ? Math.round(v / 1000) + "k" : v)}
-                    tick={{ fontSize: 10, fill: "#bbb" }}
+                    tick={{ fontSize: 10, fill: g.ejes }}
                     axisLine={false} tickLine={false} width={52}
                     domain={["auto", "auto"]}
                   />
@@ -325,7 +330,7 @@ function PrecioHistorico() {
                   <Line
                     type="monotone"
                     dataKey="precio"
-                    stroke="#111"
+                    stroke={g.neutro}
                     strokeWidth={2}
                     dot={{ fill: "#DF8635", r: 4, strokeWidth: 0 }}
                     activeDot={{ r: 5, fill: "#DF8635" }}
@@ -348,6 +353,7 @@ function PrecioHistorico() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ReportesPage() {
+  const g = COLORES_GRAFICO[useTemaPanel()];
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [chartView, setChartView] = useState<"count" | "avgPrecio">("count");
@@ -427,16 +433,16 @@ export default function ReportesPage() {
             <div className="px-4 py-5">
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={catData} margin={{ top: 4, right: 4, left: 0, bottom: 4 }} barSize={32}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#bbb" }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={g.grilla} vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: g.ejes }} axisLine={false} tickLine={false} />
                   <YAxis
                     tickFormatter={(v) => chartView === "avgPrecio" ? "$" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) : String(v)}
-                    tick={{ fontSize: 10, fill: "#bbb" }} axisLine={false} tickLine={false} width={44}
+                    tick={{ fontSize: 10, fill: g.ejes }} axisLine={false} tickLine={false} width={44}
                   />
                   <Tooltip content={<DarkTooltip />} cursor={{ fill: "#DF8635", fillOpacity: 0.05 }} />
                   <Bar dataKey={chartView} radius={[3, 3, 0, 0]}>
                     {catData.map((_: any, i: number) => (
-                      <Cell key={i} fill={i === 0 ? "#DF8635" : "#111"} />
+                      <Cell key={i} fill={i === 0 ? "#DF8635" : g.neutro} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -471,7 +477,7 @@ export default function ReportesPage() {
                         className="h-full rounded-full"
                         style={{
                           width: `${(m.count / maxMarca) * 100}%`,
-                          background: i === 0 ? "#DF8635" : "#111",
+                          background: i === 0 ? "#DF8635" : "var(--admin-dato-neutro)",
                         }}
                       />
                     </div>
