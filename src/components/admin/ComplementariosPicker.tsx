@@ -16,7 +16,15 @@ import { primeraImagen } from "@/lib/imagenes";
  * un accesorio, pero también puede ser un revestimiento.
  */
 
-type Elegido = { id: string; nombre: string; sku: string; imagen: string | null; categoria: string };
+type Elegido = {
+  id: string;
+  nombre: string;
+  sku: string;
+  imagen: string | null;
+  categoria: string;
+  /** Con qué categorías dice servir. Ordena los sugeridos. */
+  compatibleCon: string;
+};
 
 type Props = {
   /** Ids ya elegidos, en el orden en que se muestran en la ficha. */
@@ -24,6 +32,13 @@ type Props = {
   onChange: (ids: string[]) => void;
   /** Se excluye de los resultados: un producto no se complementa a sí mismo. */
   productoActualId?: string | null;
+  /**
+   * Categoría del producto que se está editando, como la muestra el panel.
+   *
+   * Ordena los sugeridos: un zócalo que dice servir para flotantes va antes que
+   * uno de porcelanato cuando se está cargando un flotante.
+   */
+  categoriaActual?: string | null;
 };
 
 /**
@@ -44,10 +59,11 @@ function aElegido(p: Record<string, unknown>): Elegido {
     sku: String(p.sku ?? ""),
     imagen: primeraImagen(p.imagenes),
     categoria: String(p._tablaLabel ?? ""),
+    compatibleCon: String(p.compatibleCon ?? ""),
   };
 }
 
-export default function ComplementariosPicker({ elegidos, onChange, productoActualId }: Props) {
+export default function ComplementariosPicker({ elegidos, onChange, productoActualId, categoriaActual }: Props) {
   const [detalle, setDetalle] = useState<Record<string, Elegido>>({});
   const [consulta, setConsulta] = useState("");
   const [resultados, setResultados] = useState<Elegido[]>([]);
@@ -130,9 +146,33 @@ export default function ComplementariosPicker({ elegidos, onChange, productoActu
 
   const quitar = (id: string) => onChange(elegidos.filter((x) => x !== id));
 
-  const recomendadosLibres = recomendados.filter(
-    (p) => p.id !== productoActualId && !elegidos.includes(p.id),
-  );
+  /**
+   * Sugeridos, los compatibles primero.
+   *
+   * `compatibleCon` es texto libre ("Pisos flotantes y vinílicos"), así que se
+   * compara por prefijos de las palabras largas de la categoría: "flotantes"
+   * → "flotan", que encuentra igual "flotante" y "Flotantes". Las palabras
+   * cortas no sirven —"pisos" está en media docena de categorías— y por eso se
+   * descartan.
+   *
+   * Es un orden, no un filtro: un accesorio sin `compatibleCon` cargado sigue
+   * apareciendo, sólo que después. Con la columna vacía en casi todo el
+   * catálogo, filtrar dejaría la lista en cero.
+   */
+  const recomendadosLibres = (() => {
+    const libres = recomendados.filter((p) => p.id !== productoActualId && !elegidos.includes(p.id));
+    const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const raices = sinTildes(categoriaActual ?? "")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 5)
+      .map((w) => w.slice(0, 6));
+    if (raices.length === 0) return libres;
+    const sirve = (p: Elegido) => {
+      const texto = sinTildes(p.compatibleCon);
+      return texto ? raices.some((r) => texto.includes(r)) : false;
+    };
+    return [...libres.filter(sirve), ...libres.filter((p) => !sirve(p))];
+  })();
 
   return (
     <div>

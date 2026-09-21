@@ -773,6 +773,7 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
                   elegidos={complementarios}
                   onChange={setComplementarios}
                   productoActualId={productId}
+                  categoriaActual={TABLA_OPTIONS.find((t) => t.value === tabla)?.label ?? null}
                 />
               </div>
             )}
