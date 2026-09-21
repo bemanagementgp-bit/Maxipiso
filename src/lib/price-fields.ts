@@ -10,7 +10,7 @@ import { CATEGORY_CONFIGS, type FieldDef } from "@/lib/category-fields";
  * Las 8 tablas NO comparten los mismos campos:
  *  - `maderas` tiene `precio` a secas, no `precioM2`.
  *  - `revestimientos` usa `precioMl` y `decks` usa `precioMLineal` para lo mismo.
- *  - `accesorios` no tiene ningún precio ni moneda: solo `stock`.
+ *  - `accesorios` cobra por unidad (`precio`), no por m².
  * Cualquier operación masiva tiene que respetar eso o termina mandando a Prisma
  * una columna que no existe (que es exactamente el 500 que rompía `garantia`).
  */

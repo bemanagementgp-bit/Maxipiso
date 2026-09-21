@@ -1082,10 +1082,22 @@ corregir tres filas a mano), revisar el total y recién ahí impactarlo en una s
   > Los centavos se muestran con dos dígitos o con ninguno. Sin el mínimo, 12500.50 salía
   > "12.500,5" al lado de "13.800,75" y la columna se leía como si un precio tuviera un decimal
   > y el otro dos.
+  >
+  > **El mismo problema estaba en los otros dos lugares donde se carga un precio**, y por la
+  > misma razón: un input cuyo `value` sale de parsear lo tipeado no deja escribir decimales.
+  > En la ficha del producto el campo era `<input type="number">`, que devuelve cadena vacía
+  > mientras lo tipeado no sea un número completo: al apretar la coma el campo **se vaciaba
+  > solo**. Y guardaba con `parseFloat(v) || 0`, así que un tipeo mal hecho se volvía un precio
+  > de cero — un dato peor que el vacío, porque parece cargado. En el editor de variantes el
+  > `value` salía derecho del número parseado y la coma desaparecía al escribirla.
+  >
+  > Los tres usan ahora `lib/numeros.ts` (`parsearNumero` / `aTexto`) y la misma idea: mientras
+  > la celda tiene el foco manda el texto crudo, al salir manda el número. Lo inválido se marca
+  > en rojo y se deja a la vista para poder corregirlo, en vez de pisarse con un cero.
 - **Las columnas se arman según las categorías visibles**, y cada celda se habilita sólo
   donde la columna existe. Las 8 tablas no comparten los campos: `maderas` tiene `precio` a
   secas, `revestimientos` usa `precioMl` y `decks` `precioMLineal` para lo mismo, y
-  **`accesorios` no tiene ningún precio ni moneda, sólo `stock`**. Todo eso se deriva de
+  `accesorios` cobra por unidad (`precio`) y no por m². Todo eso se deriva de
   `lib/price-fields.ts`, que lo saca de `CATEGORY_CONFIGS` en vez de repetir la lista.
 - Operaciones en lote sobre la selección: porcentaje, redondeo (entero / decena / centena /
   millar / terminación 99), fijar o sumar stock, y cambiar moneda con conversión opcional por
@@ -1186,6 +1198,27 @@ distintas en el filtro del catálogo.
 > El "se guardó" sale en la lista y no en el editor: al guardar se navega, y la página que
 > tendría que mostrar el aviso se desmonta. El editor vuelve con `?guardado=1` y el aviso
 > aparece allá, ya sobre la lista actualizada.
+
+> **Guardar devuelve a la misma pantalla de la que se salió.** Los filtros del ABM vivían en
+> `useState`, así que cualquier navegación los perdía: volver del editor dejaba `/panel` en
+> blanco, y para editar el siguiente producto del mismo rubro había que elegir de nuevo
+> categoría, subtipo y lo que hubiera puesto. Cargando veinte terminaciones de aluminio
+> seguidas, son veinte veces.
+>
+> Ahora viven en la URL (`lib/filtros-panel.ts`): `?buscar=…&cat=…&estado=…&f_subtipo=…`, con
+> prefijo `f_` para los filtros por característica, que dependen de la categoría y no son una
+> lista fija. El ABM los lee al montar y los escribe con `replace` —con `push`, tipear en el
+> buscador dejaría una entrada de historial por letra—, y los cuelga del link al editor como
+> `?volver=…` para que éste los devuelva al salir, al guardar y al cancelar. De paso, el
+> estado sobrevive a recargar la página y la pantalla se puede compartir como se la está
+> mirando.
+
+> **La fila base de la tabla de variantes es el producto que se está editando**, mostrado una
+> segunda vez: su precio y el campo Precio de arriba son el mismo dato. Como el guardado manda
+> las variantes primero y el producto después, lo que se escribía en esa celda lo pisaba el
+> formulario un segundo más tarde — se veía como que la tabla no guardaba. El editor de
+> variantes avisa hacia arriba cuando cambian el precio o la moneda de esa fila, y los dos
+> campos quedan mostrando lo mismo mientras se tipea.
 
 ### 8.3 Orden manual (`sortOrder`)
 

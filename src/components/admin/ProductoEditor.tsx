@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { aTexto, parsearNumero } from "@/lib/numeros";
 import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2, FiAlertCircle, FiStar } from "react-icons/fi";
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
@@ -148,16 +149,38 @@ interface ProductoEditorProps {
    * campos identicos cada vez.
    */
   duplicateOfId?: string | null;
+  /**
+   * Los filtros que tenia el ABM al abrir esta pagina, como query string.
+   *
+   * El editor no los lee: los devuelve al salir. Sin esto, guardar volvia a un
+   * /panel en blanco y para editar el siguiente producto del mismo rubro habia
+   * que elegir de nuevo categoria, subtipo y lo que hubiera puesto.
+   */
+  volverA?: string;
 }
 
 const fieldClass = "w-full px-3 py-2 text-[12px] border border-[#E0DED8] bg-white focus:outline-none focus:border-[#aaa] transition-colors text-[#111] placeholder:text-[#ccc] rounded-sm";
 const labelClass = "block text-[9px] uppercase tracking-[0.08em] text-[#aaa] mb-1";
 
-export default function ProductoEditor({ productId, duplicateOfId = null }: ProductoEditorProps) {
+export default function ProductoEditor({ productId, duplicateOfId = null, volverA = "" }: ProductoEditorProps) {
   const router = useRouter();
+  /** El ABM tal como estaba al entrar, con o sin un aviso encima. */
+  const urlDelPanel = (extra = "") => {
+    const qs = [volverA, extra].filter(Boolean).join("&");
+    return qs ? `/panel?${qs}` : "/panel";
+  };
   const isNew = productId === null;
   const isLoading = false;
   const [form, setForm] = useState<Record<string, any>>({});
+  /**
+   * El campo numerico que se esta tipeando, con su texto crudo.
+   *
+   * Sin esto no se pueden escribir decimales: `form` guarda numeros y el input
+   * se redibuja desde ahi, asi que "1180," pasa por el parser, vuelve 1180 y
+   * la coma desaparece en el momento de escribirla. Solo un campo tiene el
+   * foco a la vez, asi que alcanza con uno: nace al tipear y muere al salir.
+   */
+  const [borradorNum, setBorradorNum] = useState<{ clave: string; texto: string } | null>(null);
   const [tabla, setTabla] = useState("");
   const [metadatos, setMetadatos] = useState<Meta[]>([]);
   /**
@@ -338,7 +361,7 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
   const intentarCerrar = () => {
     if (fase) return; // guardando: no se interrumpe
     if (hayCambiosSinGuardar) { setConfirmandoCierre(true); return; }
-    router.push("/panel");
+    router.push(urlDelPanel());
   };
 
   useEffect(() => {
@@ -358,10 +381,18 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
     : new Set<string>();
 
   const handleChange = (key: string, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: NUMBER_FIELDS.has(key) ? (value === "" ? null : parseFloat(value) || 0) : value,
-    }));
+    if (!NUMBER_FIELDS.has(key)) {
+      setForm((prev) => ({ ...prev, [key]: value }));
+      return;
+    }
+    // Se acepta coma y punto, como en la grilla de precios: en la practica se
+    // pega texto de planillas y las dos convenciones conviven.
+    setBorradorNum({ clave: key, texto: value });
+    const parsed = parsearNumero(value);
+    // Lo invalido no se guarda, pero tampoco se pisa con un cero: `parseFloat`
+    // con `|| 0` convertia un tipeo mal hecho en un precio de cero, que es un
+    // dato peor que el vacio porque parece cargado.
+    if (parsed !== "invalido") setForm((prev) => ({ ...prev, [key]: parsed }));
   };
 
   /** Suma los archivos elegidos al final de la lista. Acepta varios de una. */
@@ -528,7 +559,7 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
       // guardar salta al salir de una pagina que acaba de guardar bien.
       snapshotRef.current = huellaFormulario(form, metadatos, imagenes, stickersElegidos, complementarios);
       setVariantesSucias(false);
-      router.push("/panel?guardado=1");
+      router.push(urlDelPanel("guardado=1"));
       router.refresh();
     } catch (err: unknown) {
       // El padre relanza con el mensaje que devolvió la API, que es el que
@@ -581,6 +612,9 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
     // El SKU bloqueado (edición) sigue siendo un input plano: no se toca.
     const bloqueado = key === "sku" && !isNew;
     const opciones = isNum || isTextarea || bloqueado ? [] : opcionesDe(key, sugerencias[key] ?? []);
+    // Se marca en rojo y se deja lo tipeado a la vista para poder corregirlo.
+    const numInvalido =
+      isNum && borradorNum?.clave === key && parsearNumero(borradorNum.texto) === "invalido";
 
     return (
       <div key={key}>
@@ -601,12 +635,16 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
           />
         ) : (
           <input
-            type={isNum ? "number" : "text"}
-            step={isNum ? "0.01" : undefined}
-            value={val}
+            // `type="text"` y no `"number"`: el input numerico del navegador
+            // devuelve cadena vacia mientras lo tipeado no sea un numero
+            // completo, asi que al escribir la coma el campo se vaciaba solo.
+            type="text"
+            inputMode={isNum ? "decimal" : undefined}
+            value={isNum ? (borradorNum?.clave === key ? borradorNum.texto : aTexto(val)) : val}
             onChange={(e) => handleChange(key, e.target.value)}
+            onBlur={() => { if (borradorNum?.clave === key) setBorradorNum(null); }}
             disabled={key === "sku" && !isNew}
-            className={`${fieldClass} ${key === "sku" && !isNew ? "bg-[#FAFAF8] text-[#aaa]" : ""}`}
+            className={`${fieldClass} ${numInvalido ? "border-red-400 text-red-600" : ""} ${key === "sku" && !isNew ? "bg-[#FAFAF8] text-[#aaa]" : ""}`}
           />
         )}
         {esCampoDoc && String(val).trim() !== "" && (
@@ -743,6 +781,18 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
                       ref={variantesRef}
                       productoId={isNew ? null : productId}
                       onDirty={setVariantesSucias}
+                      // La fila base de la tabla es este mismo producto: su
+                      // precio y el campo Precio de arriba son el mismo dato.
+                      // Sin esto el guardado del producto —que va despues del
+                      // de variantes— revertia lo que se acababa de escribir
+                      // en esa celda, y parecia que la tabla no guardaba.
+                      onBase={({ campoPrecio, precio, moneda }) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          ...(campoPrecio ? { [campoPrecio]: precio } : {}),
+                          ...(moneda ? { moneda } : {}),
+                        }))
+                      }
                     />
                   )}
                 </div>
@@ -920,7 +970,7 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setConfirmandoCierre(false); router.push("/panel"); }}
+                  onClick={() => { setConfirmandoCierre(false); router.push(urlDelPanel()); }}
                   className="px-3 py-1.5 text-[11px] font-medium text-red-600 hover:text-red-700 transition-colors"
                 >
                   Descartar

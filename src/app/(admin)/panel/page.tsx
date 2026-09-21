@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { escribirFiltros, FILTROS_VACIOS, hayFiltros, leerFiltros } from "@/lib/filtros-panel";
 
 import { useEffect, useState } from "react";
 import {
@@ -76,30 +77,64 @@ export default function ProductosPage() {
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
   /**
-   * `?buscar=<sku>` deja entrar apuntando a un producto.
+   * Los filtros arrancan leyendo la URL, no vacios.
    *
-   * Lo usa la tarjeta de productos invisibles de /panel/diagnostico, que
-   * necesita mandar al principal apagado o sin foto que esconde a todo su
-   * grupo. Se lee una sola vez, al montar: despues es un campo mas.
+   * Es lo que hace que volver del editor devuelva a la misma pantalla, que
+   * recargar no pierda nada y que se pueda entrar apuntado a un producto
+   * —`?buscar=<sku>&estado=todos`, como hace el diagnostico de invisibles—.
+   * Se lee una sola vez, al montar; despues manda el estado y la URL lo sigue.
+   *
+   * La categoria arranca en "todas": entrar viendo una sola hacia parecer que
+   * el resto del catalogo no estaba.
    */
-  const [searchTerm, setSearchTerm] = useState(() => busquedaParams.get("buscar") ?? "");
-  // Arranca en "todas": entrar viendo una sola categoria hacia parecer que el
-  // resto del catalogo no estaba, y obligaba a limpiar el filtro cada vez.
-  const [tablaFilter, setTablaFilter] = useState("");
-  const [marcaFilter, setMarcaFilter] = useState("");
-  // Con `?buscar=` la lista arranca en "todos": lo que se viene a ver desde el
-  // diagnostico suele ser justamente un producto inactivo, y el filtro por
-  // defecto lo escondia, dejando la busqueda en cero resultados.
-  const [estadoFilter, setEstadoFilter] = useState(busquedaParams.get("buscar") ? "todos" : "activo");
+  // `useState` y no `useMemo`: es una lectura de una sola vez, al montar. Con
+  // `useMemo` habria que mentirle a la lista de dependencias.
+  const [inicial] = useState(() => leerFiltros(busquedaParams));
+  const [searchTerm, setSearchTerm] = useState(inicial.buscar);
+  const [tablaFilter, setTablaFilter] = useState(inicial.tabla);
+  const [marcaFilter, setMarcaFilter] = useState(inicial.marca);
+  const [estadoFilter, setEstadoFilter] = useState(inicial.estado);
   /** "" | "con" | "sin". El catalogo esconde los productos sin imagen, asi que
    *  este filtro es el que deja ver cuales estan invisibles para el cliente. */
-  const [imagenFilter, setImagenFilter] = useState("");
+  const [imagenFilter, setImagenFilter] = useState(inicial.imagen);
   /** Filtros por caracteristica, segun la categoria elegida. */
-  const [filtrosExtra, setFiltrosExtra] = useState<Record<string, string>>({});
+  const [filtrosExtra, setFiltrosExtra] = useState<Record<string, string>>(inicial.extra);
   const [camposFiltrables, setCamposFiltrables] = useState<{ key: string; label: string; valores: string[] }[]>([]);
 
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (type: "success" | "error", message: string) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  };
+
+  /** La URL del ABM para un query string dado. */
+  const conFiltros = (qs: string) => (qs ? `/panel?${qs}` : "/panel");
+
+  /**
+   * El estado de los filtros, tal como iria en la URL.
+   *
+   * Se calcula una vez y se usa para dos cosas: mantener la barra de
+   * direcciones al dia, y viajar al editor para que sepa a donde volver.
+   */
+  const queryFiltros = escribirFiltros({
+    buscar: searchTerm, tabla: tablaFilter, marca: marcaFilter,
+    estado: estadoFilter, imagen: imagenFilter, extra: filtrosExtra,
+  });
+
+  /**
+   * La URL del editor, con los filtros de esta pantalla colgados.
+   *
+   * El editor no los usa para nada: los guarda y los devuelve al salir, para
+   * que guardar un producto no obligue a volver a elegir categoria y subtipo
+   * antes de editar el siguiente del mismo rubro.
+   */
+  const alEditor = (id: string, extra = "") => {
+    const partes = [extra, queryFiltros ? `volver=${encodeURIComponent(queryFiltros)}` : ""].filter(Boolean);
+    return `/panel/producto/${id}${partes.length ? `?${partes.join("&")}` : ""}`;
+  };
 
   /**
    * Aviso al volver del editor.
@@ -112,16 +147,28 @@ export default function ProductosPage() {
     if (!busquedaParams.get("guardado")) return;
     addToast("success", "Producto guardado");
     setTableRefreshKey((v) => v + 1);
-    router.replace("/panel");
+    // No se navega a "/panel" pelado: eso borraria los filtros que el editor
+    // se encargo de devolver. Solo se saca el `guardado`, que ya cumplio, para
+    // que recargar no vuelva a mostrar el aviso.
+    router.replace(conFiltros(escribirFiltros(inicial)));
     // Solo al montar con el parametro puesto: despues `router.replace` lo saca.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addToast = (type: "success" | "error", message: string) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  };
+  /**
+   * Los filtros, a la URL.
+   *
+   * `replace` y no `push`: tipear en el buscador generaria una entrada de
+   * historial por letra, y el boton "atras" tardaria veinte clicks en salir de
+   * la pantalla. Lo que se quiere del historial es la ida y vuelta al editor,
+   * y eso lo empuja el editor, no esto.
+   */
+  useEffect(() => {
+    const actual = window.location.search.replace(/^\?/, "");
+    if (actual === queryFiltros) return;
+    router.replace(conFiltros(queryFiltros), { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryFiltros]);
 
   /**
    * Que campos se ofrecen como filtro, y en que orden.
@@ -240,7 +287,7 @@ export default function ProductosPage() {
             Importar
           </Link>
           <button
-            onClick={() => router.push("/panel/producto/nuevo")}
+            onClick={() => router.push(alEditor("nuevo"))}
             className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
           >
             <FiPlus size={14} />
@@ -315,9 +362,16 @@ export default function ProductosPage() {
           </FilterSelect>
         ))}
 
-        {(tablaFilter || marcaFilter || estadoFilter !== "activo" || imagenFilter || searchTerm || Object.keys(filtrosExtra).length > 0) && (
+        {hayFiltros({
+          buscar: searchTerm, tabla: tablaFilter, marca: marcaFilter,
+          estado: estadoFilter, imagen: imagenFilter, extra: filtrosExtra,
+        }) && (
           <button
-            onClick={() => { setTablaFilter(""); setMarcaFilter(""); setEstadoFilter("activo"); setImagenFilter(""); setFiltrosExtra({}); setSearchTerm(""); }}
+            onClick={() => {
+              setTablaFilter(FILTROS_VACIOS.tabla); setMarcaFilter(FILTROS_VACIOS.marca);
+              setEstadoFilter(FILTROS_VACIOS.estado); setImagenFilter(FILTROS_VACIOS.imagen);
+              setFiltrosExtra({}); setSearchTerm(FILTROS_VACIOS.buscar);
+            }}
             className="flex items-center gap-1 h-8 px-3 text-[10px] uppercase tracking-[0.06em] text-[#bbb] hover:text-[#666] transition-colors"
           >
             <FiX size={11} />
@@ -330,8 +384,8 @@ export default function ProductosPage() {
       <div className="bg-white border border-[#E0DED8] overflow-hidden">
         <ProductTable
           refreshKey={tableRefreshKey}
-          onEdit={(product) => router.push(`/panel/producto/${product.id}`)}
-          onDuplicate={(product) => router.push(`/panel/producto/nuevo?duplicar=${product.id}`)}
+          onEdit={(product) => router.push(alEditor(String(product.id)))}
+          onDuplicate={(product) => router.push(alEditor("nuevo", `duplicar=${product.id}`))}
           onDelete={() => {
             setTableRefreshKey((v) => v + 1);
             addToast("success", "Producto eliminado");

@@ -38,6 +38,8 @@ type FilaEditor = {
   opciones: { tipo: string; valor: string }[];
   imagen: string | null;
   precio: number | null;
+  /** "ARS" | "USD", o `null` en las categorias que no tienen la columna. */
+  moneda: string | null;
   stock: number | null;
   esPrincipal: boolean;
 };
@@ -87,6 +89,7 @@ function aFilaEditor(row: Record<string, unknown>, campoPrecio: string | null, e
     opciones: parseOpciones(row.varianteOpciones),
     imagen: primeraImagen(row.imagenes),
     precio: campoPrecio && row[campoPrecio] != null ? Number(row[campoPrecio]) : null,
+    moneda: typeof row.moneda === "string" && row.moneda ? row.moneda : null,
     stock: row.stock != null ? Number(row.stock) : null,
     esPrincipal,
   };
@@ -115,6 +118,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       campoPrecio,
       etiquetaPrecio: dinero?.precios[0]?.label ?? null,
       tieneStock: !!dinero?.stock,
+      // La moneda es por producto, y una variante es un producto: el mismo
+      // zocalo puede estar cotizado en pesos y su version importada en dolares.
+      monedas: dinero?.moneda?.options ?? null,
       filas,
     },
   });
@@ -180,6 +186,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const p = numero(fila.precio);
       if (p !== null) data[campoPrecio] = p;
     }
+    // Solo un valor de la lista de esa categoria: lo que llega del navegador
+    // no se confia mas que lo que llega de un Excel.
+    const monedas = dinero?.moneda?.options ?? [];
+    const moneda = sanitizeText(fila.moneda, 10).trim().toUpperCase();
+    if (moneda && monedas.includes(moneda)) data.moneda = moneda;
     if (dinero?.stock) {
       const s = numero(fila.stock);
       if (s !== null) data.stock = Math.round(s);

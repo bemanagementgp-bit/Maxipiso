@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parsearNumero } from "./PriceGrid";
+import { aTexto, parsearNumero } from "./numeros";
 
 /**
- * Lo que se tipea en una celda de la grilla de precios.
+ * Lo que se tipea en un campo de precio del panel.
  *
  * Se aceptan las dos convenciones porque en la práctica se pega texto de
  * planillas: "14372,45" y "14372.45" son lo mismo. Un error acá no se ve —el
@@ -55,5 +55,36 @@ describe("parsearNumero", () => {
     // se marcaba en rojo en medio de la carga.
     expect(parsearNumero("2,")).toBe(2);
     expect(parsearNumero("2.")).toBe(2);
+  });
+});
+
+describe("aTexto", () => {
+  it("muestra el importe con coma decimal y sin miles", () => {
+    // Sin miles a propósito: el input es para editar, no para leer. Con puntos
+    // de miles cada tecla los recalcula y el cursor salta de lugar.
+    expect(aTexto(1180.5)).toBe("1180,5");
+    expect(aTexto(14372.45)).toBe("14372,45");
+    expect(aTexto(1180)).toBe("1180");
+  });
+
+  it("redondea a dos decimales", () => {
+    expect(aTexto(10.006)).toBe("10,01");
+  });
+
+  it("sin precio deja el campo vacío, no un cero", () => {
+    // Un cero dicho por el formateador es un precio de cero, y esto se usa
+    // para categorías donde "todavía no lo cargué" es lo normal.
+    expect(aTexto(null)).toBe("");
+    expect(aTexto(undefined)).toBe("");
+    expect(aTexto("")).toBe("");
+    expect(aTexto("hola")).toBe("");
+  });
+
+  it("ida y vuelta con parsearNumero", () => {
+    // Es lo que sostiene al borrador: al salir de la celda se guarda el
+    // número, y al volver a entrar el input tiene que mostrar lo mismo.
+    for (const n of [0, 12, 1180.5, 14372.45]) {
+      expect(parsearNumero(aTexto(n))).toBe(n);
+    }
   });
 });

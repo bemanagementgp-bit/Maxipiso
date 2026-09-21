@@ -1,5 +1,6 @@
 "use client";
 
+import { aTexto, parsearNumero } from "@/lib/numeros";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertTriangle,
@@ -45,37 +46,8 @@ type Props = { onNotify?: (mensaje: string, tipo?: "ok" | "error") => void };
 
 // ─── Formato de números ──────────────────────────────────────────────────────
 
-/**
- * Parsea lo que se tipea en una celda.
- *
- * Se aceptan las dos convenciones porque en la práctica se pega texto de
- * planillas: "14372,45" y "14372.45" son lo mismo. Con ambos separadores
- * presentes ("1.234,56") el punto es de miles.
- */
-export function parsearNumero(texto: string): number | null | "invalido" {
-  const limpio = texto.trim().replace(/\s/g, "");
-  if (limpio === "") return null;
-
-  let normalizado = limpio;
-  if (limpio.includes(",") && limpio.includes(".")) {
-    normalizado = limpio.replace(/\./g, "").replace(",", ".");
-  } else if (limpio.includes(",")) {
-    normalizado = limpio.replace(",", ".");
-  }
-
-  const n = Number(normalizado);
-  if (!Number.isFinite(n) || n < 0) return "invalido";
-  return n;
-}
-
-/** Cómo se muestra un importe dentro del input: coma decimal, sin miles. */
-function aTexto(valor: unknown): string {
-  if (valor === null || valor === undefined || valor === "") return "";
-  const n = Number(valor);
-  if (!Number.isFinite(n)) return "";
-  return String(Math.round(n * 100) / 100).replace(".", ",");
-}
-
+// `parsearNumero` y `aTexto` viven en `lib/numeros`: el editor de variantes
+// tiene el mismo problema de los decimales y tiene que resolverlo igual.
 const fmt = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtEntero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 

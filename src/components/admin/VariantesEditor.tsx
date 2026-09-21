@@ -3,6 +3,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { FiPlus, FiX, FiLoader, FiUpload, FiAlertCircle, FiGrid } from "react-icons/fi";
 import { TIPOS_SUGERIDOS, type Opcion } from "@/lib/variantes";
+import { aTexto, parsearNumero } from "@/lib/numeros";
 
 /**
  * Carga las variantes de un producto sin salir de su ficha.
@@ -30,6 +31,8 @@ export type Fila = {
   opciones: Opcion[];
   imagen: string | null;
   precio: number | null;
+  /** "ARS" | "USD". `null` en las categorías que no tienen la columna. */
+  moneda: string | null;
   stock: number | null;
   esPrincipal: boolean;
 };
@@ -46,6 +49,16 @@ type Props = {
   /** `null` cuando el producto todavía no se guardó. */
   productoId: string | null;
   onDirty?: (sucio: boolean) => void;
+  /**
+   * Avisa cuando cambian el precio o la moneda de la fila **base**.
+   *
+   * La fila base no es otro producto: es el que se está editando, mostrado una
+   * segunda vez. Su precio y el campo Precio del formulario son el mismo dato,
+   * y como el guardado manda las variantes primero y el producto después, lo
+   * que se escribía acá lo pisaba el formulario un segundo más tarde. Se veía
+   * como que la celda no guardaba.
+   */
+  onBase?: (cambios: { campoPrecio: string | null; precio: number | null; moneda: string | null }) => void;
 };
 
 const input =
@@ -100,8 +113,48 @@ function definicionesDesde(filas: Fila[]): Definicion[] {
   return [...mapa.values()];
 }
 
+/**
+ * Un input de numero que deja escribir decimales.
+ *
+ * Mientras la celda tiene el foco manda el texto crudo, no el numero parseado:
+ * es lo unico que permite tipear "1180," sin que la coma desaparezca sola. Al
+ * salir se guarda el valor y el borrador muere, asi que la tabla sigue
+ * teniendo numeros y no cadenas a medio escribir.
+ *
+ * Lo invalido no se guarda pero tampoco se pisa: se marca en rojo y se deja lo
+ * tipeado a la vista para poder corregirlo.
+ */
+function CeldaNumero({
+  clave, valor, entero = false, borrador, setBorrador, onValor,
+}: {
+  clave: string;
+  valor: number | null;
+  entero?: boolean;
+  borrador: { clave: string; texto: string } | null;
+  setBorrador: (b: { clave: string; texto: string } | null) => void;
+  onValor: (v: number | null) => void;
+}) {
+  const propio = borrador?.clave === clave ? borrador.texto : null;
+  const invalido = propio !== null && parsearNumero(propio) === "invalido";
+  return (
+    <input
+      value={propio ?? aTexto(valor)}
+      onChange={(e) => {
+        const texto = e.target.value;
+        setBorrador({ clave, texto });
+        const parsed = parsearNumero(texto);
+        if (parsed !== "invalido") onValor(parsed);
+      }}
+      onBlur={() => { if (borrador?.clave === clave) setBorrador(null); }}
+      inputMode={entero ? "numeric" : "decimal"}
+      placeholder="—"
+      className={`${input} w-full text-right ${invalido ? "border-red-400 text-red-600" : ""}`}
+    />
+  );
+}
+
 const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEditor(
-  { productoId, onDirty },
+  { productoId, onDirty, onBase },
   ref,
 ) {
   const [cargando, setCargando] = useState(false);
@@ -111,13 +164,26 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
   const [defs, setDefs] = useState<Definicion[]>([]);
   const [skuPrincipal, setSkuPrincipal] = useState("");
   const [etiquetaPrecio, setEtiquetaPrecio] = useState<string | null>(null);
+  const [campoPrecio, setCampoPrecio] = useState<string | null>(null);
   const [tieneStock, setTieneStock] = useState(true);
+  /** Las monedas de esta categoría, o `null` si no tiene la columna. */
+  const [monedas, setMonedas] = useState<string[] | null>(null);
+  /**
+   * La celda numérica que se está tipeando, con su texto crudo.
+   *
+   * Sin esto no se pueden escribir decimales: el `value` del input sale de
+   * parsear lo tipeado, así que "1180," pasa por `Number("1180.")` = 1180 y la
+   * coma desaparece en el momento de escribirla. Se siente como que el teclado
+   * no la toma. Sólo una celda tiene el foco a la vez, así que alcanza con un
+   * borrador: nace al tipear y muere al salir.
+   */
+  const [borrador, setBorrador] = useState<{ clave: string; texto: string } | null>(null);
   const [subiendo, setSubiendo] = useState<number | null>(null);
   const [valorNuevo, setValorNuevo] = useState<Record<number, string>>({});
   const huellaRef = useRef("");
 
   const huella = useCallback(
-    (fs: Fila[]) => JSON.stringify(fs.map((f) => [f.id, f.sku, f.nombre, f.opciones, f.imagen, f.precio, f.stock])),
+    (fs: Fila[]) => JSON.stringify(fs.map((f) => [f.id, f.sku, f.nombre, f.opciones, f.imagen, f.precio, f.moneda, f.stock])),
     [],
   );
 
@@ -138,7 +204,9 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
         setDefs(definicionesDesde(traidas));
         setSkuPrincipal(d.skuPrincipal);
         setEtiquetaPrecio(d.etiquetaPrecio);
+        setCampoPrecio(d.campoPrecio ?? null);
         setTieneStock(!!d.tieneStock);
+        setMonedas(Array.isArray(d.monedas) && d.monedas.length > 0 ? d.monedas : null);
         huellaRef.current = huella(traidas);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar las variantes"))
@@ -245,6 +313,10 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
           opciones: combo,
           imagen: null,
           precio: base?.precio ?? null,
+          // La moneda se hereda: un grupo cotizado en dólares lo está entero,
+          // y tener que elegirla fila por fila es la clase de paso que se
+          // olvida en la variante número seis.
+          moneda: base?.moneda ?? null,
           stock: null,
           esPrincipal: false,
         });
@@ -256,7 +328,16 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
   };
 
   const editarFila = (i: number, cambios: Partial<Fila>) =>
-    setFilas((prev) => prev.map((f, j) => (j === i ? { ...f, ...cambios } : f)));
+    setFilas((prev) => {
+      const siguiente = prev.map((f, j) => (j === i ? { ...f, ...cambios } : f));
+      // El formulario tiene que enterarse de lo que se toca en la fila base, o
+      // su propio guardado lo revierte.
+      const fila = siguiente[i];
+      if (fila?.esPrincipal && ("precio" in cambios || "moneda" in cambios)) {
+        onBase?.({ campoPrecio, precio: fila.precio, moneda: fila.moneda });
+      }
+      return siguiente;
+    });
 
   const editarValor = (i: number, tipo: string, valor: string) =>
     setFilas((prev) =>
@@ -280,6 +361,7 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
         opciones: defs.filter((d) => d.tipo.trim()).map((d) => ({ tipo: d.tipo, valor: d.valores[0] ?? "" })).filter((o) => o.valor),
         imagen: null,
         precio: prev[0]?.precio ?? null,
+        moneda: prev[0]?.moneda ?? null,
         stock: null,
         esPrincipal: prev.length === 0,
       },
@@ -432,6 +514,7 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
                 <th className="text-left px-2 py-2">Nombre</th>
                 <th className="text-left px-2 py-2">SKU</th>
                 <th className="text-left px-2 py-2 w-[110px]">{etiquetaPrecio ?? "Precio"}</th>
+                {monedas && <th className="text-left px-2 py-2 w-[92px]">Moneda</th>}
                 {tieneStock && <th className="text-left px-2 py-2 w-[80px]">Stock</th>}
                 <th className="px-2 py-2 w-[30px]" />
               </tr>
@@ -496,23 +579,39 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
                   </td>
 
                   <td className="px-2 py-1.5">
-                    <input
-                      value={f.precio ?? ""}
-                      onChange={(e) => editarFila(i, { precio: e.target.value === "" ? null : Number(e.target.value.replace(",", ".")) })}
-                      inputMode="decimal"
-                      placeholder="—"
-                      className={`${input} w-full text-right`}
+                    <CeldaNumero
+                      clave={`${i}|precio`}
+                      valor={f.precio}
+                      borrador={borrador}
+                      setBorrador={setBorrador}
+                      onValor={(v) => editarFila(i, { precio: v })}
                     />
                   </td>
 
+                  {monedas && (
+                    <td className="px-2 py-1.5">
+                      <select
+                        value={f.moneda ?? ""}
+                        onChange={(e) => editarFila(i, { moneda: e.target.value || null })}
+                        // `px-1`: con el padding del resto de las celdas la
+                        // flecha del select le comia la ultima letra a "USD".
+                        className={`${input} w-full px-1`}
+                      >
+                        <option value="">—</option>
+                        {monedas.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </td>
+                  )}
+
                   {tieneStock && (
                     <td className="px-2 py-1.5">
-                      <input
-                        value={f.stock ?? ""}
-                        onChange={(e) => editarFila(i, { stock: e.target.value === "" ? null : Number(e.target.value) })}
-                        inputMode="numeric"
-                        placeholder="—"
-                        className={`${input} w-full text-right`}
+                      <CeldaNumero
+                        clave={`${i}|stock`}
+                        valor={f.stock}
+                        entero
+                        borrador={borrador}
+                        setBorrador={setBorrador}
+                        onValor={(v) => editarFila(i, { stock: v === null ? null : Math.round(v) })}
                       />
                     </td>
                   )}
