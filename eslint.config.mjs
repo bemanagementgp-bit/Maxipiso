@@ -1,22 +1,21 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import coreWebVitals from "eslint-config-next/core-web-vitals";
+import typescript from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
+/**
+ * Configuración de ESLint.
+ *
+ * Sin `FlatCompat`. `eslint-config-next` 16 ya exporta flat config —un array de
+ * bloques, que es lo que ESLint 9 espera— y pasarlo igual por el compat de
+ * eslintrc terminaba en `TypeError: Converting circular structure to JSON`:
+ * el plugin de React se referencia a sí mismo y el validador viejo intenta
+ * serializarlo. Con eso, `npm run lint` no corría.
+ */
 const config = [
   {
-    ignores: [
-      ".next/**",
-      "node_modules/**",
-      "public/**",
-      "next-env.d.ts",
-    ],
+    ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts"],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...coreWebVitals,
+  ...typescript,
   {
     rules: {
       // Las variables de descarte con _ son intencionales.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 /**
  * El tema del panel, leído del DOM.
@@ -30,18 +30,26 @@ function leer(): TemaPanel {
   return document.documentElement.dataset.theme === "dark" ? "dark" : "warm";
 }
 
+/** Avisa cuando `data-theme` cambia. */
+function suscribir(alCambiar: () => void): () => void {
+  const obs = new MutationObserver(alCambiar);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => obs.disconnect();
+}
+
+/**
+ * `useSyncExternalStore` y no `useState` con un efecto.
+ *
+ * El tema vive en el DOM, que para React es un sistema externo: esta es la API
+ * que existe justamente para eso. La versión con efecto pintaba una vez en
+ * claro y corregía después —un parpadeo en los gráficos al entrar en oscuro— y
+ * React 19 la marca como render en cascada.
+ *
+ * El tercer argumento es el valor del servidor, donde no hay DOM. Devuelve
+ * "warm" para que el HTML del servidor y el primer render del cliente
+ * coincidan; el script previo al pintado ya dejó el atributo puesto, así que
+ * el primer `leer()` del cliente da el tema correcto sin repintar el resto.
+ */
 export function useTemaPanel(): TemaPanel {
-  // Arranca en claro y no en `leer()` porque en el render del servidor no hay
-  // DOM: si difiriera del primer render del cliente, sería un desajuste de
-  // hidratación. El efecto corrige apenas monta.
-  const [tema, setTema] = useState<TemaPanel>("warm");
-
-  useEffect(() => {
-    setTema(leer());
-    const obs = new MutationObserver(() => setTema(leer()));
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => obs.disconnect();
-  }, []);
-
-  return tema;
+  return useSyncExternalStore(suscribir, leer, () => "warm" as TemaPanel);
 }
