@@ -13,6 +13,7 @@ import StickerPicker from "./StickerPicker";
 import ComplementariosPicker from "./ComplementariosPicker";
 import VariantesEditor, { type VariantesHandle } from "./VariantesEditor";
 import { parseStickerIds, type Sticker } from "@/lib/stickers";
+import { parseImagenes } from "@/lib/imagenes";
 
 type Meta = { clave: string; valor: string };
 
@@ -269,7 +270,13 @@ export default function ProductoEditor({ productId, duplicateOfId = null }: Prod
         if (isNew) setCopiaDe(String(original.nombre ?? original.especie ?? original.sku ?? ""));
         setForm(p);
         setTabla(original._tabla ?? "");
-        const imgs = (() => { try { const arr = JSON.parse(original.imagenes); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
+        // `parseImagenes` y no `JSON.parse`: la columna tambien puede traer
+        // "url1 | url2" o una URL sola, que es como quedan los productos
+        // cargados por planilla. Con el parse a secas eso tiraba excepcion, la
+        // lista arrancaba vacia, y al guardar se escribia esa lista vacia: el
+        // producto perdia todas sus fotos y desaparecia del catalogo, que
+        // esconde lo que no tiene imagen. Bastaba con abrirlo y guardar.
+        const imgs = parseImagenes(original.imagenes);
         const items: ImagenItem[] = imgs.map((url: string) => ({
           tipo: "url" as const,
           clave: `u${claveRef.current++}`,

@@ -27,7 +27,15 @@ export function parseImagenes(valor: unknown): string[] {
   if (texto.startsWith("[")) {
     try {
       const parsed = JSON.parse(texto);
-      partes = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
+      // Solo las cadenas. Con `map(String)` un `null` dentro del array —que
+      // aparece cuando se borra una foto del medio— se volvia la cadena "null"
+      // y terminaba pedida como `/null`: un 404 en la card, sin error visible
+      // en ningun lado.
+      partes = Array.isArray(parsed)
+        ? parsed.filter((x): x is string => typeof x === "string")
+        : typeof parsed === "string"
+          ? [parsed]
+          : [];
     } catch {
       partes = [];
     }

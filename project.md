@@ -623,9 +623,13 @@ del lado del cliente, sin recargar. Las miniaturas aparecen **sólo en el eje do
 difieren**: en Color se ve la diferencia entre "Roble" y "Nogal", en Medidas serían seis veces
 la misma foto al lado de números distintos.
 
-Los filtros del catálogo también miran sólo a las principales. Listaban los valores de todas
-las filas, variantes incluidas, así que la barra lateral ofrecía opciones que al tildarlas no
-devolvían ninguna card.
+**Los filtros buscan contra el grupo entero.** Tildar Tono = Gris y no ver el piso porque su
+versión gris es una variante es, para quien busca, que el producto no existe. Se resuelve en
+dos consultas: primero qué filas cumplen el filtro —principales y variantes—, después qué
+principales listar. Sólo cuando hay filtros activos, y con un tope de 4000 filas como red.
+
+Por lo mismo, las opciones de cada filtro salen del grupo completo: ofrecer sólo los valores
+de las principales escondía opciones que sí devuelven resultados.
 
 > **Un `variante de` que apunta a un SKU inexistente esconde el producto**: el listado oculta
 > las variantes y el grupo al que cree pertenecer no existe. Un error de tipeo en una celda
@@ -1554,6 +1558,21 @@ El `where` del catálogo incluye `imagenes NOT NULL AND != '' AND != '[]'`. Es i
 —una tarjeta sin imagen queda mal— pero sorprende: si cargás un producto y no aparece en
 `/catalogo`, lo primero a revisar es si tiene imagen, no el filtro.
 
+**La regla no cambió, pero ya no es silenciosa**: la lista del panel marca con un chip
+"No se ve en el catálogo" cada producto invisible, y el título dice por qué —sin foto,
+inactivo, o variante de otro—. Pasó con las terminaciones de aluminio: cargadas, activas, y
+sin aparecer.
+
+### 9.6 bis Editar un producto le borraba las fotos (arreglado)
+
+El editor leía la columna `imagenes` con `JSON.parse` a secas. Con `"url1 | url2"` —que es
+como quedan **todos los productos cargados por planilla**— eso tiraba excepción, la lista de
+imágenes arrancaba vacía, y al guardar se escribía esa lista vacía.
+
+El producto perdía todas sus fotos y, por 9.6, desaparecía del catálogo. Bastaba con abrirlo
+y apretar Guardar sin tocar nada. Era el único lugar que no se había migrado a
+`lib/imagenes.ts` cuando se unificaron los cinco parsers duplicados.
+
 ### 9.7 Cloudinary necesita sus credenciales en Vercel
 
 El driver está implementado (§8.5) pero **no funciona hasta que estén las credenciales** en
@@ -1593,6 +1612,28 @@ falla — por eso el workflow de CI usa `npm install`.
   va vacío y el endpoint devuelve 400.
 
 ---
+
+## 9 bis. Pruebas
+
+`npm test` (vitest). Corren en CI antes del build.
+
+**Sólo funciones puras, y a propósito.** Lo que se cubre es donde un error corrompe datos sin
+dar la cara: el parser de precios con coma y punto, el de opciones de variante, el de
+imágenes, el detector de tonos y la detección de categoría al importar. Todo eso se venía
+verificando a mano en el navegador, y una coma perdida no se ve hasta que alguien cotiza mal
+semanas después.
+
+No hay pruebas de componentes ni de endpoints. Serían más caras de escribir y de mantener que
+lo que aportan hoy: el panel se mira, y lo que se mira se nota cuando falla.
+
+Escribirlas encontró tres defectos reales de una:
+
+- `parseImagenes` convertía un `null` dentro del array JSON en la URL `/null` — un 404 en la
+  card, sin error en ningún lado.
+- El detector de tonos no reconocía el femenino: `"Pizarra Negra"` no daba nada, porque la
+  lista sólo tenía `"negro"`. En un catálogo en castellano eso es la mitad de los productos.
+- **Editar un producto en el panel le borraba las fotos** si venían cargadas por planilla. Ver
+  9.6 bis.
 
 ## 10. Código muerto
 

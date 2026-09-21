@@ -30,6 +30,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Pruebas
+        run: npm test
+
       - name: Build
         env:
           DATABASE_URL: file:./ci.db

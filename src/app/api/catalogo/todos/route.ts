@@ -260,9 +260,8 @@ export async function GET(req: NextRequest) {
       ? TABLES.filter((t) => t.key === categoria)
       : TABLES;
 
-    // Las variantes no se listan como cards (ver el `where` de productos, mas
-    // abajo), asi que tampoco pueden aportar valores a los filtros: una opcion
-    // que solo existe en una variante no devuelve ninguna card al tildarla.
+    // Las variantes no se listan como cards: el mismo piso en ocho colores tiene
+    // que ocupar una, no ocho. Se ven entrando al principal.
     const soloPrincipales = { OR: [{ varianteDe: null }, { varianteDe: "" }] };
 
     // Build filter queries (run in parallel with product queries)
@@ -281,7 +280,10 @@ export async function GET(req: NextRequest) {
           }
           return timeout(
             (filterTable.delegate() as any).findMany({
-              where: { isActive: true, ...otherFilters, AND: [soloPrincipales] },
+              // Los valores salen del grupo entero, variantes incluidas: el
+              // filtro busca contra el grupo, asi que ofrecer solo lo de los
+              // principales escondia opciones que si devuelven resultados.
+              where: { isActive: true, ...otherFilters },
               select: { [fd.key]: true },
             }) as Promise<Record<string, unknown>[]>,
             QUERY_TIMEOUT_MS,
@@ -290,6 +292,49 @@ export async function GET(req: NextRequest) {
           );
         })
       : [];
+
+    /**
+     * Arma el `where` de los filtros activos, sin la parte del grupo.
+     *
+     * Se usa dos veces: para buscar las filas que matchean —principales y
+     * variantes— y como base de la consulta final.
+     */
+    const condicionesDeFiltro = (): Record<string, unknown> => {
+      const cond: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(activeFilters)) {
+        if (MULTI_VALUE_FIELDS.has(key)) {
+          cond[key] = { contains: val };
+        } else {
+          const vars = reverseAliases[val];
+          cond[key] = vars ? { in: vars } : val;
+        }
+      }
+      return cond;
+    };
+
+    /**
+     * Los SKU de los principales cuyo grupo matchea el filtro.
+     *
+     * Un filtro tiene que encontrar al grupo si **cualquiera** de sus miembros
+     * cumple: tildar Tono = Gris y no ver el piso porque su version gris es una
+     * variante es, para quien busca, que el producto no existe.
+     *
+     * Son dos consultas en vez de una, y solo cuando hay filtros activos. El
+     * tope de 4000 es una red: con un catalogo mucho mas grande habria que
+     * resolverlo del lado de la base, pero hoy entra holgado y es preferible
+     * devolver de mas que colgar la consulta.
+     */
+    const skusDelGrupoQueMatchea = async (d: any): Promise<string[] | null> => {
+      if (Object.keys(activeFilters).length === 0) return null;
+      const filas = (await d.findMany({
+        where: { isActive: true, ...condicionesDeFiltro() },
+        select: { sku: true, varianteDe: true },
+        take: 4000,
+      }).catch(() => [])) as { sku: string; varianteDe: string | null }[];
+      const skus = new Set<string>();
+      for (const f of filas) skus.add(String(f.varianteDe ?? "").trim() || f.sku);
+      return [...skus];
+    };
 
     // Query all tables + filters in parallel
     const singleTable = tablesToQuery.length === 1;
@@ -310,14 +355,10 @@ export async function GET(req: NextRequest) {
           soloPrincipales,
         ],
       };
-      for (const [key, val] of Object.entries(activeFilters)) {
-        if (MULTI_VALUE_FIELDS.has(key)) {
-          where[key] = { contains: val };
-        } else {
-          const vars = reverseAliases[val];
-          where[key] = vars ? { in: vars } : val;
-        }
-      }
+      // Los filtros se resuelven contra el grupo entero y despues se listan los
+      // principales, que son los que ocupan una card.
+      const skusGrupo = await skusDelGrupoQueMatchea(d);
+      if (skusGrupo !== null) where.sku = { in: skusGrupo };
       if (search) {
         const fields = SEARCH_FIELDS[table.key] ?? ["nombre", "sku"];
         where.OR = fields.map((f) => ({ [f]: { contains: search } }));

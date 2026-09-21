@@ -179,6 +179,10 @@ export function normalizeAdminRow(row: Record<string, unknown>, tableKey: TableK
     updatedAt:    row.updatedAt,
     descripcion:  row.descripcion ?? null,
     imagen:       firstImage(row),
+    // El panel avisa cuales productos no se ven en el catalogo, y ser variante
+    // es uno de los motivos: sin esta columna, la vista "todas las categorias"
+    // no podia distinguirlo.
+    varianteDe:   row.varianteDe ?? null,
     _tabla:       DB_NAMES[tableKey],
     _tablaLabel:  TABLE_LABELS[tableKey],
   };

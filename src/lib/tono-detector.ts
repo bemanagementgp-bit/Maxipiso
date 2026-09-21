@@ -24,17 +24,21 @@ type Regla = { tono: string; palabras: string[] };
  *
  * Los compuestos van antes que los simples —"gris oscuro" antes que "gris"— o
  * "Roble Gris Oscuro" caeria en Gris.
+ *
+ * Van las dos formas de genero. En castellano el adjetivo concuerda, y el
+ * catalogo tiene tanto "Roble Negro" como "Pizarra Negra": con una sola forma,
+ * la mitad de los productos no se detectaba.
  */
 const REGLAS: Regla[] = [
   { tono: "Gris Oscuro",   palabras: ["gris oscuro", "grafito", "antracita", "anthracite", "dark grey", "dark gray", "plomo"] },
-  { tono: "Marrón Oscuro", palabras: ["marron oscuro", "wengue", "wenge", "chocolate", "tabaco", "mocha", "moka", "dark brown", "cafe"] },
-  { tono: "Blanco",        palabras: ["blanco", "white", "nieve", "polar", "artico"] },
-  { tono: "Negro",         palabras: ["negro", "black", "ebano", "onix"] },
-  { tono: "Rojizo",        palabras: ["rojizo", "rojo", "cerezo", "cherry", "caoba", "mahogany", "terracota", "cobre", "copper", "ladrillo"] },
+  { tono: "Marrón Oscuro", palabras: ["marron oscuro", "marrona oscura", "wengue", "wenge", "chocolate", "tabaco", "mocha", "moka", "dark brown", "cafe"] },
+  { tono: "Blanco",        palabras: ["blanco", "blanca", "white", "nieve", "polar", "artico", "artica"] },
+  { tono: "Negro",         palabras: ["negro", "negra", "black", "ebano", "onix"] },
+  { tono: "Rojizo",        palabras: ["rojizo", "rojiza", "rojo", "roja", "cerezo", "cherry", "caoba", "mahogany", "terracota", "cobre", "copper", "ladrillo"] },
   { tono: "Cremas",        palabras: ["crema", "cream", "marfil", "ivory", "vainilla", "hueso"] },
   { tono: "Beige",         palabras: ["beige", "arena", "sand", "trigo", "champagne", "champan"] },
   { tono: "Gris",          palabras: ["gris", "grey", "gray", "cemento", "concrete", "perla", "plata", "silver", "humo", "smoke"] },
-  { tono: "Marrón",        palabras: ["marron", "brown", "miel", "honey", "caramelo", "cognac", "castano", "avellana", "terra"] },
+  { tono: "Marrón",        palabras: ["marron", "marrona", "brown", "miel", "honey", "caramelo", "cognac", "castano", "castana", "avellana", "terra"] },
 ];
 
 /** Sin acentos y en minuscula: "Marrón Oscuro" tiene que encontrar "marron oscuro". */

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { primeraImagen } from "@/lib/imagenes";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight, FiCopy } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiClock, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiPackage, FiMenu, FiArrowUpRight, FiCopy, FiEyeOff } from "react-icons/fi";
 import { isRemoteImageUrl } from "@/lib/google-drive";
 import { getGridColumns, getCategoryConfig } from "@/lib/category-fields";
 
@@ -33,6 +33,37 @@ const TABLA_CONFIG: Record<string, { dot: string; label: string }> = {
  * acá los estados de la tabla ni romperse en modo oscuro.
  */
 const COL_ACCIONES = "sticky right-0 z-10 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]";
+
+/**
+ * Por que un producto cargado no aparece en el catalogo.
+ *
+ * El `where` del catalogo pide imagen y producto activo, y las variantes se ven
+ * dentro de su principal en vez de como card propia. Las tres reglas son
+ * intencionales, pero **no se ven desde aca**: se carga un producto, queda
+ * activo, y no aparece. Paso con las terminaciones de aluminio.
+ *
+ * Esto no cambia ninguna regla: solo la cuenta. `null` cuando el producto si
+ * se ve.
+ */
+function AvisoInvisible({ motivo }: { motivo: string | null }) {
+  if (!motivo) return null;
+  return (
+    <span
+      title={motivo}
+      className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-sm"
+    >
+      <FiEyeOff size={9} /> No se ve en el catálogo
+    </span>
+  );
+}
+
+function porQueNoSeVe(p: Record<string, unknown>, tieneFoto: boolean): string | null {
+  if (p.isActive === false) return "Está inactivo, por eso no aparece en el catálogo.";
+  const variante = String(p.varianteDe ?? "").trim();
+  if (variante) return `Es variante de ${variante}: se ve dentro de ese producto, no como card aparte.`;
+  if (!tieneFoto) return "No tiene foto, y el catálogo esconde los productos sin foto.";
+  return null;
+}
 const FONDO_HEREDADO = { background: "inherit" } as const;
 
 function Thumb({ src, alt }: { src: string | null; alt: string }) {
@@ -533,6 +564,7 @@ export function ProductTable({
                       <td className="px-3 py-2.5 max-w-[200px]">
                         <p className="text-[12px] font-semibold text-gray-900 truncate leading-tight">{nombre}</p>
                         <p className="text-[10px] font-mono text-gray-400 mt-0.5">{p.sku}</p>
+                        <AvisoInvisible motivo={porQueNoSeVe(p, !!imgSrc)} />
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <span className="text-[11px] text-gray-600">{p.marca ?? "-"}</span>
@@ -716,6 +748,7 @@ export function ProductTable({
                     <td className="px-4 py-3 max-w-[220px]">
                       <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">{p.nombre ?? "-"}</p>
                       <p className="text-[10px] font-mono text-gray-400 mt-0.5 tracking-wide">{p.sku}</p>
+                      <AvisoInvisible motivo={porQueNoSeVe(p, !!p.imagen)} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-[12px] text-gray-600">
