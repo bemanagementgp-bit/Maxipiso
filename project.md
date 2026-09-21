@@ -640,6 +640,11 @@ devolvían ninguna card.
 
 #### Productos complementarios
 
+En el ABM se eligen a mano con un buscador, y debajo aparecen **los accesorios como
+sugerencia**: el complemento de un piso es casi siempre un zócalo, una manta o un perfil, así
+que se ofrecen de entrada y no hay que acordarse de ningún SKU para empezar. Se esconden
+mientras se busca, que es cuando estorban, y no se sugiere lo ya elegido.
+
 Debajo de la ficha van dos carruseles. **Complementarios va primero**: "Similares" es la misma
 tabla, o sea otro modelo que compite con el que el cliente ya está mirando; lo complementario
 es lo que le falta para terminar la obra.
@@ -1112,6 +1117,31 @@ lateral) + `HistorialModal`.
 - El badge de **Estado es un botón**: llama a `POST /api/productos/[id]/toggle` y activa o
   desactiva en un click, en las dos vistas de la tabla. Si el nuevo estado no entra en el
   filtro activo, la tabla recarga; si entra, se parchea la fila sin refetch.
+
+### 8.2 octies El alta y la edición son una página
+
+`/panel/producto/[id]`, con `nuevo` para el alta y `?duplicar=<id>` para partir de otro.
+
+Era un popup de 780px con scroll propio. Los treinta campos de un piso flotante entraban en
+dos columnas angostas y había que desplazar **dentro del popup, dentro de la página**; la
+tabla de variantes, que es ancha, no tenía lugar. Como página entran tres columnas, el scroll
+es el del navegador, y el encabezado —nombre y SKU— y la barra de guardado quedan pegados
+arriba y abajo.
+
+**Enter pasa al campo siguiente**, como en una planilla, y no envía el formulario: un Enter
+distraído en el primer campo guardaba el producto a medio cargar. No pisa el Enter del
+Combobox, que elige la opción resaltada y llama a `preventDefault`, ni el de un textarea,
+donde es un salto de línea.
+
+Los campos con valores ya usados son **Combobox y no `select`**: se escribe para filtrar —sin
+acentos y sin distinguir mayúsculas, así que "porcelanato" encuentra "Porcelánato"—, las
+flechas recorren y Enter elige, pero **un valor nuevo siempre se puede escribir**. La lista
+sugiere para que "Max Core" no termine cargado también como "MaxCore", que serían dos marcas
+distintas en el filtro del catálogo.
+
+> El "se guardó" sale en la lista y no en el editor: al guardar se navega, y la página que
+> tendría que mostrar el aviso se desmonta. El editor vuelve con `?guardado=1` y el aviso
+> aparece allá, ya sobre la lista actualizada.
 
 ### 8.3 Orden manual (`sortOrder`)
 

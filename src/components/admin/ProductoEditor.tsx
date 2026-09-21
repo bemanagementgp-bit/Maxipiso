@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { FiX, FiUpload, FiLoader, FiPackage, FiArrowLeft, FiArrowRight, FiTrash2, FiAlertCircle, FiStar } from "react-icons/fi";
 import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
@@ -135,27 +136,26 @@ function previewDe(item: ImagenItem): string {
 
 const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "complementarios", "varianteDe", "varianteOpciones", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
 
-interface QuickEditPanelProps {
-  isOpen: boolean;
+interface ProductoEditorProps {
+  /** `null` cuando se esta creando uno nuevo. */
   productId: string | null;
-  isNew: boolean;
   /**
-   * Id del producto del cual copiar los datos, cuando `isNew` es true.
+   * Id del producto del cual copiar los datos, cuando se crea uno nuevo.
    *
    * Existe porque cargar varias variantes de un mismo piso —mismas medidas,
    * misma marca, mismo espesor, cambia el color— significaba tipear treinta
    * campos identicos cada vez.
    */
   duplicateOfId?: string | null;
-  isLoading?: boolean;
-  onClose: () => void;
-  onSave: (data: any) => void | Promise<void>;
 }
 
 const fieldClass = "w-full px-3 py-2 text-[12px] border border-[#E0DED8] bg-white focus:outline-none focus:border-[#aaa] transition-colors text-[#111] placeholder:text-[#ccc] rounded-sm";
 const labelClass = "block text-[9px] uppercase tracking-[0.08em] text-[#aaa] mb-1";
 
-export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null, isLoading = false, onClose, onSave }: QuickEditPanelProps) {
+export default function ProductoEditor({ productId, duplicateOfId = null }: ProductoEditorProps) {
+  const router = useRouter();
+  const isNew = productId === null;
+  const isLoading = false;
   const [form, setForm] = useState<Record<string, any>>({});
   const [tabla, setTabla] = useState("");
   const [metadatos, setMetadatos] = useState<Meta[]>([]);
@@ -221,7 +221,6 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
     setError("");
     setImagenes([]);
     setUrlInput("");
@@ -296,10 +295,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
-  }, [isOpen, productId, isNew, duplicateOfId]);
+  }, [productId, isNew, duplicateOfId]);
 
   useEffect(() => {
-    if (!isOpen) return;
     let cancelado = false;
     fetch("/api/stickers")
       .then((r) => (r.ok ? r.json() : null))
@@ -307,10 +305,10 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       // Sin stickers el formulario sigue andando: solo no se ofrece la seccion.
       .catch(() => { if (!cancelado) setStickersDisponibles([]); });
     return () => { cancelado = true; };
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
-    if (!isOpen || !tabla) { setSugerencias({}); return; }
+    if (!tabla) { setSugerencias({}); return; }
     let cancelado = false;
     fetch(`/api/productos/valores?tabla=${encodeURIComponent(tabla)}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -319,7 +317,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       // libre, que es como funcionaban antes.
       .catch(() => { if (!cancelado) setSugerencias({}); });
     return () => { cancelado = true; };
-  }, [isOpen, tabla]);
+  }, [tabla]);
 
   const hayCambiosSinGuardar =
     snapshotRef.current !== "" &&
@@ -333,11 +331,10 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   const intentarCerrar = () => {
     if (fase) return; // guardando: no se interrumpe
     if (hayCambiosSinGuardar) { setConfirmandoCierre(true); return; }
-    onClose();
+    router.push("/panel");
   };
 
   useEffect(() => {
-    if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       // Si hay una confirmacion abierta, Escape la cancela a ella.
@@ -510,7 +507,22 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
         setFase("");
         return;
       }
-      await onSave(payload);
+      const res = await fetch(isNew ? "/api/productos" : `/api/productos/${productId}`, {
+        method: isNew ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      // El motivo real viene en el cuerpo ("Faltan campos requeridos: X"). Sin
+      // eso todo terminaba en el mismo "no se pudo guardar", que no dice que
+      // corregir.
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || `No se pudo guardar el producto (HTTP ${res.status})`);
+      // La huella se actualiza antes de navegar: si no, el guard de cambios sin
+      // guardar salta al salir de una pagina que acaba de guardar bien.
+      snapshotRef.current = huellaFormulario(form, metadatos, imagenes, stickersElegidos, complementarios);
+      setVariantesSucias(false);
+      router.push("/panel?guardado=1");
+      router.refresh();
     } catch (err: unknown) {
       // El padre relanza con el mensaje que devolvió la API, que es el que
       // dice qué campo falta o por qué el storage no acepta el archivo.
@@ -518,6 +530,33 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     } finally {
       setFase("");
     }
+  };
+
+  /**
+   * Enter pasa al campo siguiente, como en una planilla.
+   *
+   * Se carga producto tras producto y el formulario tiene treinta campos: sin
+   * esto hay que tabular con la otra mano o ir con el mouse. No pisa el Enter
+   * del Combobox —que elige la opción resaltada y llama a `preventDefault`—
+   * ni el de un textarea, donde Enter es un salto de línea.
+   *
+   * Tampoco envía el formulario: un Enter distraído en el primer campo
+   * guardaba el producto a medio cargar.
+   */
+  const avanzarConEnter = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key !== "Enter" || e.defaultPrevented) return;
+    const activo = e.target as HTMLElement;
+    if (activo.tagName === "TEXTAREA" || activo.tagName === "BUTTON") return;
+    e.preventDefault();
+
+    const campos = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>("input:not([type=file]):not([disabled]), select:not([disabled]), textarea:not([disabled])"),
+    ).filter((el) => el.offsetParent !== null);
+    const i = campos.indexOf(activo);
+    const siguiente = campos[i + 1];
+    if (!siguiente) return;
+    siguiente.focus();
+    if (siguiente instanceof HTMLInputElement) siguiente.select();
   };
 
   const renderField = (key: string) => {
@@ -584,17 +623,11 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   };
 
   return (
-    <>
-      <div
-        className={`fixed inset-0 z-40 bg-black/20 transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        onClick={intentarCerrar}
-      />
-
-      <div
-        className={`fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[780px] max-h-[85vh] bg-white border border-[#E0DED8] flex flex-col shadow-xl rounded-sm transition-all duration-200 ease-in-out ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0DED8] shrink-0">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">
+        {/* Encabezado, pegado arriba: el formulario es largo y el nombre del
+            producto tiene que seguir a la vista mientras se baja. */}
+        <div className="sticky top-[52px] z-20 bg-white flex items-center justify-between px-6 lg:px-10 py-4 border-b border-[#E0DED8]">
           <div className="flex items-center gap-3 min-w-0">
             {imagenes[0] ? (
               <img src={previewDe(imagenes[0])} alt="" className="w-11 h-11 rounded-md object-cover border border-[#E0DED8] shrink-0" referrerPolicy="no-referrer" />
@@ -622,8 +655,12 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
               ) : null}
             </div>
           </div>
-          <button onClick={intentarCerrar} className="p-1.5 text-[#ccc] hover:text-[#777] transition-colors shrink-0">
-            <FiX size={16} />
+          <button
+            onClick={intentarCerrar}
+            title="Volver a la lista"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#777] hover:text-[#111] border border-[#E0DED8] hover:border-[#bbb] transition-colors rounded-sm shrink-0"
+          >
+            <FiArrowLeft size={13} /> Volver
           </button>
         </div>
 
@@ -633,7 +670,11 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
             <FiLoader size={20} className="text-[#ccc] animate-spin" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={avanzarConEnter}
+            className="px-6 lg:px-10 py-6 space-y-6 max-w-[1100px]"
+          >
             {error && (
               <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-sm">
                 {error}
@@ -641,7 +682,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
             )}
 
             {/* Categoría + Estado */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               <div>
                 <label className={labelClass}>Categoría *</label>
                 <select
@@ -686,7 +727,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
                     {section.title}
                   </h3>
                   {fields.length > 0 && (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-4">
                       {fields.map((key) => renderField(key))}
                     </div>
                   )}
@@ -852,7 +893,9 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
         )}
 
         {/* Footer */}
-        <div className="border-t border-[#E0DED8] shrink-0">
+      </div>
+
+      <div className="sticky bottom-0 z-20 bg-white border-t border-[#E0DED8]">
           {confirmandoCierre && (
             <div className="flex items-center gap-3 px-6 py-3 bg-[#FFF8F1] border-b border-[#E0DED8]">
               <FiAlertCircle size={14} className="text-[#DF8635] shrink-0" />
@@ -869,7 +912,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setConfirmandoCierre(false); onClose(); }}
+                  onClick={() => { setConfirmandoCierre(false); router.push("/panel"); }}
                   className="px-3 py-1.5 text-[11px] font-medium text-red-600 hover:text-red-700 transition-colors"
                 >
                   Descartar
@@ -883,18 +926,18 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
               <span className="leading-relaxed">{error}</span>
             </div>
           )}
-        <div className="px-6 py-4 flex gap-2">
+        <div className="px-6 lg:px-10 py-3 flex gap-2 max-w-[1100px]">
           <button
             type="button"
             onClick={intentarCerrar}
-            className="flex-1 py-2 text-[11px] font-medium text-[#888] hover:text-[#444] transition-colors rounded-sm"
+            className="px-5 py-2 text-[11px] font-medium text-[#888] hover:text-[#444] transition-colors rounded-sm"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit as any}
             disabled={isLoading || fetching || fase !== ""}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:opacity-40 rounded-sm transition-colors"
+            className="ml-auto flex items-center justify-center gap-1.5 px-8 py-2 text-[11px] font-medium text-white bg-[#111] hover:bg-[#333] disabled:opacity-40 rounded-sm transition-colors"
           >
             {(fase !== "" || isLoading) && <FiLoader size={12} className="animate-spin" />}
             {fase === "subiendo"
@@ -908,8 +951,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
                   : "Guardar cambios"}
           </button>
           </div>
-        </div>
       </div>
-    </>
+    </div>
   );
 }

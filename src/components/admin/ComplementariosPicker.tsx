@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FiSearch, FiX, FiLoader } from "react-icons/fi";
+import { FiSearch, FiX, FiLoader, FiPlus } from "react-icons/fi";
 import { primeraImagen } from "@/lib/imagenes";
 
 /**
@@ -26,6 +26,15 @@ type Props = {
   productoActualId?: string | null;
 };
 
+/**
+ * De dónde salen los recomendados.
+ *
+ * El complemento de un piso es casi siempre un accesorio —el zócalo, la manta,
+ * el perfil—, así que se ofrecen esos de entrada y no hay que acordarse de
+ * ningún SKU para empezar. Buscar sigue estando para el resto.
+ */
+const CATEGORIA_RECOMENDADA = "accesorios";
+
 
 
 function aElegido(p: Record<string, unknown>): Elegido {
@@ -43,6 +52,7 @@ export default function ComplementariosPicker({ elegidos, onChange, productoActu
   const [consulta, setConsulta] = useState("");
   const [resultados, setResultados] = useState<Elegido[]>([]);
   const [buscando, setBuscando] = useState(false);
+  const [recomendados, setRecomendados] = useState<Elegido[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -74,6 +84,21 @@ export default function ComplementariosPicker({ elegidos, onChange, productoActu
 
   useEffect(() => { cargarFaltantes(elegidos); }, [elegidos, cargarFaltantes]);
 
+  // Los accesorios activos, una sola vez al montar. Son pocos y se reusan en
+  // cada producto que se carga, asi que no hace falta volver a pedirlos.
+  useEffect(() => {
+    let cancelado = false;
+    fetch(`/api/productos?tabla=${CATEGORIA_RECOMENDADA}&take=24&skip=0&estado=activo`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelado || !d) return;
+        const filas: Record<string, unknown>[] = d?.productos ?? d?.data?.productos ?? [];
+        setRecomendados(filas.map(aElegido));
+      })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
+
   // Buscar mientras se tipea, con un respiro: sin el debounce cada tecla
   // dispara una consulta a las 8 tablas.
   useEffect(() => {
@@ -104,6 +129,10 @@ export default function ComplementariosPicker({ elegidos, onChange, productoActu
   };
 
   const quitar = (id: string) => onChange(elegidos.filter((x) => x !== id));
+
+  const recomendadosLibres = recomendados.filter(
+    (p) => p.id !== productoActualId && !elegidos.includes(p.id),
+  );
 
   return (
     <div>
@@ -176,6 +205,37 @@ export default function ComplementariosPicker({ elegidos, onChange, productoActu
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Recomendados: los accesorios, que son el complemento habitual. Van
+          abajo del buscador y no arriba para no tapar lo ya elegido, y se
+          esconden mientras se busca, que es cuando estorban. */}
+      {consulta.trim().length < 2 && recomendadosLibres.length > 0 && (
+        <div className="mt-2.5">
+          <p className="text-[9px] uppercase tracking-[0.08em] text-[#aaa] mb-1.5">
+            Accesorios sugeridos
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {recomendadosLibres.slice(0, 12).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => agregar(p)}
+                title={`${p.nombre} · ${p.sku}`}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-1 border border-[#E0DED8] hover:border-[#DF8635] bg-white transition-colors rounded-sm max-w-[190px]"
+              >
+                {p.imagen ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imagen} alt="" className="w-5 h-5 object-cover rounded-sm shrink-0" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="w-5 h-5 bg-[#F0EEE8] rounded-sm shrink-0" />
+                )}
+                <span className="text-[10px] text-[#555] truncate">{p.nombre}</span>
+                <FiPlus size={10} className="text-[#ccc] shrink-0" />
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

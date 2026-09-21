@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { useEffect, useState } from "react";
 import {
   FiPlus, FiDownload, FiUpload,
@@ -8,7 +10,6 @@ import {
 import Link from "next/link";
 import { ProductTable } from "../../../components/admin/ProductTable";
 import DetectarTonos from "@/components/admin/DetectarTonos";
-import { QuickEditPanel } from "../../../components/admin/QuickEditPanel";
 import { HistorialModal } from "../../../components/admin/HistorialModal";
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -68,11 +69,10 @@ const TABLAS = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProductosPage() {
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [editProductId, setEditProductId] = useState<string | null>(null);
-  const [isNewProduct, setIsNewProduct] = useState(false);
-  /** Producto del cual copiar los datos al abrir el formulario como nuevo. */
-  const [duplicateOfId, setDuplicateOfId] = useState<string | null>(null);
+  const router = useRouter();
+  const busquedaParams = useSearchParams();
+  // El alta y la edicion viven en /panel/producto/[id]: esta pantalla solo
+  // navega hacia alla, asi que ya no guarda estado de formulario.
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,9 +88,24 @@ export default function ProductosPage() {
   const [filtrosExtra, setFiltrosExtra] = useState<Record<string, string>>({});
   const [camposFiltrables, setCamposFiltrables] = useState<{ key: string; label: string; valores: string[] }[]>([]);
 
-  const [isLoading, setIsLoading] = useState(false);
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  /**
+   * Aviso al volver del editor.
+   *
+   * El alta y la edicion son otra pagina, asi que el "se guardo" no puede
+   * salir alla: la pagina se desmonta al navegar. El editor vuelve con
+   * `?guardado=1` y el aviso se muestra aca, ya en la lista actualizada.
+   */
+  useEffect(() => {
+    if (!busquedaParams.get("guardado")) return;
+    addToast("success", "Producto guardado");
+    setTableRefreshKey((v) => v + 1);
+    router.replace("/panel");
+    // Solo al montar con el parametro puesto: despues `router.replace` lo saca.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToast = (type: "success" | "error", message: string) => {
     const id = Date.now();
@@ -157,38 +172,6 @@ export default function ProductosPage() {
     return () => { cancelado = true; };
   }, [tablaFilter]);
 
-  const handleSaveProduct = async (formData: any) => {
-    setIsLoading(true);
-    try {
-      const method = editProductId ? "PUT" : "POST";
-      const url = editProductId ? `/api/productos/${editProductId}` : "/api/productos";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      // El motivo real viene en el cuerpo ("Faltan campos requeridos: X",
-      // "Sin permisos"). Antes se descartaba y todo terminaba en el mismo
-      // "No se pudo guardar", que no dice qué corregir.
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(json?.error || `No se pudo guardar el producto (HTTP ${res.status})`);
-      }
-      setIsPanelOpen(false);
-      setEditProductId(null);
-      setTableRefreshKey((v) => v + 1);
-      addToast("success", editProductId ? "Producto actualizado" : "Producto creado");
-    } catch (err: unknown) {
-      const mensaje = err instanceof Error && err.message ? err.message : "No se pudo guardar el producto";
-      addToast("error", mensaje);
-      // Se relanza para que el panel quede abierto con el error a la vista, en
-      // vez de cerrarse y perder lo que se estaba cargando.
-      throw new Error(mensaje);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   /**
    * Baja el catalogo como Excel, con la misma forma que la plantilla.
    *
@@ -247,7 +230,7 @@ export default function ProductosPage() {
             Importar
           </Link>
           <button
-            onClick={() => { setEditProductId(null); setIsNewProduct(true); setDuplicateOfId(null); setIsPanelOpen(true); }}
+            onClick={() => router.push("/panel/producto/nuevo")}
             className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-medium text-white bg-[#111] hover:bg-[#2a2a2a] transition-colors rounded-sm"
           >
             <FiPlus size={14} />
@@ -337,8 +320,8 @@ export default function ProductosPage() {
       <div className="bg-white border border-[#E0DED8] overflow-hidden">
         <ProductTable
           refreshKey={tableRefreshKey}
-          onEdit={(product) => { setEditProductId(product.id); setIsNewProduct(false); setDuplicateOfId(null); setIsPanelOpen(true); }}
-          onDuplicate={(product) => { setEditProductId(null); setIsNewProduct(true); setDuplicateOfId(product.id); setIsPanelOpen(true); }}
+          onEdit={(product) => router.push(`/panel/producto/${product.id}`)}
+          onDuplicate={(product) => router.push(`/panel/producto/nuevo?duplicar=${product.id}`)}
           onDelete={() => {
             setTableRefreshKey((v) => v + 1);
             addToast("success", "Producto eliminado");
@@ -353,17 +336,6 @@ export default function ProductosPage() {
           filtrosExtra={filtrosExtra}
         />
       </div>
-
-      {/* Panel deslizable */}
-      <QuickEditPanel
-        isOpen={isPanelOpen}
-        productId={editProductId}
-        isNew={isNewProduct}
-        duplicateOfId={duplicateOfId}
-        isLoading={isLoading}
-        onClose={() => { setIsPanelOpen(false); setEditProductId(null); }}
-        onSave={handleSaveProduct}
-      />
 
       <HistorialModal
         isOpen={isHistorialOpen}
