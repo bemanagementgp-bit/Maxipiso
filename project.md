@@ -636,6 +636,22 @@ de las principales escondía opciones que sí devuelven resultados.
 > deja un producto invisible, que es la clase de problema que se descubre semanas después. La
 > importación lo avisa, nombrando los productos afectados. No lo corrige sola: puede ser un
 > SKU que todavía no se cargó.
+>
+> Para los que ya quedaron así, **Estado de la base → "Productos invisibles"** los encuentra y
+> los devuelve al catálogo. Cubre las dos formas de romperlo: apuntar a un SKU que no existe,
+> y apuntarse a sí mismo. Muestra qué va a tocar antes de tocarlo.
+
+> **Una fila no puede ser variante de sí misma.** Si `varianteDe` coincide con el SKU propio
+> —lo deja una planilla con la columna copiada de más— la consulta por `varianteDe` devolvía
+> también a la principal: el editor la mostraba dos veces, como cabecera y como su propia
+> variante, y al guardar cortaba con "SKU repetido" **bloqueando la edición del producto
+> entero**, aunque lo que se estuviera cambiando fuese el nombre. Lo filtra `soloHermanas()`.
+
+> **Guardar un producto no toca sus hermanas si nadie tocó las variantes.** El editor manda el
+> grupo sólo cuando hay cambios ahí. Además de ahorrar escrituras, evita que un grupo con
+> datos raros rompa la edición de campos que no tienen nada que ver, y que la llamada de
+> variantes —que escribe una sola foto por fila— pise la galería de un producto si el guardado
+> del producto fallara después.
 
 > La migración `20260914000000_variantes` agrega las dos columnas y un índice por `varianteDe`
 > a las 8 tablas — la ficha busca los hermanos del grupo en cada carga, y sin índice son ocho

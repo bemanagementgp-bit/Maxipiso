@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { findProductById, getDelegate, type TableKey } from "@/lib/all-products";
-import { parseOpciones, serializarOpciones, skuDelPrincipal } from "@/lib/variantes";
+import { parseOpciones, serializarOpciones, skuDelPrincipal, soloHermanas } from "@/lib/variantes";
 import { getCamposDeDinero } from "@/lib/price-fields";
 import { primeraImagen } from "@/lib/imagenes";
 import { clearCatalogCache } from "@/lib/catalog-cache";
@@ -69,7 +69,14 @@ async function cargarGrupo(id: string) {
     delegate.findMany({ where: { varianteDe: skuPrincipal } }).catch(() => []),
   ]);
 
-  return { tableKey, tablaNombre, skuPrincipal, principal: principal ?? raw, hermanas };
+  const cabecera = (principal ?? raw) as Record<string, unknown>;
+  return {
+    tableKey,
+    tablaNombre,
+    skuPrincipal,
+    principal: cabecera,
+    hermanas: soloHermanas(cabecera, hermanas as Record<string, unknown>[]),
+  };
 }
 
 function aFilaEditor(row: Record<string, unknown>, campoPrecio: string | null, esPrincipal: boolean): FilaEditor {

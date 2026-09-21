@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOpciones, serializarOpciones, ejesDeVariantes, type VarianteFila } from "./variantes";
+import { parseOpciones, serializarOpciones, ejesDeVariantes, soloHermanas, type VarianteFila } from "./variantes";
 
 /**
  * La columna `varianteOpciones` es una sola celda de texto que viaja igual
@@ -113,5 +113,31 @@ describe("ejesDeVariantes", () => {
       fila("b", "Color: Nogal ; Espesor: 8mm"),
     ];
     expect(ejesDeVariantes(mismoEspesor).map((e) => e.tipo)).toEqual(["Color"]);
+  });
+});
+
+describe("soloHermanas", () => {
+  const principal = { id: "p1", sku: "3722" };
+
+  it("saca a la principal cuando se apunta a sí misma", () => {
+    // Una importación con la columna "variante de" mal completada deja
+    // `varianteDe` igual al SKU propio. La consulta por `varianteDe` devuelve
+    // entonces también a la principal, el editor la mostraba dos veces y al
+    // guardar decía "SKU repetido", bloqueando la edición del producto entero.
+    expect(soloHermanas(principal, [{ id: "p1", sku: "3722" }])).toEqual([]);
+  });
+
+  it("la reconoce por SKU aunque venga con otro id", () => {
+    expect(soloHermanas(principal, [{ id: "otro", sku: "3722" }])).toEqual([]);
+    expect(soloHermanas(principal, [{ id: "otro", sku: " 3722 " }])).toEqual([]);
+  });
+
+  it("deja pasar las hermanas de verdad", () => {
+    const hermanas = [{ id: "v1", sku: "3722-ORO" }, { id: "v2", sku: "3722-PLATA" }];
+    expect(soloHermanas(principal, hermanas)).toEqual(hermanas);
+  });
+
+  it("no rompe sin principal", () => {
+    expect(soloHermanas(null, [{ id: "v1", sku: "A" }])).toEqual([{ id: "v1", sku: "A" }]);
   });
 });

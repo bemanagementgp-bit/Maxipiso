@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiCheck, FiAlertCircle, FiLoader, FiCopy, FiRefreshCw } from "react-icons/fi";
+import VariantesHuerfanas from "@/components/admin/VariantesHuerfanas";
 
 /**
  * Estado de la base.
@@ -54,7 +55,7 @@ export default function DiagnosticoPage() {
   const conProblemas = reporte?.tablas.filter((t) => !t.existe || t.faltantes.length > 0) ?? [];
 
   return (
-    <div className="px-6 lg:px-10 py-8 max-w-[900px]">
+    <div className="px-6 lg:px-10 py-8 max-w-[1000px]">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-[22px] font-bold text-[#111] tracking-tight">Estado de la base</h1>
@@ -79,6 +80,10 @@ export default function DiagnosticoPage() {
           <FiAlertCircle size={14} className="shrink-0 mt-px" /> {error}
         </div>
       )}
+
+      {/* La otra forma de que el catálogo esconda cosas sin dar error: no es la
+          base la que falta, son los datos los que se apuntan mal. */}
+      <VariantesHuerfanas />
 
       {cargando && !reporte ? (
         <div className="flex items-center gap-2 text-[12px] text-[#888] py-10">

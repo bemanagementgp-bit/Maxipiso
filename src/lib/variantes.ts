@@ -80,6 +80,29 @@ export function serializarOpciones(opciones: Opcion[]): string {
     .join(" ; ");
 }
 
+/**
+ * Las hermanas de verdad: las del grupo que no son la principal.
+ *
+ * Una fila no puede ser variante de si misma. Si `varianteDe` apunta a su
+ * propio SKU —lo deja una importacion con la columna mal completada, o un
+ * `variante de` copiado de mas— la consulta por `varianteDe` devuelve tambien
+ * a la principal, y el editor la mostraba dos veces: como cabecera y como su
+ * propia variante. Al guardar, eso era un "SKU repetido" que ademas bloqueaba
+ * la edicion entera del producto.
+ */
+export function soloHermanas<T extends { id?: unknown; sku?: unknown }>(
+  principal: T | null,
+  candidatas: T[],
+): T[] {
+  const idPrincipal = String(principal?.id ?? "");
+  const skuPrincipal = String(principal?.sku ?? "").trim().toLowerCase();
+  return candidatas.filter((c) => {
+    if (idPrincipal && String(c.id ?? "") === idPrincipal) return false;
+    if (skuPrincipal && String(c.sku ?? "").trim().toLowerCase() === skuPrincipal) return false;
+    return true;
+  });
+}
+
 /** El SKU del principal del grupo, o `null` si esta fila ES la principal. */
 export function skuDelPrincipal(fila: Record<string, unknown>): string | null {
   return String(fila.varianteDe ?? "").trim() || null;

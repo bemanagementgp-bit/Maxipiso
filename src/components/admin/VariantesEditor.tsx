@@ -149,12 +149,19 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
     onDirty?.(huellaRef.current !== "" && huella(filas) !== huellaRef.current);
   }, [filas, huella, onDirty]);
 
+  const hayCambios = () => huellaRef.current !== "" && huella(filas) !== huellaRef.current;
+
   useImperativeHandle(ref, () => ({
-    hayCambios: () => huellaRef.current !== "" && huella(filas) !== huellaRef.current,
+    hayCambios,
     guardar: async () => {
       if (!productoId) return [];
-      // Sólo hay grupo si hay más de una fila. Con una sola, el producto no
-      // tiene variantes y no hay nada que mandar.
+      // Si nadie tocó las variantes, no se manda nada. Guardar un producto no
+      // tiene por qué reescribir filas hermanas: además de trabajo al pedo,
+      // esta llamada escribe la foto de portada de cada fila, así que un
+      // producto con galería quedaba a merced del orden de los dos guardados.
+      // Y un grupo con datos raros —una fila que se apunta a sí misma— hacía
+      // fallar la edición de campos que no tienen nada que ver.
+      if (!hayCambios()) return [];
       const res = await fetch(`/api/productos/${productoId}/variantes`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
