@@ -1568,6 +1568,16 @@ a mano.
 > La migración `20260921000000_precio_accesorios` agrega las dos columnas. **Hay que aplicarla
 > en Turso antes de deployar**: el panel las lee al abrir cualquier accesorio.
 
+> **El alta manda el `precio` del formulario a la columna que esa tabla tiene**, y esa columna
+> sale de `getCamposDeDinero`. Era un mapa escrito a mano que decía `accesorios: "precioM2"`:
+> al darle precio a accesorios —que usa `precio` a secas— el alta escribía una columna
+> inexistente y **crear cualquier accesorio fallaba con un 500 sin explicación**. Derivarlo de
+> `CATEGORY_CONFIGS` es lo que evita que las dos listas se vuelvan a desincronizar, y hay una
+> prueba que verifica que cada columna de dinero existe de verdad en su categoría.
+>
+> Un precio vacío se guarda vacío. `Number(null)` da 0, así que antes un alta sin precio
+> dejaba el producto cotizado en cero.
+
 ### 9.6 Un producto sin foto es invisible
 
 El `where` del catálogo incluye `imagenes NOT NULL AND != '' AND != '[]'`. Es intencional

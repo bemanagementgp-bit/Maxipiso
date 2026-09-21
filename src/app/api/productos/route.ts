@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { DB_NAMES, getDelegate, normalizeAdminRow, TABLE_LABELS, type TableKey, TABLE_KEYS } from "@/lib/all-products";
 import { parseOpciones, serializarOpciones } from "@/lib/variantes";
 import { getCategoryConfig } from "@/lib/category-fields";
+import { getCamposDeDinero } from "@/lib/price-fields";
 import { prisma } from "@/lib/prisma";
 import { clearCatalogCache } from "@/lib/catalog-cache";
 import { parseIntSafe, sanitizeText, verifyOrigin } from "@/lib/security";
@@ -327,25 +328,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "SKU ya existe en esta categoría" }, { status: 409 });
     }
 
-    // Campos genéricos del formulario → campos específicos de cada tabla
-    const PRICE_FIELD: Record<string, string> = {
-      pisos_flotantes: "precioM2",
-      porcellanatos:   "precioM2",
-      revestimientos:  "precioM2",
-      pisos_vinilicos: "precioM2",
-      pisos_madera:    "precioM2",
-      decks:           "precioM2",
-      maderas:         "precio",
-      accesorios:      "precioM2",
-    };
-
     const { config, data, requiredFields } = sanitizeProductData(tablaNombre, raw);
 
-    if (raw.precio !== undefined && data[PRICE_FIELD[tablaNombre] ?? "precioM2"] === undefined) {
-      const priceField = PRICE_FIELD[tablaNombre] ?? "precioM2";
-      const parsed = typeof raw.precio === "number" ? raw.precio : Number(raw.precio);
-      if (Number.isFinite(parsed)) {
-        data[priceField] = parsed;
+    /**
+     * El `precio` generico del formulario, a la columna que esa tabla tiene.
+     *
+     * Sale de `getCamposDeDinero`, que lo deriva de `CATEGORY_CONFIGS`. Antes
+     * era un mapa escrito a mano que decia `accesorios: "precioM2"`: al darle
+     * precio a accesorios —que usa `precio` a secas— el alta intentaba escribir
+     * una columna inexistente y fallaba con un 500 sin explicacion. Derivarlo
+     * es lo que evita que las dos listas se vuelvan a desincronizar.
+     */
+    const campoPrecio = getCamposDeDinero(tablaNombre)?.precios[0]?.key;
+    if (campoPrecio && raw.precio !== undefined && data[campoPrecio] === undefined) {
+      // `null` y `""` son "sin precio", no cero: `Number(null)` da 0 y dejaba
+      // productos cotizados en cero.
+      const crudo = raw.precio;
+      if (crudo === null || crudo === "") {
+        data[campoPrecio] = null;
+      } else {
+        const parsed = typeof crudo === "number" ? crudo : Number(crudo);
+        if (Number.isFinite(parsed)) data[campoPrecio] = parsed;
       }
     }
 
@@ -379,7 +382,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: producto }, { status: 201 });
   } catch (error) {
     console.error("[productos POST] error:", error);
-    return NextResponse.json({ error: "Error al crear producto" }, { status: 500 });
+    // "Error al crear producto" no decia nada y dejaba a quien carga sin saber
+    // que corregir. Los dos motivos habituales tienen nombre propio.
+    const codigo = (error as { code?: string })?.code;
+    if (codigo === "P2002") {
+      return NextResponse.json(
+        { error: "Ya existe un producto con ese SKU en esta categoría." },
+        { status: 409 },
+      );
+    }
+    const detalle = error instanceof Error ? error.message.split("\n").pop()?.trim() : "";
+    return NextResponse.json(
+      { error: detalle ? `No se pudo crear el producto: ${detalle}` : "No se pudo crear el producto" },
+      { status: 500 },
+    );
   }
 }
 
