@@ -592,7 +592,11 @@ function CatalogoPage() {
         <div className="flex gap-6">
           {/* Sidebar — desktop */}
           <aside className="w-56 shrink-0 hidden md:block">
-            <div className="sticky top-24">
+            {/* El bloque pegado necesita su propio scroll: las categorías con
+                muchos filtros —vinílicos tiene siete— pasaban el alto de la
+                pantalla y los últimos quedaban cortados, sin forma de llegar a
+                ellos porque la página ya estaba al final. */}
+            <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1 pb-4">
               {/* Categoría */}
               {!selectedCategoria ? (
                 <div>

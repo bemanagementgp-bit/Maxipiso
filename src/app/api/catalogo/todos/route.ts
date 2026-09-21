@@ -144,8 +144,12 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "marca",            label: "Marca" },
   ],
   "pisos-vinilicos": [
-    // "Tipo" y "Material" son las columnas E y F del maestro.
-    { key: "tipoProducto",     label: "Tipo" },
+    // El "Tipo" va primero, igual que en flotantes. Se ofrecen las dos columnas
+    // donde puede venir cargado —la subcategoria del maestro y `tipoProducto`—
+    // porque no todas las cargas usan la misma, y un filtro sin valores no se
+    // dibuja: se ve el que tenga datos.
+    { key: "categoriaTerciaria", label: "Tipo" },
+    { key: "tipoProducto",     label: "Tipo de producto" },
     { key: "material",         label: "Material" },
     { key: "espesorTotal",     label: "Espesor total" },
     { key: "capaDeUso",        label: "Capa de uso" },
@@ -191,8 +195,12 @@ const FILTER_FIELDS_BY_TABLE: Record<string, FilterField[]> = {
     { key: "secado",               label: "Secado" },
   ],
   "accesorios": [
-    { key: "compatibleCon", label: "Compatible con" },
     { key: "tipoProducto",  label: "Tipo de accesorio" },
+    // El subtipo es donde viven "Terminaciones de aluminio", "Zocalos EPS" y
+    // compania. Sin el, esos productos se listaban pero no habia forma de
+    // filtrarlos, que desde el mostrador es lo mismo que no encontrarlos.
+    { key: "subtipo",       label: "Subtipo" },
+    { key: "compatibleCon", label: "Compatible con" },
     { key: "composicion",   label: "Composición" },
   ],
 };

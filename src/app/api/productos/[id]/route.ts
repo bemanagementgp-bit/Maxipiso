@@ -161,6 +161,18 @@ export async function PUT(
 
     const updated = await delegate.update({ where: { id }, data });
 
+    // El grupo de variantes se arma con el SKU del principal, asi que
+    // renombrarlo dejaba a las hermanas apuntando a un SKU que ya no existe: se
+    // volvian invisibles —no se listan por ser variantes, y su grupo no
+    // existia— sin que nada lo avisara. El cambio se propaga.
+    const skuAnterior = String((found.raw as Record<string, unknown>).sku ?? "");
+    const skuNuevo = String(data.sku ?? skuAnterior);
+    if (skuNuevo && skuAnterior && skuNuevo !== skuAnterior) {
+      await delegate
+        .updateMany({ where: { varianteDe: skuAnterior }, data: { varianteDe: skuNuevo } })
+        .catch((e: unknown) => console.error("[producto PUT] no se pudo repuntar el grupo:", e));
+    }
+
     // Changelogs por campo
     for (const [key, value] of Object.entries(data)) {
       const prev = (found.raw as any)[key];

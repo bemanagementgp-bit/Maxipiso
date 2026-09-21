@@ -10,8 +10,7 @@ import { normalizarLinkDoc } from "@/lib/doc-links";
 import { opcionesDe } from "@/lib/opciones-fijas";
 import StickerPicker from "./StickerPicker";
 import ComplementariosPicker from "./ComplementariosPicker";
-import OpcionesVarianteEditor from "./OpcionesVarianteEditor";
-import { parseOpciones, serializarOpciones, type Opcion } from "@/lib/variantes";
+import VariantesEditor, { type VariantesHandle } from "./VariantesEditor";
 import { parseStickerIds, type Sticker } from "@/lib/stickers";
 
 type Meta = { clave: string; valor: string };
@@ -51,9 +50,11 @@ const SECTIONS = [
       "stock", "origen",
     ],
   },
+  // Las variantes no se listan como campos: `varianteDe` y `varianteOpciones`
+  // los escribe el editor de abajo, que maneja el grupo entero.
   {
     title: "Variantes",
-    keys: ["varianteDe"],
+    keys: [],
   },
   {
     title: "Archivos y garantía",
@@ -117,7 +118,6 @@ function huellaFormulario(
   imagenes: ImagenItem[],
   stickers: string[] = [],
   complementarios: string[] = [],
-  opcionesVariante: Opcion[] = [],
 ): string {
   return JSON.stringify({
     form,
@@ -125,7 +125,6 @@ function huellaFormulario(
     imagenes: imagenes.map((i) => (i.tipo === "url" ? i.url : `archivo:${i.clave}`)),
     stickers,
     complementarios,
-    opcionesVariante,
   });
 }
 
@@ -134,7 +133,7 @@ function previewDe(item: ImagenItem): string {
   return item.tipo === "url" ? item.url : item.preview;
 }
 
-const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "complementarios", "varianteOpciones", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
+const HIDDEN_FIELDS = new Set(["id", "imagenes", "stickers", "complementarios", "varianteDe", "varianteOpciones", "metadatos", "isActive", "createdAt", "updatedAt", "_tabla", "_tablaLabel"]);
 
 interface QuickEditPanelProps {
   isOpen: boolean;
@@ -201,7 +200,15 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
   const [stickersDisponibles, setStickersDisponibles] = useState<Sticker[]>([]);
   const [stickersElegidos, setStickersElegidos] = useState<string[]>([]);
   const [complementarios, setComplementarios] = useState<string[]>([]);
-  const [opcionesVariante, setOpcionesVariante] = useState<Opcion[]>([]);
+  /**
+   * El editor de variantes guarda su propio grupo.
+   *
+   * No entra en `form` porque no es un campo de este producto: son otras filas
+   * de la misma tabla. El panel lo dispara al guardar, para que quien carga
+   * apriete Guardar una sola vez.
+   */
+  const variantesRef = useRef<VariantesHandle>(null);
+  const [variantesSucias, setVariantesSucias] = useState(false);
   /**
    * Foto del formulario recien cargado, para saber si hay cambios sin guardar.
    *
@@ -232,8 +239,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       setMetadatos([]);
       setStickersElegidos([]);
       setComplementarios([]);
-      setOpcionesVariante([]);
-      snapshotRef.current = huellaFormulario(vacio, [], [], [], [], []);
+      setVariantesSucias(false);
+      snapshotRef.current = huellaFormulario(vacio, [], [], [], []);
       return;
     }
 
@@ -285,11 +292,7 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
           catch { return []; }
         })();
         setComplementarios(comps);
-        // Al duplicar NO se copian: el duplicado es otra variante, y si llevara
-        // las mismas opciones serian dos filas identicas dentro del grupo.
-        const opts = isNew ? [] : parseOpciones(original.varianteOpciones);
-        setOpcionesVariante(opts);
-        snapshotRef.current = huellaFormulario(p, metas, items, ids, comps, opts);
+        snapshotRef.current = huellaFormulario(p, metas, items, ids, comps);
       })
       .catch(() => setError("No se pudo cargar el producto"))
       .finally(() => setFetching(false));
@@ -320,7 +323,8 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
 
   const hayCambiosSinGuardar =
     snapshotRef.current !== "" &&
-    huellaFormulario(form, metadatos, imagenes, stickersElegidos, complementarios, opcionesVariante) !== snapshotRef.current;
+    huellaFormulario(form, metadatos, imagenes, stickersElegidos, complementarios) !== snapshotRef.current ||
+    variantesSucias;
 
   /**
    * Cierre pedido por el usuario (click afuera, la X, Cancelar o Escape).
@@ -488,7 +492,6 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
     payload.sku = form.sku;
     payload.stickers = JSON.stringify(stickersElegidos);
     payload.complementarios = JSON.stringify(complementarios);
-    payload.varianteOpciones = serializarOpciones(opcionesVariante) || null;
     payload.isActive = form.isActive ?? true;
     payload._tabla = tabla;
     if (metaFiltrados.length > 0) payload.metadatos = JSON.stringify(metaFiltrados);
@@ -498,6 +501,15 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
 
     setFase("guardando");
     try {
+      // Las variantes van primero, mientras el panel sigue abierto: si algo
+      // falla, el error se ve. `onSave` cierra el panel al terminar bien, y un
+      // error despues de eso no tendria donde mostrarse.
+      const avisos = (await variantesRef.current?.guardar()) ?? [];
+      if (avisos.length > 0) {
+        setError(avisos.join(" "));
+        setFase("");
+        return;
+      }
       await onSave(payload);
     } catch (err: unknown) {
       // El padre relanza con el mensaje que devolvió la API, que es el que
@@ -507,30 +519,6 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
       setFase("");
     }
   };
-
-  /**
-   * Los tipos de variante que ya se usaron en el catalogo.
-   *
-   * Salen del mismo endpoint que las sugerencias de los otros campos: la
-   * columna guarda "Color: Roble ; Medidas: 120x20", asi que hay que quedarse
-   * con la parte de antes del ":". Sin esto, cada quien inventa su ortografia y
-   * la ficha muestra tres ejes donde tenia que haber uno.
-   */
-  const tiposDeVariante = (() => {
-    const vistos = new Set<string>();
-    const lista: string[] = [];
-    for (const celda of sugerencias.varianteOpciones ?? []) {
-      for (const parte of String(celda).split(";")) {
-        const corte = parte.indexOf(":");
-        if (corte === -1) continue;
-        const tipo = parte.slice(0, corte).trim();
-        if (!tipo || vistos.has(tipo.toLowerCase())) continue;
-        vistos.add(tipo.toLowerCase());
-        lista.push(tipo);
-      }
-    }
-    return lista;
-  })();
 
   const renderField = (key: string) => {
     if (HIDDEN_FIELDS.has(key)) return null;
@@ -690,26 +678,24 @@ export function QuickEditPanel({ isOpen, productId, isNew, duplicateOfId = null,
             {/* Secciones de campos */}
             {tabla && SECTIONS.map((section) => {
               const fields = section.keys.filter((k) => availableKeys.has(k) && !HIDDEN_FIELDS.has(k));
-              if (fields.length === 0) return null;
+              const esVariantes = section.title === "Variantes";
+              if (fields.length === 0 && !esVariantes) return null;
               return (
                 <div key={section.title}>
                   <h3 className="text-[9px] uppercase tracking-[0.1em] text-[#aaa] font-semibold mb-3 pb-1.5 border-b border-[#F0EEE8]">
                     {section.title}
                   </h3>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    {fields.map((key) => renderField(key))}
-                  </div>
-                  {/* Las opciones van pegadas al SKU del principal: son las dos
-                      mitades de lo mismo, y separadas se completaba una sola. */}
-                  {section.title === "Variantes" && (
-                    <div className="mt-3">
-                      <label className={labelClass}>Opciones de esta variante</label>
-                      <OpcionesVarianteEditor
-                        opciones={opcionesVariante}
-                        onChange={setOpcionesVariante}
-                        tiposConocidos={tiposDeVariante}
-                      />
+                  {fields.length > 0 && (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      {fields.map((key) => renderField(key))}
                     </div>
+                  )}
+                  {esVariantes && (
+                    <VariantesEditor
+                      ref={variantesRef}
+                      productoId={isNew ? null : productId}
+                      onDirty={setVariantesSucias}
+                    />
                   )}
                 </div>
               );

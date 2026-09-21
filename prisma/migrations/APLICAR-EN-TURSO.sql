@@ -190,3 +190,19 @@ CREATE INDEX IF NOT EXISTS "accesorios_varianteDe_idx" ON "accesorios"("variante
 -- Es una linea sola.
 
 ALTER TABLE "stickers" ADD COLUMN "escala" INTEGER NOT NULL DEFAULT 100;
+
+-- ── 8. PRECIO EN ACCESORIOS (20260921000000) ──────────────── URGENTE ───
+-- APLICAR ANTES DE DEPLOYAR: el codigo lee estas columnas al abrir cualquier
+-- accesorio en el panel y al listar la grilla de precios.
+--
+-- `accesorios` era la unica de las 8 tablas sin ninguna columna de importe: una
+-- manta bajo piso o un zocalo no tenian donde cargar el precio, no salian en
+-- Precios y stock y en el catalogo aparecian sin precio.
+--
+-- Va `precio` a secas y no `precioM2`: un accesorio se vende por unidad, bolsa
+-- o rollo, no por metro cuadrado. Mismo criterio que en `maderas`.
+--
+-- Son dos lineas.
+
+ALTER TABLE "accesorios" ADD COLUMN "precio" REAL;
+ALTER TABLE "accesorios" ADD COLUMN "moneda" TEXT;

@@ -472,6 +472,10 @@ model Accesorio {
   espesor          String?
   dimensiones      String?
   colores          String?
+  /// Precio de venta. Los accesorios se venden por unidad, bolsa o rollo, asi
+  /// que es un importe a secas y no uno por m2 como en los pisos.
+  precio           Float?
+  moneda           String?
   stock            Int?
   imagenes         String?
   stickers         String? // JSON array de ids de Sticker

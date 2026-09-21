@@ -293,6 +293,11 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
     fields: [
       { key: "sku",          label: "SKU",          type: "text",   gridVisible: true, required: true },
       { key: "nombre",       label: "Nombre",       type: "text",   gridVisible: true, required: true },
+      // Los accesorios se venden por unidad, bolsa o rollo: un importe a secas,
+      // no uno por m2. Sin esta columna, una manta bajo piso no tenia donde
+      // cargar el precio y quedaba fuera de la grilla de precios.
+      { key: "precio",       label: "Precio",       type: "number", gridVisible: true },
+      { key: "moneda",       label: "Moneda",       type: "select", options: ["ARS", "USD"] },
       { key: "stock",        label: "Stock",        type: "number", gridVisible: true },
       { key: "descripcion",  label: "Descripción",  type: "textarea" },
       { key: "varianteDe",         label: "Variante de (SKU)", type: "text" },

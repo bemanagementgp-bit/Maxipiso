@@ -19,6 +19,22 @@ const TABLA_CONFIG: Record<string, { dot: string; label: string }> = {
   accesorios:      { dot: "#6b7280", label: "Accesorios"       },
 };
 
+
+/**
+ * La columna de acciones queda clavada a la derecha.
+ *
+ * Las categorías con muchas columnas —accesorios, maderas— desbordan el ancho y
+ * los botones de editar y borrar quedaban fuera de pantalla: había que
+ * desplazar hasta el final, y para entonces el nombre del producto ya no se
+ * veía y se editaba a ciegas.
+ *
+ * El fondo va en `inherit` y no en una clase: así la celda toma el color de su
+ * propia fila —blanca, en hover, o la banda oscura del encabezado— sin repetir
+ * acá los estados de la tabla ni romperse en modo oscuro.
+ */
+const COL_ACCIONES = "sticky right-0 z-10 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]";
+const FONDO_HEREDADO = { background: "inherit" } as const;
+
 function Thumb({ src, alt }: { src: string | null; alt: string }) {
   if (!src) return (
     <div className="w-10 h-10 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
@@ -458,7 +474,7 @@ export function ProductTable({
                   </th>
                 ))}
                 <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Estado</th>
-                <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Acciones</th>
+                <th className={`px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap ${COL_ACCIONES}`} style={FONDO_HEREDADO}>Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -550,7 +566,7 @@ export function ProductTable({
                           {togglingId === p.id ? "..." : p.isActive ? "Activo" : "Inactivo"}
                         </button>
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className={`px-3 py-2.5 ${COL_ACCIONES}`} style={FONDO_HEREDADO}>
                         <div className={`flex items-center justify-center gap-0.5 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-25"}`}>
 
                           <button onClick={() => onViewHistory(p.id)} title="Historial" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiClock size={13} /></button>
@@ -664,7 +680,7 @@ export function ProductTable({
               <th className="px-4 py-3.5 text-right  text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Precio</th>
               <th className="px-4 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Stock</th>
               <th className="px-4 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Estado</th>
-              <th className="px-4 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap">Acciones</th>
+              <th className={`px-4 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 whitespace-nowrap ${COL_ACCIONES}`} style={FONDO_HEREDADO}>Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -734,7 +750,7 @@ export function ProductTable({
                         {togglingId === p.id ? "..." : p.isActive ? "Activo" : "Inactivo"}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 py-3 ${COL_ACCIONES}`} style={FONDO_HEREDADO}>
                       <div className={`flex items-center justify-center gap-0.5 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-25"}`}>
 
                         <button onClick={() => onViewHistory(p.id)} title="Historial" className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><FiClock size={14} /></button>

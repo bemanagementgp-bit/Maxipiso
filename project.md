@@ -569,15 +569,41 @@ Medidas abajo— y elegir un color mantiene la medida que ya estaba elegida. `ej
 hace ese cruce: cada botón apunta a la hermana que coincide en todos los otros ejes, y un eje
 con un solo valor no se dibuja (no es una opción, es un dato del producto).
 
-En el ABM el tipo sale de un desplegable —**Color** y **Medidas** vienen armados, más los
-tipos que ya se usaron en el catálogo, más "Otro…" para inventar uno— y el valor se escribe.
-Sin eso, "Color", "color" y "COLOR" terminaban siendo tres ejes distintos en la misma ficha.
-En la planilla es una sola celda con el mismo formato, así que un tipo nuevo se inventa igual
-de fácil desde Excel.
+#### El editor: el grupo entero desde la ficha del principal
 
-> Elegir "Otro…" **conserva el tipo que había** (arranca seleccionado, escribir encima lo
-> pisa): tocar el desplegable sin querer no puede borrar "Medidas". Y una fila a medio llenar
-> avisa antes de guardar, porque al serializar se descarta y el dato se perdía en silencio.
+En la planilla es una sola celda con el formato de arriba. En el ABM, en cambio, hay una tabla
+dentro de la ficha del producto: se definen las opciones una vez —Color con sus valores,
+Medidas con los suyos— y **"Generar" crea las combinaciones que faltan**. Cada fila lleva foto,
+nombre, SKU, precio y stock.
+
+La versión anterior era dos campos sueltos —el SKU del principal y las opciones de *esa* fila—
+así que armar un piso en ocho colores eran ocho pantallas: crear cada producto por separado y
+volver a cada uno a escribirle el SKU del padre. Es la queja que lo originó.
+
+**La primera combinación se la queda el producto base.** El base es una variante más —la que
+además hace de cabecera— y dejarlo sin valores daba un grupo de siete donde el principal no
+aparecía en ningún botón de la ficha.
+
+**Un SKU que ya existe en esa categoría se engancha al grupo en vez de duplicarse.** Es la
+misma regla que la importación (el SKU es la clave: existe → se actualiza, no existe → se
+crea), y es lo que permite agrupar los productos que ya estaban cargados sueltos, que es el
+caso real del catálogo.
+
+**La cruz no borra**: desvincula y apaga. Una variante es un producto con su historial de
+precios; se la puede volver a prender desde la lista.
+
+La tabla edita sólo lo que cambia entre hermanas. La descripción, las fichas técnicas y la
+galería completa se editan abriendo esa variante como cualquier otro producto.
+
+> El guardado lo dispara el botón del panel, no uno propio: quien carga completa la ficha y
+> aprieta Guardar una vez. Por eso el editor expone `guardar()` por ref. Va **antes** del
+> `PUT` del producto, con el panel todavía abierto: si algo falla, el error se ve; después de
+> `onSave` el panel ya se cerró y no tendría dónde mostrarse.
+
+> **Renombrar el SKU del principal arrastra a su grupo.** El grupo se arma con ese SKU, así
+> que cambiarlo dejaba a las hermanas apuntando a uno que ya no existía: se volvían invisibles
+> —no se listan por ser variantes, y su grupo no existía— sin que nada lo avisara. El `PUT` del
+> producto propaga el cambio.
 
 **Por qué agrupar filas y no meter las opciones como JSON adentro del principal**: el catálogo
 **ya tiene esos productos cargados por separado** — ése es exactamente el problema que se está
@@ -1477,6 +1503,20 @@ merge se corta en memoria. En la página 50 son 8 queries de 765 filas por reque
 El resultado es **correcto** (los N globales están garantizados dentro de la unión de los N
 de cada tabla), pero el costo crece con la profundidad. Si el catálogo sigue creciendo, hay
 que pasar a keyset pagination o a una vista materializada.
+
+### 9.5 bis Accesorios no tenía precio
+
+Era la única de las 8 tablas sin ninguna columna de importe: una manta bajo piso o un zócalo
+no tenían dónde cargarlo, no salían en Precios y stock y en el catálogo aparecían sin precio.
+Ahora tiene `precio` y `moneda`.
+
+Va `precio` a secas y no `precioM2` porque un accesorio se vende por unidad, bolsa o rollo, no
+por metro cuadrado: mismo criterio que `maderas`. La grilla de precios lo toma sola, porque
+`lib/price-fields.ts` deriva las columnas de dinero de `CATEGORY_CONFIGS` en vez de listarlas
+a mano.
+
+> La migración `20260921000000_precio_accesorios` agrega las dos columnas. **Hay que aplicarla
+> en Turso antes de deployar**: el panel las lee al abrir cualquier accesorio.
 
 ### 9.6 Un producto sin foto es invisible
 

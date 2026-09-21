@@ -328,6 +328,8 @@ export const SHEET_SCHEMAS: SheetSchema[] = [
       espesor:          "espesor",
       dimensiones:      "dimensiones",
       colores:          "colores",
+      precio:           "precio",
+      moneda:           "moneda",
       stock:            "stock",
       imagen:           "imagenes",
       imagenes:         "imagenes",
