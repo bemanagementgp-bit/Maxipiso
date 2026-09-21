@@ -60,7 +60,10 @@ function AvisoInvisible({ motivo }: { motivo: string | null }) {
 function porQueNoSeVe(p: Record<string, unknown>, tieneFoto: boolean): string | null {
   if (p.isActive === false) return "Está inactivo, por eso no aparece en el catálogo.";
   const variante = String(p.varianteDe ?? "").trim();
-  if (variante) return `Es variante de ${variante}: se ve dentro de ese producto, no como card aparte.`;
+  // La fila sola no sabe como esta el principal, asi que no puede prometer que
+  // se lo vea. Quien encuentra el grupo entero escondido es el buscador de
+  // invisibles de /panel/diagnostico; aca al menos se avisa que puede pasar.
+  if (variante) return `Es variante de ${variante}: se ve dentro de ese producto, no como card aparte. Si ${variante} está inactivo o sin foto, no se ve ninguno de los dos: revisalo en Estado de la base.`;
   if (!tieneFoto) return "No tiene foto, y el catálogo esconde los productos sin foto.";
   return null;
 }

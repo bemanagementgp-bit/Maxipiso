@@ -3,38 +3,29 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getDelegate, TABLE_KEYS, TABLE_LABELS, type TableKey } from "@/lib/all-products";
 import { clearCatalogCache } from "@/lib/catalog-cache";
+import { motivoDeInvisibilidad, SE_ARREGLA_SOLO, type FilaVisibilidad, type MotivoInvisible } from "@/lib/visibilidad";
 import { verifyOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 
 /**
- * Productos que dicen ser variante de un grupo que no existe.
+ * Productos cargados, activos y con foto que aun asi no aparecen en el catalogo.
  *
- * El catálogo lista sólo los principales, así que un `varianteDe` roto vuelve
- * al producto **invisible**: no sale como card propia porque se lo considera
- * variante, y no sale dentro de ningún grupo porque ese grupo no está. Cargado,
- * activo, con foto, y no aparece. Pasó con las terminaciones de aluminio.
+ * El catalogo lista una card por grupo: el principal. Un producto con la columna
+ * `variante de` cargada no sale por si mismo, sale entrando al principal. Eso
+ * esta bien cuando el principal se ve; cuando no se ve, el grupo entero
+ * desaparece y no hay forma de notarlo salvo ir producto por producto.
  *
- * Son dos formas de romperlo, y las dos las deja una planilla con la columna
- * "variante de" mal completada:
- *
- *  - **Se apunta a sí mismo.** Un producto no puede ser su propia variante.
- *  - **Apunta a un SKU que no existe** en su categoría. Un error de tipeo, o el
- *    principal se borró después.
- *
- * En los dos casos la única lectura posible es "este producto no es variante de
- * nada", así que arreglarlo es vaciar la columna. No se hace solo: se muestra
- * primero qué se va a tocar, igual que el detector de tonos.
+ * Los cuatro motivos, y por que se separan en dos grupos, en `lib/visibilidad`.
  */
 
-type Huerfano = {
-  id: string;
-  sku: string;
-  nombre: string;
+type Invisible = FilaVisibilidad & {
   tabla: string;
   tablaLabel: string;
   varianteDe: string;
-  motivo: "se-apunta-a-si-mismo" | "principal-inexistente";
+  motivo: MotivoInvisible;
+  /** El nombre del principal, para poder ir a arreglarlo. */
+  principal: string;
 };
 
 async function exigirAdmin() {
@@ -44,45 +35,40 @@ async function exigirAdmin() {
   return null;
 }
 
-/** Recorre las 8 tablas y junta los que tienen el grupo roto. */
-async function buscarHuerfanos(): Promise<Huerfano[]> {
+/** Recorre las 8 tablas y junta los que no se ven. */
+async function buscarInvisibles(): Promise<Invisible[]> {
   const porTabla = await Promise.all(
     TABLE_KEYS.map(async (key: TableKey) => {
       const d = getDelegate(key);
-      // Todas las filas con `varianteDe` cargado, y todos los SKU que existen
-      // en esa tabla: con eso alcanza para decidir, sin una consulta por fila.
-      const [conGrupo, todos] = await Promise.all([
-        d.findMany({
-          where: { NOT: { varianteDe: null } },
-          select: { id: true, sku: true, nombre: true, varianteDe: true },
-        }).catch(() => []),
-        d.findMany({ select: { sku: true } }).catch(() => []),
-      ]);
+      // Una sola consulta por tabla: para decidir hace falta el estado del
+      // principal, asi que se traen todas las filas y se resuelve en memoria.
+      const filas = (await d
+        .findMany({
+          select: { id: true, sku: true, nombre: true, varianteDe: true, isActive: true, imagenes: true },
+        })
+        .catch(() => [])) as Record<string, unknown>[];
 
-      const existentes = new Set(
-        (todos as { sku: string }[]).map((t) => String(t.sku ?? "").trim().toLowerCase()),
-      );
+      const porSku = new Map<string, FilaVisibilidad>();
+      for (const f of filas) {
+        const sku = String(f.sku ?? "").trim();
+        if (sku) porSku.set(sku.toLowerCase(), aFila(f));
+      }
 
-      const salida: Huerfano[] = [];
-      for (const f of conGrupo as Record<string, unknown>[]) {
+      const salida: Invisible[] = [];
+      for (const f of filas) {
+        const fila = aFila(f);
         const varianteDe = String(f.varianteDe ?? "").trim();
         if (!varianteDe) continue;
-        const sku = String(f.sku ?? "");
-        const motivo: Huerfano["motivo"] | null =
-          varianteDe.toLowerCase() === sku.trim().toLowerCase()
-            ? "se-apunta-a-si-mismo"
-            : !existentes.has(varianteDe.toLowerCase())
-              ? "principal-inexistente"
-              : null;
+        const principal = porSku.get(varianteDe.toLowerCase()) ?? null;
+        const motivo = motivoDeInvisibilidad(fila, varianteDe, principal);
         if (!motivo) continue;
         salida.push({
-          id: String(f.id),
-          sku,
-          nombre: String(f.nombre ?? f.especie ?? sku),
+          ...fila,
           tabla: key,
           tablaLabel: TABLE_LABELS[key],
           varianteDe,
           motivo,
+          principal: principal ? `${principal.sku} · ${principal.nombre}` : varianteDe,
         });
       }
       return salida;
@@ -91,43 +77,67 @@ async function buscarHuerfanos(): Promise<Huerfano[]> {
   return porTabla.flat();
 }
 
-/** Qué se va a tocar. Nunca escribe. */
+function aFila(f: Record<string, unknown>): FilaVisibilidad {
+  return {
+    id: String(f.id),
+    sku: String(f.sku ?? ""),
+    nombre: String(f.nombre ?? f.especie ?? f.sku ?? ""),
+    isActive: f.isActive !== false,
+    imagenes: f.imagenes,
+  };
+}
+
+/** Que se va a tocar. Nunca escribe. */
 export async function GET() {
   const denegado = await exigirAdmin();
   if (denegado) return denegado;
 
-  const huerfanos = await buscarHuerfanos();
+  const invisibles = await buscarInvisibles();
+  const cuenta = (m: MotivoInvisible) => invisibles.filter((h) => h.motivo === m).length;
+  const arreglables = invisibles.filter((h) => SE_ARREGLA_SOLO.has(h.motivo));
+
   return NextResponse.json({
     success: true,
     data: {
-      total: huerfanos.length,
-      seApuntanASiMismos: huerfanos.filter((h) => h.motivo === "se-apunta-a-si-mismo").length,
-      principalInexistente: huerfanos.filter((h) => h.motivo === "principal-inexistente").length,
-      // Alcanza con una muestra: la lista completa de un catálogo entero no
+      total: invisibles.length,
+      // Los que se arreglan con el boton, y los que hay que ir a tocar a mano.
+      arreglables: arreglables.length,
+      seApuntanASiMismos: cuenta("se-apunta-a-si-mismo"),
+      principalInexistente: cuenta("principal-inexistente"),
+      principalApagado: cuenta("principal-apagado"),
+      principalSinFoto: cuenta("principal-sin-foto"),
+      // Alcanza con una muestra: la lista completa de un catalogo entero no
       // aporta nada en pantalla y puede ser enorme.
-      ejemplos: huerfanos.slice(0, 20),
+      ejemplos: invisibles.slice(0, 30),
     },
   });
 }
 
-/** Los saca del grupo: vuelven a ser productos sueltos y al catálogo. */
+/**
+ * Saca del grupo a los que apuntan a la nada: vuelven al catalogo como card.
+ *
+ * Los otros dos motivos no se tocan. Ahi el grupo esta bien armado y la
+ * variante tiene que seguir colgando del principal; lo que falta es prender el
+ * principal o darle una foto, y eso es una decision del catalogo, no una
+ * reparacion de datos.
+ */
 export async function POST(req: NextRequest) {
   const originErr = verifyOrigin(req);
   if (originErr) return originErr;
   const denegado = await exigirAdmin();
   if (denegado) return denegado;
 
-  const huerfanos = await buscarHuerfanos();
+  const invisibles = (await buscarInvisibles()).filter((h) => SE_ARREGLA_SOLO.has(h.motivo));
   const porTabla = new Map<string, string[]>();
-  for (const h of huerfanos) {
+  for (const h of invisibles) {
     porTabla.set(h.tabla, [...(porTabla.get(h.tabla) ?? []), h.id]);
   }
 
   let arreglados = 0;
   for (const [tabla, ids] of porTabla) {
     const d = getDelegate(tabla as TableKey);
-    // `varianteOpciones` se limpia junto: describen en qué se diferencia de
-    // hermanas que no existen, así que sueltas no significan nada.
+    // `varianteOpciones` se limpia junto: describen en que se diferencia de
+    // hermanas que no existen, asi que sueltas no significan nada.
     const r = await d
       .updateMany({ where: { id: { in: ids } }, data: { varianteDe: null, varianteOpciones: null } })
       .catch(() => ({ count: 0 }));

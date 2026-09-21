@@ -75,12 +75,22 @@ export default function ProductosPage() {
   // navega hacia alla, asi que ya no guarda estado de formulario.
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
   const [historialProductId, setHistorialProductId] = useState<string>();
-  const [searchTerm, setSearchTerm] = useState("");
+  /**
+   * `?buscar=<sku>` deja entrar apuntando a un producto.
+   *
+   * Lo usa la tarjeta de productos invisibles de /panel/diagnostico, que
+   * necesita mandar al principal apagado o sin foto que esconde a todo su
+   * grupo. Se lee una sola vez, al montar: despues es un campo mas.
+   */
+  const [searchTerm, setSearchTerm] = useState(() => busquedaParams.get("buscar") ?? "");
   // Arranca en "todas": entrar viendo una sola categoria hacia parecer que el
   // resto del catalogo no estaba, y obligaba a limpiar el filtro cada vez.
   const [tablaFilter, setTablaFilter] = useState("");
   const [marcaFilter, setMarcaFilter] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("activo");
+  // Con `?buscar=` la lista arranca en "todos": lo que se viene a ver desde el
+  // diagnostico suele ser justamente un producto inactivo, y el filtro por
+  // defecto lo escondia, dejando la busqueda en cero resultados.
+  const [estadoFilter, setEstadoFilter] = useState(busquedaParams.get("buscar") ? "todos" : "activo");
   /** "" | "con" | "sin". El catalogo esconde los productos sin imagen, asi que
    *  este filtro es el que deja ver cuales estan invisibles para el cliente. */
   const [imagenFilter, setImagenFilter] = useState("");

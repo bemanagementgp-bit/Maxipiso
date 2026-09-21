@@ -637,9 +637,33 @@ de las principales escondía opciones que sí devuelven resultados.
 > importación lo avisa, nombrando los productos afectados. No lo corrige sola: puede ser un
 > SKU que todavía no se cargó.
 >
-> Para los que ya quedaron así, **Estado de la base → "Productos invisibles"** los encuentra y
-> los devuelve al catálogo. Cubre las dos formas de romperlo: apuntar a un SKU que no existe,
-> y apuntarse a sí mismo. Muestra qué va a tocar antes de tocarlo.
+> Para los que ya quedaron así, **Estado de la base → "Productos que no se ven en el
+> catálogo"** los encuentra. Muestra qué va a tocar antes de tocarlo.
+
+> **Un grupo bien armado también esconde, si el principal está cerrado.** La card del catálogo
+> es la del principal, así que un principal **inactivo o sin foto** se lleva puesto al grupo
+> entero: las variantes no salen porque son variantes, y el principal no sale porque no pasa
+> el `where`. El resultado es el que más desconcierta —accesorios activos, con foto, cargados,
+> que no aparecen— porque mirando la fila sola está todo bien.
+>
+> De ahí que el detector distinga cuatro motivos en dos grupos, y que sólo repare el primero
+> (`lib/visibilidad.ts`, `SE_ARREGLA_SOLO`):
+>
+> - **Apunta a la nada** — se declara variante de sí mismo, o de un SKU que no existe. La
+>   única lectura posible es "no es variante de nada", así que el botón vacía la columna y el
+>   producto vuelve como card propia.
+> - **El principal está cerrado** — inactivo o sin foto. Acá el botón no toca nada: el grupo
+>   está bien y desvincular las variantes taparía el síntoma rompiéndolo. Se listan con link
+>   al principal, que es donde se arregla, y con eso vuelve el grupo completo.
+>
+> El segundo grupo se reporta sólo si la variante **se vería de no ser por eso** (activa y con
+> foto). Una variante apagada o sin foto se esconde sola, y para eso ya están los filtros
+> "Inactivos" y "Sin imagen" del ABM; avisarlo acá mandaría a prender un principal que no
+> tiene la culpa.
+>
+> Las reglas viven en `lib/visibilidad.ts` y no en la ruta para poder probarlas sin base: son
+> las mismas cuatro condiciones del `where` de `api/catalogo/todos`, y si se corren, el panel
+> dice que un producto se ve cuando no se ve — peor que no tener el detector.
 
 > **Una fila no puede ser variante de sí misma.** Si `varianteDe` coincide con el SKU propio
 > —lo deja una planilla con la columna copiada de más— la consulta por `varianteDe` devolvía
