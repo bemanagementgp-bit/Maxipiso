@@ -82,6 +82,12 @@ function displayName(item: CatalogItem): string {
  * enterarse es entrar. La card es donde esa informacion sirve, porque es donde
  * se decide si entrar.
  *
+ * **Sin tipo que nombrar se cuentan versiones.** Cuando las opciones no
+ * distinguen nada —los niveladores cargados todos como "Color: Plata"— igual
+ * hay mas de un producto ahi adentro, y la ficha los lista bajo "Otras
+ * versiones". Callarse seria peor: es justo el caso en que el catalogo parecia
+ * tener un producto donde habia seis.
+ *
  * **Miniaturas solo si distinguen algo.** Si las variantes comparten la foto
  * —pasa cuando el grupo son medidas del mismo piso, o cuando todavia no se
  * cargaron las fotos de cada color— cinco cuadraditos iguales no dicen nada:
@@ -97,7 +103,9 @@ function OpcionesDelGrupo({ resumen }: { resumen: ResumenGrupo }) {
   if (!fotosDistintas) {
     return (
       <p className="text-[11px] text-gray-500">
-        Disponible en {pluralDeTipo(resumen.tipo, resumen.total)}
+        {/* Sin tipo, el grupo existe pero ninguna opción lo distingue: se
+            cuentan versiones, que es lo único cierto que se puede decir. */}
+        Disponible en {resumen.tipo ? pluralDeTipo(resumen.tipo, resumen.total) : `${resumen.total} versiones`}
       </p>
     );
   }

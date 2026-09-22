@@ -240,11 +240,17 @@ describe("resumenDelGrupo", () => {
     expect(resumenDelGrupo([])).toBeNull();
   });
 
-  it("un grupo sin opción que lo distinga tampoco", () => {
-    // Los seis niveladores "Color: Plata": no hay eje, así que la card no
-    // puede prometer una elección que la ficha no va a ofrecer.
-    const mudo = [fila("a", "Color: Plata"), fila("b", "Color: Plata")];
-    expect(resumenDelGrupo(mudo)).toBeNull();
+  it("sin opción que distinga, cuenta versiones en vez de callarse", () => {
+    // Los niveladores cargados todos como "Color: Plata": no hay eje que
+    // nombrar, pero el grupo existe y la ficha los lista bajo "Otras
+    // versiones". Callarse sería peor, porque es justo el caso en que el
+    // catálogo parecía tener un producto donde había cuatro.
+    const mudo = [
+      fila("a", "Color: Plata", true),
+      fila("b", "Color: Plata"),
+      fila("c", "Color: Plata"),
+    ];
+    expect(resumenDelGrupo(mudo)).toEqual({ tipo: "", total: 3, muestras: [] });
   });
 });
 

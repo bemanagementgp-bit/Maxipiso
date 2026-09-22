@@ -250,8 +250,16 @@ export function variantesInalcanzables(filas: VarianteFila[]): VarianteFila[] {
  *
  * `muestras` son las primeras, para dibujarlas; `total` es cuántas hay en
  * total, que casi nunca coincide y es lo que se pone en el "+N".
+ *
+ * **Sin eje también se dice algo.** Cuando las opciones no distinguen nada
+ * —los seis niveladores cargados todos como "Color: Plata"— no hay tipo que
+ * nombrar, pero el grupo existe igual y la ficha las lista bajo "Otras
+ * versiones", así que la card puede decir "4 versiones" sin mentir. Callarse
+ * sería peor: es justamente el caso en que el catálogo parecía tener un
+ * producto donde había seis. Se distingue por `tipo` vacío.
  */
 export type ResumenGrupo = {
+  /** "Color", "Medidas"… o vacío cuando ninguna opción distingue al grupo. */
   tipo: string;
   total: number;
   muestras: { valor: string; id: string; imagen: string | null }[];
@@ -260,9 +268,9 @@ export type ResumenGrupo = {
 const MAX_MUESTRAS = 5;
 
 export function resumenDelGrupo(filas: VarianteFila[]): ResumenGrupo | null {
-  const ejes = ejesDeVariantes(filas);
-  const eje = ejes[0];
-  if (!eje) return null;
+  if (filas.length <= 1) return null;
+  const eje = ejesDeVariantes(filas)[0];
+  if (!eje) return { tipo: "", total: filas.length, muestras: [] };
   return {
     tipo: eje.tipo,
     total: eje.valores.length,
