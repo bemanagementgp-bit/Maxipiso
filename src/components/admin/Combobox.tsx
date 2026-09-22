@@ -20,9 +20,18 @@ type Props = {
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * Se llama cuando el valor queda **elegido**: al tocar una opción o al
+   * apretar Enter. Distinto de `onChange`, que se dispara con cada tecla.
+   *
+   * Lo necesita `MultiCombobox`, que agrega un chip por valor elegido: con
+   * `onChange` agregaba uno por letra ("M", "a", "d"…). Los campos de un solo
+   * valor no lo usan, porque ahí cada tecla ya es el valor.
+   */
+  onCommit?: (valor: string) => void;
 };
 
-export default function Combobox({ value, onChange, opciones, placeholder, className, id }: Props) {
+export default function Combobox({ value, onChange, opciones, placeholder, className, id, onCommit }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(-1);
   const contenedorRef = useRef<HTMLDivElement>(null);
@@ -69,6 +78,7 @@ export default function Combobox({ value, onChange, opciones, placeholder, class
 
   const elegir = (valor: string) => {
     onChange(valor);
+    onCommit?.(valor);
     setAbierto(false);
     setResaltado(-1);
   };
@@ -91,6 +101,15 @@ export default function Combobox({ value, onChange, opciones, placeholder, class
       // lo tipeado, que es un valor nuevo perfectamente válido.
       e.preventDefault();
       elegir(filtradas[resaltado]);
+      return;
+    }
+    if (e.key === "Enter" && onCommit && value.trim()) {
+      // Enter sobre lo tipeado, sin opción resaltada: es un valor nuevo, y para
+      // quien lleva chips eso también es elegirlo.
+      e.preventDefault();
+      onCommit(value.trim());
+      setAbierto(false);
+      setResaltado(-1);
       return;
     }
     if (e.key === "Escape" && abierto) {

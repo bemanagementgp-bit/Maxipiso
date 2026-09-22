@@ -14,7 +14,57 @@
  * distintas en el filtro.
  */
 
+/**
+ * Las categorías del catálogo, tal como las nombra el sitio.
+ *
+ * Es la lista que ofrece "Compatible con": un zócalo sirve para pisos
+ * flotantes y vinílicos, y decirlo con las mismas palabras que usan los
+ * botones del catálogo es lo que permite que el filtro funcione. Escrito a
+ * mano una vez más sería "Pisos flotantes" acá y "Pisos Flotantes" allá: dos
+ * opciones distintas en el filtro para la misma cosa.
+ */
+export const CATEGORIAS_DEL_CATALOGO = [
+  "Pisos Flotantes",
+  "Porcelanatos",
+  "Revestimientos",
+  "Pisos Vinílicos",
+  "Pisos Madera",
+  "Decks",
+  "Maderas",
+  "Accesorios",
+] as const;
+
+/**
+ * Campos que guardan varios valores en una celda, separados por ` | `.
+ *
+ * El catálogo los parte para armar el filtro, así que un accesorio cargado
+ * como "Pisos Flotantes | Pisos Vinílicos" aparece bajo los dos. Con una sola
+ * cadena —"Pisos flotantes y vinílicos"— el filtro ofrecía esa frase entera
+ * como opción y no matcheaba con ninguna de las dos categorías.
+ */
+export const SEPARADOR_MULTIPLE = " | ";
+export const CAMPOS_MULTIPLES = new Set(["compatibleCon", "espesoresDisponibles"]);
+
+/** Los valores de una celda multivalor, sin vacíos ni repetidos. */
+export function partirMultiple(valor: unknown): string[] {
+  const vistos = new Set<string>();
+  const salida: string[] = [];
+  for (const parte of String(valor ?? "").split("|")) {
+    const limpio = parte.trim();
+    if (!limpio || vistos.has(limpio.toLowerCase())) continue;
+    vistos.add(limpio.toLowerCase());
+    salida.push(limpio);
+  }
+  return salida;
+}
+
+/** Los vuelve a juntar como se guardan. */
+export function unirMultiple(valores: string[]): string {
+  return partirMultiple(valores.join("|")).join(SEPARADOR_MULTIPLE);
+}
+
 export const OPCIONES_FIJAS: Record<string, string[]> = {
+  compatibleCon: [...CATEGORIAS_DEL_CATALOGO],
   tono: [
     "Beige",
     "Blanco",

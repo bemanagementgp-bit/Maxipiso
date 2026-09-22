@@ -8,8 +8,9 @@ import { CATEGORY_CONFIGS } from "@/lib/category-fields";
 import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
+import MultiCombobox from "./MultiCombobox";
 import { normalizarLinkDoc } from "@/lib/doc-links";
-import { opcionesDe } from "@/lib/opciones-fijas";
+import { CAMPOS_MULTIPLES, opcionesDe, partirMultiple } from "@/lib/opciones-fijas";
 import StickerPicker from "./StickerPicker";
 import ComplementariosPicker from "./ComplementariosPicker";
 import VariantesEditor, { type VariantesHandle } from "./VariantesEditor";
@@ -611,7 +612,14 @@ export default function ProductoEditor({ productId, duplicateOfId = null, volver
     const linkOk = esCampoDoc && String(val).trim() ? normalizarLinkDoc(val) : null;
     // El SKU bloqueado (edición) sigue siendo un input plano: no se toca.
     const bloqueado = key === "sku" && !isNew;
-    const opciones = isNum || isTextarea || bloqueado ? [] : opcionesDe(key, sugerencias[key] ?? []);
+    const esMultiple = CAMPOS_MULTIPLES.has(key) && !bloqueado;
+    // En un campo multivalor lo cargado son celdas enteras ("Pisos Flotantes |
+    // Decks"), y ofrecerlas asi sugeria la combinacion completa como si fuera
+    // un valor. Se parten para que la lista tenga los valores de a uno.
+    const cargados = esMultiple
+      ? [...new Set((sugerencias[key] ?? []).flatMap(partirMultiple))]
+      : sugerencias[key] ?? [];
+    const opciones = isNum || isTextarea || bloqueado ? [] : opcionesDe(key, cargados);
     // Se marca en rojo y se deja lo tipeado a la vista para poder corregirlo.
     const numInvalido =
       isNum && borradorNum?.clave === key && parsearNumero(borradorNum.texto) === "invalido";
@@ -625,6 +633,15 @@ export default function ProductoEditor({ productId, duplicateOfId = null, volver
             onChange={(e) => handleChange(key, e.target.value)}
             rows={2}
             className={`${fieldClass} resize-none`}
+          />
+        ) : esMultiple ? (
+          // Varios valores en una celda: ver `MultiCombobox`. Va antes que el
+          // Combobox simple porque "Compatible con" cumple las dos.
+          <MultiCombobox
+            value={String(val)}
+            onChange={(v) => handleChange(key, v)}
+            opciones={opciones}
+            className={fieldClass}
           />
         ) : opciones.length > 0 ? (
           <Combobox

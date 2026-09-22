@@ -6,6 +6,8 @@ import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
 import { normalizarSticker, parseStickerIds, resolverStickers } from "@/lib/stickers";
 import { parseOpciones, resumenDelGrupo, type VarianteFila } from "@/lib/variantes";
+import { claveDeValor, MIN_VALORES, opcionesDeFiltro } from "@/lib/filtros-catalogo";
+import { CAMPOS_MULTIPLES } from "@/lib/opciones-fijas";
 import { primeraImagen } from "@/lib/imagenes";
 
 export const runtime = "nodejs";
@@ -57,7 +59,10 @@ const BRAND_ALIASES: Record<string, string> = {
   "Max Core": "MaxCore",
 };
 
-const MULTI_VALUE_FIELDS = new Set(["espesoresDisponibles"]);
+// Campos que guardan varios valores en una celda. Viven en `opciones-fijas`
+// porque el ABM tiene que escribirlos con el mismo separador con el que el
+// catalogo los parte.
+const MULTI_VALUE_FIELDS = CAMPOS_MULTIPLES;
 
 // Campo de precio real de cada tabla. Solo `maderas` usa `precio`; el resto
 // usa `precioM2`. `accesorios` no tiene precio, asi que no se puede ordenar
@@ -296,6 +301,45 @@ export async function GET(req: NextRequest) {
       : [];
 
     /**
+     * Las otras escrituras de cada valor elegido.
+     *
+     * El filtro muestra "Interior" una sola vez aunque en la base convivan
+     * "Interior" e "interior" (ver `lib/filtros-catalogo`), asi que la
+     * consulta tiene que pedir **las dos**: con `= "Interior"` se perderian
+     * justo los productos cargados en minuscula, que es peor que el problema
+     * que vino a arreglar.
+     *
+     * Una sola consulta, con las columnas que estan filtradas, y solo cuando
+     * hay algun filtro puesto.
+     */
+    const equivalentes = new Map<string, string[]>();
+    if (filterTable && Object.keys(activeFilters).length > 0) {
+      const columnas = Object.fromEntries(Object.keys(activeFilters).map((k) => [k, true]));
+      const tablaFiltrada = filterTable.delegate() as unknown as {
+        findMany: (args: object) => Promise<Record<string, unknown>[]>;
+      };
+      const filas = (await tablaFiltrada
+        .findMany({ where: { isActive: true }, select: columnas, take: 4000 })
+        // Si falla, se filtra por el valor exacto: el comportamiento de antes.
+        .catch(() => [])) as Record<string, unknown>[];
+      for (const [key, val] of Object.entries(activeFilters)) {
+        const elegido = claveDeValor(val);
+        const escrituras = new Set<string>([val]);
+        for (const f of filas) {
+          const crudo = f[key];
+          if (typeof crudo !== "string") continue;
+          const partes = MULTI_VALUE_FIELDS.has(key)
+            ? crudo.split("|").map((x) => x.trim())
+            : [crudo.trim()];
+          for (const parte of partes) {
+            if (parte && claveDeValor(parte) === elegido) escrituras.add(parte);
+          }
+        }
+        equivalentes.set(key, [...escrituras]);
+      }
+    }
+
+    /**
      * Arma el `where` de los filtros activos, sin la parte del grupo.
      *
      * Se usa dos veces: para buscar las filas que matchean —principales y
@@ -307,8 +351,10 @@ export async function GET(req: NextRequest) {
         if (MULTI_VALUE_FIELDS.has(key)) {
           cond[key] = { contains: val };
         } else {
-          const vars = reverseAliases[val];
-          cond[key] = vars ? { in: vars } : val;
+          // Los alias de marca y las escrituras distintas terminan en lo
+          // mismo: una lista de valores que significan lo que se eligio.
+          const vars = reverseAliases[val] ?? equivalentes.get(key);
+          cond[key] = vars && vars.length > 1 ? { in: vars } : val;
         }
       }
       return cond;
@@ -456,29 +502,21 @@ export async function GET(req: NextRequest) {
     const totalMostrado = merged.length > 0 ? total : 0;
     for (const row of allProducts) delete row[SORT_PRICE_KEY];
 
-    // Build filter values
+    // Los valores de cada filtro. Ver `lib/filtros-catalogo`: agrupa las
+    // escrituras distintas de la misma palabra y ordena estable.
     const filtros: Record<string, { label: string; values: string[] }> = {};
     for (let i = 0; i < filterFields.length; i++) {
       const fd = filterFields[i];
-      const isMulti = MULTI_VALUE_FIELDS.has(fd.key);
-      const unique = [...new Set(
-        (filterResults[i] ?? [])
-          .flatMap((r) => {
-            const v = r[fd.key];
-            if (typeof v !== "string" || v.trim() === "") return [];
-            if (isMulti) {
-              return v.split("|").map((s) => s.trim()).filter(Boolean);
-            }
-            return [BRAND_ALIASES[v] ?? v];
-          })
-      )].sort((a, b) => {
-        const na = parseFloat(a), nb = parseFloat(b);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return a.localeCompare(b, "es", { numeric: true });
-      });
-      if (unique.length > 0) {
-        filtros[fd.key] = { label: fd.label, values: unique };
-      }
+      const opciones = opcionesDeFiltro(
+        (filterResults[i] ?? []).map((r) => r[fd.key]),
+        { multiple: MULTI_VALUE_FIELDS.has(fd.key), alias: BRAND_ALIASES },
+      );
+      // Un filtro de un solo valor no separa nada: "Tipo de accesorio:
+      // Accesorios" ocupa lugar, invita a un click y devuelve lo mismo que ya
+      // estaba en pantalla. Se muestra igual si ese filtro esta puesto, porque
+      // esconderlo dejaria al cliente filtrado sin forma de destildarlo.
+      if (opciones.length < MIN_VALORES && !activeFilters[fd.key]) continue;
+      filtros[fd.key] = { label: fd.label, values: opciones.map((o) => o.valor) };
     }
 
     // Stickers: se resuelven en el servidor y viajan con cada producto.

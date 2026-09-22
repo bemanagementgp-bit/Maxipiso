@@ -1267,6 +1267,43 @@ distintas en el filtro del catálogo.
 > variantes avisa hacia arriba cuando cambian el precio o la moneda de esa fila, y los dos
 > campos quedan mostrando lo mismo mientras se tipea.
 
+### 8.2 nonies Los filtros del catálogo
+
+Se arman con los valores distintos que hay cargados en esa columna, no con una lista escrita a
+mano: una categoría nueva aparece en el filtro sola, en cuanto alguien la carga. Eso trae dos
+problemas propios, los dos visibles desde el mostrador como "el filtro no sirve".
+
+> **"interior" e "Interior" eran dos opciones.** Un `Set` sobre el texto crudo toma por
+> distinto lo que para quien busca es lo mismo, así que el filtro de Uso ofrecía las dos y cada
+> una devolvía la mitad de los productos. `opcionesDeFiltro()` agrupa ignorando mayúsculas y
+> acentos y muestra **una sola** escritura: la más cargada —que es cómo está escrito el
+> catálogo de verdad—, y si empatan la que arranca en mayúscula, que es la que se lee como
+> título en un filtro.
+>
+> Elegirla tiene que traer **todas** las escrituras del grupo, así que cada opción viaja con
+> sus `equivalentes` y la consulta usa `in` en vez de `=`. Mostrar "Interior" y filtrar sólo
+> por "Interior" perdería justo los productos cargados en minúscula: peor que el problema
+> original. Las equivalencias salen de una consulta extra, una sola, y nada más que cuando hay
+> algún filtro puesto.
+
+> **Un filtro de un solo valor no separa nada.** "Tipo de accesorio: Accesorios" ocupaba lugar,
+> invitaba a un click y devolvía exactamente lo que ya estaba en pantalla. Se piden `MIN_VALORES`
+> (2) valores distintos, la misma regla que el ABM usa para decidir qué filtros ofrecer — salvo
+> que ese filtro esté puesto, porque esconderlo dejaría al cliente filtrado sin forma de
+> destildarlo.
+
+> **"Compatible con" guarda varias categorías en una celda**, separadas por ` | `, y el catálogo
+> las parte para el filtro (`CAMPOS_MULTIPLES` en `lib/opciones-fijas`). Con una sola cadena
+> —"Pisos flotantes y vinílicos"— el filtro ofrecía esa frase entera como opción y no matcheaba
+> con ninguna de las dos categorías. En el ABM el campo es un `MultiCombobox`: chips de lo
+> elegido y la lista de las 8 categorías del catálogo, escritas una sola vez en
+> `CATEGORIAS_DEL_CATALOGO` para que el valor cargado y el botón del catálogo digan lo mismo.
+>
+> Lo tipeado sólo se agrega cuando queda **elegido** —tocando una opción o con Enter—, no con
+> cada tecla: `Combobox` dispara `onChange` por letra, y escribir "Maderas" agregaba ocho chips,
+> uno por letra. De ahí el `onCommit` del `Combobox`, que los campos de un solo valor no usan
+> porque ahí cada tecla ya es el valor.
+
 ### 8.3 Orden manual (`sortOrder`)
 
 Dos caminos:
