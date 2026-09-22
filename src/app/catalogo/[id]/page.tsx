@@ -28,7 +28,7 @@ import { normalizarSticker, parseStickerIds, resolverStickers, type Sticker } fr
 import { CAMPOS_DOC, normalizarLinkDoc } from "@/lib/doc-links";
 import { textos } from "@/lib/i18n/servidor";
 import SelectorVariantes from "@/components/catalog/SelectorVariantes";
-import { ejesDeVariantes, filasDelGrupo } from "@/lib/variantes";
+import { ejesDeVariantes, filasDelGrupo, variantesInalcanzables } from "@/lib/variantes";
 import { parseImagenes } from "@/lib/imagenes";
 
 /**
@@ -419,7 +419,10 @@ export default async function ProductPage({
    * el cliente ya esta mirando; esto lo suma.
    */
   // Las variantes del grupo: el mismo producto en otro color o medida.
-  const ejesVariantes = ejesDeVariantes(await filasDelGrupo(tableKey, raw));
+  const filasGrupo = await filasDelGrupo(tableKey, raw);
+  const ejesVariantes = ejesDeVariantes(filasGrupo);
+  // Ninguna hermana puede quedar sin link: los ejes no siempre llegan a todas.
+  const variantesSueltas = variantesInalcanzables(filasGrupo);
 
   const idsComplementarios = parseComplementarios(raw.complementarios);
   const filasComplementarias = await findRowsByIds(idsComplementarios);
@@ -526,7 +529,7 @@ export default async function ProductPage({
               {product.nombre}
             </h1>
 
-            <SelectorVariantes ejes={ejesVariantes} />
+            <SelectorVariantes ejes={ejesVariantes} sueltas={variantesSueltas} />
 
             {product.descripcion && (
               <div className="mb-5">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import SafeImage from "./SafeImage";
-import type { EjeVariante } from "@/lib/variantes";
+import type { EjeVariante, VarianteFila } from "@/lib/variantes";
 
 /**
  * El selector de variantes de la ficha.
@@ -19,9 +19,22 @@ import type { EjeVariante } from "@/lib/variantes";
  * La miniatura sólo va en el eje que la hace distinta: en pisos, la diferencia
  * entre "Roble" y "Nogal" se ve, pero poner la misma foto al lado de "120x20" y
  * "190x20" no aporta nada y ensucia.
+ *
+ * `sueltas` son las hermanas a las que **ningún botón lleva**, casi siempre
+ * porque la planilla las cargó a todas con el mismo valor —siete niveladores
+ * "Color: Plata"— o dejó la columna de opciones vacía. Sin esto quedaban
+ * cargadas, activas, con foto y sin forma de abrirse desde ningún lado. Se
+ * listan aparte y por nombre: el dato que las distingue no está, así que no
+ * hay eje que inventarles, pero el link tiene que existir igual.
  */
-export default function SelectorVariantes({ ejes }: { ejes: EjeVariante[] }) {
-  if (ejes.length === 0) return null;
+export default function SelectorVariantes({
+  ejes,
+  sueltas = [],
+}: {
+  ejes: EjeVariante[];
+  sueltas?: VarianteFila[];
+}) {
+  if (ejes.length === 0 && sueltas.length === 0) return null;
 
   return (
     <div className="mb-5 space-y-3">
@@ -71,6 +84,27 @@ export default function SelectorVariantes({ ejes }: { ejes: EjeVariante[] }) {
           </div>
         );
       })}
+
+      {sueltas.length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#111111] mb-1.5">
+            Otras versiones
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {sueltas.map((v) => (
+              <Link
+                key={v.id}
+                href={`/catalogo/${v.id}`}
+                prefetch
+                className="flex items-center gap-2 py-1 pl-1 pr-3 border-2 border-gray-200 rounded-lg hover:border-[#DF8635]/60 transition-colors"
+              >
+                <Miniatura src={v.imagen} />
+                <span className="text-[12px] font-medium text-[#111111]">{v.nombre || v.sku}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

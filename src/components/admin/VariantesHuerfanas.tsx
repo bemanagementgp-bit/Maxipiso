@@ -38,6 +38,7 @@ type Reporte = {
   principalInexistente: number;
   principalApagado: number;
   principalSinFoto: number;
+  sinBoton: number;
   ejemplos: Ejemplo[];
 };
 
@@ -94,9 +95,10 @@ export default function VariantesHuerfanas() {
           </h2>
           <p className="text-[11px] text-[#888] mt-1 leading-relaxed max-w-[62ch]">
             El catálogo muestra una card por grupo de variantes, y esa card es la del producto
-            principal. Un producto con &ldquo;variante de&rdquo; cargado se ve entrando al principal:
-            si el principal está inactivo, sin foto, o no existe, el grupo entero desaparece
-            aunque las variantes estén activas y con imagen.
+            principal. Un producto con &ldquo;variante de&rdquo; cargado se ve entrando al principal
+            y eligiéndolo en el selector. No se llega si el principal está inactivo, sin foto o no
+            existe, y tampoco si ninguna opción lo distingue de sus hermanas: seis niveladores
+            cargados todos como &ldquo;Color: Plata&rdquo; no dan un selector, dan un grupo mudo.
           </p>
         </div>
         <button
@@ -169,14 +171,15 @@ export default function VariantesHuerfanas() {
             <div className="border border-[#E0DED8] rounded-sm overflow-hidden">
               <div className="px-3 py-2 bg-[#F7F6F3] border-b border-[#E0DED8]">
                 <p className="text-[11px] text-[#111]">
-                  <span className="font-semibold">{reporte.principalApagado + reporte.principalSinFoto}</span> escondidos
-                  detrás de su producto principal
+                  <span className="font-semibold">{aMano.length}</span> escondidos detrás de su producto principal
                   {reporte.principalApagado > 0 && ` · ${reporte.principalApagado} con el principal inactivo`}
                   {reporte.principalSinFoto > 0 && ` · ${reporte.principalSinFoto} con el principal sin foto`}
+                  {reporte.sinBoton > 0 && ` · ${reporte.sinBoton} sin un botón que lleve a ellas`}
                 </p>
                 <p className="text-[10px] text-[#888] mt-0.5">
-                  El grupo está bien armado. Se arregla prendiendo el principal o dándole una foto,
-                  y con eso vuelve el grupo entero.
+                  El grupo está bien armado, así que el botón no las toca. Se arreglan prendiendo el
+                  principal, dándole una foto, o escribiendo en cada variante el valor que de verdad
+                  la distingue —si todas dicen lo mismo, la ficha no puede dibujar el selector—.
                 </p>
               </div>
               <ul className="divide-y divide-[#F0EEE8] max-h-64 overflow-y-auto">

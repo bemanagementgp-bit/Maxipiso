@@ -28,6 +28,14 @@ import { primeraImagen } from "@/lib/imagenes";
  * es prender el principal o darle una foto, y eso es una decision de catalogo.
  * Desvincular las variantes "arreglaria" el sintoma rompiendo el grupo.
  *
+ *  - `sin-boton-que-lleve`: el principal se ve, pero el selector de la ficha
+ *    no tiene ningun boton que lleve a esta variante. Pasa cuando la fila
+ *    quedo sin opciones, cuando todas las hermanas dicen lo mismo —siete
+ *    niveladores cargados como "Color: Plata" dan un eje de un solo valor, y
+ *    un eje de un solo valor no se dibuja— o cuando dos filas repiten la
+ *    misma combinacion. Se arregla escribiendo el valor que de verdad las
+ *    distingue en la columna de opciones. Ver `variantesInalcanzables`.
+ *
  * Vive aparte de la ruta para poder probarlo sin base.
  */
 
@@ -35,7 +43,8 @@ export type MotivoInvisible =
   | "se-apunta-a-si-mismo"
   | "principal-inexistente"
   | "principal-apagado"
-  | "principal-sin-foto";
+  | "principal-sin-foto"
+  | "sin-boton-que-lleve";
 
 export type FilaVisibilidad = {
   id: string;
@@ -56,6 +65,7 @@ export const TEXTO_MOTIVO: Record<MotivoInvisible, string> = {
   "principal-inexistente": "apunta a un SKU que no existe",
   "principal-apagado": "su producto principal está inactivo",
   "principal-sin-foto": "su producto principal no tiene foto",
+  "sin-boton-que-lleve": "ningún botón de la ficha lleva a ella",
 };
 
 /**

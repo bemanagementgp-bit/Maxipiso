@@ -660,6 +660,27 @@ de las principales escondía opciones que sí devuelven resultados.
 > foto). Una variante apagada o sin foto se esconde sola, y para eso ya están los filtros
 > "Inactivos" y "Sin imagen" del ABM; avisarlo acá mandaría a prender un principal que no
 > tiene la culpa.
+
+> **Estar en un grupo sano tampoco alcanza: tiene que haber un botón que lleve.** El selector
+> de la ficha no dibuja un eje de un solo valor —con razón: si todas dicen "Espesor: 8mm" eso
+> no es una opción, es un dato del producto—. Siete niveladores cargados todos como
+> "Color: Plata" dan entonces **cero ejes**: el principal sale como card, y las otras seis
+> quedan cargadas, activas, con foto, agrupadas, y sin forma de abrirse desde ningún lado. Es
+> el caso más difícil de ver de todos, porque en el ABM está todo bien y en la ficha
+> simplemente no hay botones. Lo mismo pasa con una fila sin opciones, o con dos filas que
+> repiten la misma combinación.
+>
+> `variantesInalcanzables()` recorre el grupo **a saltos, no de a uno**. En una grilla de 3
+> colores × 2 medidas, "Nogal 90x15" no tiene botón desde "Roble 120x20" —los ejes mantienen
+> lo demás igual, que es lo que se quiere— pero se llega en dos clicks pasando por Nogal.
+> Mirar un solo salto marcaba como rota la mitad de una grilla sana, y un detector que grita
+> con datos buenos deja de mirarse.
+>
+> Se usa en los dos lados. En la ficha, las que ningún salto alcanza se listan aparte como
+> **"Otras versiones"**, por nombre: el dato que las distingue no está, así que no hay eje que
+> inventarles, pero el link tiene que existir igual — **ninguna hermana puede quedar sin forma
+> de abrirse**. En el panel se reportan como `sin-boton-que-lleve`, con el principal nombrado,
+> y el arreglo de fondo es escribir en cada una el valor que de verdad la distingue.
 >
 > Las reglas viven en `lib/visibilidad.ts` y no en la ruta para poder probarlas sin base: son
 > las mismas cuatro condiciones del `where` de `api/catalogo/todos`, y si se corren, el panel

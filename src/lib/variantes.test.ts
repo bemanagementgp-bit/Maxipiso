@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOpciones, serializarOpciones, ejesDeVariantes, soloHermanas, type VarianteFila } from "./variantes";
+import { parseOpciones, serializarOpciones, ejesDeVariantes, soloHermanas, variantesInalcanzables, type VarianteFila } from "./variantes";
 
 /**
  * La columna `varianteOpciones` es una sola celda de texto que viaja igual
@@ -65,7 +65,7 @@ describe("serializarOpciones", () => {
 // ── Ejes del selector de la ficha ──────────────────────────────────────────
 
 function fila(id: string, opciones: string, actual = false): VarianteFila {
-  return { id, sku: id, opciones: parseOpciones(opciones), imagen: null, actual };
+  return { id, sku: id, nombre: id, opciones: parseOpciones(opciones), imagen: null, actual };
 }
 
 describe("ejesDeVariantes", () => {
@@ -139,5 +139,74 @@ describe("soloHermanas", () => {
 
   it("no rompe sin principal", () => {
     expect(soloHermanas(null, [{ id: "v1", sku: "A" }])).toEqual([{ id: "v1", sku: "A" }]);
+  });
+});
+
+describe("variantesInalcanzables", () => {
+  it("un grupo sano llega a todas", () => {
+    const grupo = [
+      fila("a", "Color: Roble", true),
+      fila("b", "Color: Nogal"),
+      fila("c", "Color: Wengue"),
+    ];
+    expect(variantesInalcanzables(grupo)).toEqual([]);
+  });
+
+  it("una grilla de dos ejes se recorre a saltos, y eso cuenta", () => {
+    // 3 colores x 2 medidas. Desde "Roble 120x20" no hay botón que lleve a
+    // "Nogal 90x15" —los ejes mantienen lo demás igual, que es lo que se
+    // quiere— pero se llega en dos clicks, pasando por Nogal 120x20. Mirar un
+    // solo salto marcaría como rota la mitad de una grilla perfectamente sana.
+    const grilla = [
+      fila("roble-120", "Color: Roble ; Medidas: 120x20", true),
+      fila("roble-90", "Color: Roble ; Medidas: 90x15"),
+      fila("nogal-120", "Color: Nogal ; Medidas: 120x20"),
+      fila("nogal-90", "Color: Nogal ; Medidas: 90x15"),
+      fila("ceniza-120", "Color: Ceniza ; Medidas: 120x20"),
+      fila("ceniza-90", "Color: Ceniza ; Medidas: 90x15"),
+    ];
+    expect(variantesInalcanzables(grilla)).toEqual([]);
+  });
+
+  it("encuentra a las que quedaron sin opciones", () => {
+    // "Variante de" completado y la columna de al lado vacía: la fila no entra
+    // en ningún eje, así que no hay botón que lleve a ella.
+    const grupo = [fila("a", "Color: Roble", true), fila("b", "Color: Nogal"), fila("c", "")];
+    expect(variantesInalcanzables(grupo).map((f) => f.id)).toEqual(["c"]);
+  });
+
+  it("encuentra el grupo entero escondido detrás de un eje de un solo valor", () => {
+    // Siete niveladores cargados todos como "Color: Plata". El eje tiene un
+    // solo valor, no se dibuja, y las seis hermanas quedan sin forma de
+    // abrirse: cargadas, activas, con foto, y a las que no se llega.
+    const grupo = [
+      fila("plata", "Color: Plata", true),
+      fila("oro", "Color: Plata"),
+      fila("bronce", "Color: Plata"),
+    ];
+    expect(ejesDeVariantes(grupo)).toEqual([]);
+    expect(variantesInalcanzables(grupo).map((f) => f.id)).toEqual(["oro", "bronce"]);
+  });
+
+  it("encuentra la segunda de dos filas con la misma combinación", () => {
+    // Cada valor lleva a una sola fila: la repetida se queda sin botón propio.
+    const grupo = [
+      fila("a", "Color: Roble", true),
+      fila("b", "Color: Nogal"),
+      fila("c", "Color: Nogal"),
+    ];
+    expect(variantesInalcanzables(grupo).map((f) => f.id)).toEqual(["c"]);
+  });
+
+  it("la fila que se está viendo nunca cuenta como inalcanzable", () => {
+    // Aunque haya quedado sin opciones y ningún botón lleve a ella: es la
+    // página donde estamos parados, se llega estando ahí.
+    const grupo = [fila("a", "", true), fila("b", "Color: Roble"), fila("c", "Color: Nogal")];
+    expect(variantesInalcanzables(grupo)).toEqual([]);
+  });
+
+  it("un producto suelto no es un grupo", () => {
+    expect(variantesInalcanzables([fila("a", "Color: Roble", true)])).toEqual([]);
+    expect(variantesInalcanzables([])).toEqual([]);
   });
 });

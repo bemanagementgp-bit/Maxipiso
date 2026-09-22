@@ -113,6 +113,8 @@ export function skuDelPrincipal(fila: Record<string, unknown>): string | null {
 export type VarianteFila = {
   id: string;
   sku: string;
+  /** Para nombrar a las que ningún eje alcanza. Ver `variantesInalcanzables`. */
+  nombre: string;
   opciones: Opcion[];
   imagen: string | null;
   actual: boolean;
@@ -183,6 +185,58 @@ export function ejesDeVariantes(filas: VarianteFila[]): EjeVariante[] {
     .filter((eje) => eje.valores.length > 1);
 }
 
+/**
+ * Las filas del grupo a las que **ningún botón del selector lleva**.
+ *
+ * Los ejes no garantizan llegar a todo el grupo, y cuando no llegan el
+ * producto queda cargado, activo, con foto, agrupado — y sin forma de abrirlo
+ * desde ningún lado. Es el caso más difícil de ver de todos, porque en el ABM
+ * está todo bien y en la ficha del principal simplemente no hay botones.
+ *
+ * Pasa de tres maneras, y las tres las deja una planilla:
+ *
+ *  - **La fila no tiene opciones.** Sin un par tipo/valor no entra en ningún
+ *    eje. Es lo que queda al completar "variante de" y olvidar la columna de
+ *    al lado.
+ *  - **Todas las hermanas dicen lo mismo.** Siete niveladores cargados como
+ *    "Color: Plata" dan un eje de un solo valor, y un eje de un solo valor no
+ *    se dibuja —con razón: no es una opción, es un dato del producto—. El
+ *    grupo entero queda detrás de un selector que no existe.
+ *  - **Dos filas con la misma combinación.** Cada valor lleva a una sola fila,
+ *    así que la segunda no tiene botón propio.
+ *
+ * Se calcula desde los ejes ya armados y no en paralelo: lo que importa es a
+ * dónde llevan los botones que realmente se van a dibujar.
+ */
+export function variantesInalcanzables(filas: VarianteFila[]): VarianteFila[] {
+  if (filas.length <= 1) return [];
+
+  // Se recorre el grupo a saltos, no de una: en un grupo de 3 colores por 2
+  // medidas, "Nogal 90x15" no tiene boton desde "Roble 120x20" —los ejes
+  // mantienen lo demas igual— pero se llega en dos clicks, pasando por Nogal.
+  // Mirar un solo salto marcaria como rota la mitad de una grilla sana.
+  const inicio = filas.find((f) => f.actual) ?? filas[0];
+  const alcanzables = new Set<string>([inicio.id]);
+  const pendientes = [inicio];
+
+  while (pendientes.length > 0) {
+    const desde = pendientes.shift()!;
+    // Los ejes dependen de donde uno esta parado, asi que se recalculan en
+    // cada salto: es literalmente lo que veria quien navega.
+    const ejes = ejesDeVariantes(filas.map((f) => ({ ...f, actual: f.id === desde.id })));
+    for (const eje of ejes) {
+      for (const v of eje.valores) {
+        if (alcanzables.has(v.id)) continue;
+        alcanzables.add(v.id);
+        const fila = filas.find((f) => f.id === v.id);
+        if (fila) pendientes.push(fila);
+      }
+    }
+  }
+
+  return filas.filter((f) => !alcanzables.has(f.id));
+}
+
 /** Cuántos tipos, además del que se está cambiando, comparte con la actual. */
 function coincidencias(
   candidata: VarianteFila,
@@ -247,6 +301,7 @@ export async function filasDelGrupo(
     salida.push({
       id,
       sku: String(f.sku ?? ""),
+      nombre: String(f.nombre ?? f.especie ?? f.sku ?? ""),
       opciones: parseOpciones(f.varianteOpciones),
       imagen: primeraImagen(f.imagenes),
       actual: id === idActual,
