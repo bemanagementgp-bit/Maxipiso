@@ -237,6 +237,63 @@ export function variantesInalcanzables(filas: VarianteFila[]): VarianteFila[] {
   return filas.filter((f) => !alcanzables.has(f.id));
 }
 
+/**
+ * Lo que la card del catálogo cuenta sobre el grupo, en una línea.
+ *
+ * El catálogo dibuja **una card por grupo**, así que un piso que viene en ocho
+ * colores se ve igual que uno que viene en uno solo: para enterarse hay que
+ * entrar. Esto es lo que va en la card para que no haga falta.
+ *
+ * **Un solo eje**, el primero con más de un valor. En una card no entra una
+ * grilla de opciones, y de los dos ejes de un piso —color y medidas— el que
+ * decide una compra de un vistazo es el color. El resto se ve entrando.
+ *
+ * `muestras` son las primeras, para dibujarlas; `total` es cuántas hay en
+ * total, que casi nunca coincide y es lo que se pone en el "+N".
+ */
+export type ResumenGrupo = {
+  tipo: string;
+  total: number;
+  muestras: { valor: string; id: string; imagen: string | null }[];
+};
+
+const MAX_MUESTRAS = 5;
+
+export function resumenDelGrupo(filas: VarianteFila[]): ResumenGrupo | null {
+  const ejes = ejesDeVariantes(filas);
+  const eje = ejes[0];
+  if (!eje) return null;
+  return {
+    tipo: eje.tipo,
+    total: eje.valores.length,
+    muestras: eje.valores.slice(0, MAX_MUESTRAS).map((v) => ({
+      valor: v.valor,
+      id: v.id,
+      imagen: v.imagen,
+    })),
+  };
+}
+
+/**
+ * "Color" + 6 -> "6 colores". Para cuando las fotos no distinguen nada y hay
+ * que decirlo con palabras.
+ *
+ * Plural del castellano en tres reglas, que es todo lo que hace falta para lo
+ * que se usa como tipo de variante —color, medida, acabado, espesor,
+ * terminación—: termina en vocal, `+s`; termina en `-ión`, **pierde la tilde**
+ * y `+es` ("terminación" -> "terminaciones", no "terminaciónes"); cualquier
+ * otra consonante, `+es`. Una falta de ortografía en la card del catálogo la
+ * ve todo el que entra.
+ */
+export function pluralDeTipo(tipo: string, n: number): string {
+  const limpio = tipo.trim().toLowerCase();
+  if (!limpio) return String(n);
+  if (n === 1) return `1 ${limpio}`;
+  if (/[sx]$/.test(limpio)) return `${n} ${limpio}`;
+  if (/ión$/.test(limpio)) return `${n} ${limpio.replace(/ión$/, "iones")}`;
+  return `${n} ${limpio}${/[aeiou]$/.test(limpio) ? "s" : "es"}`;
+}
+
 /** Cuántos tipos, además del que se está cambiando, comparte con la actual. */
 function coincidencias(
   candidata: VarianteFila,

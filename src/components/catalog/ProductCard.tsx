@@ -18,6 +18,7 @@ import StickerOverlay from "./StickerOverlay";
 import type { Sticker } from "@/lib/stickers";
 import { useT } from "@/components/providers/IdiomaProvider";
 import { interpolar } from "@/lib/i18n";
+import { pluralDeTipo, type ResumenGrupo } from "@/lib/variantes";
 import { primeraImagen } from "@/lib/imagenes";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -39,6 +40,8 @@ export type CatalogItem = {
   imagenes?: string;
   /** Stickers ya resueltos por el servidor. */
   stickersResueltos?: Sticker[];
+  /** Las opciones del grupo, resueltas por el servidor. Ver `ResumenGrupo`. */
+  grupoVariantes?: ResumenGrupo;
   descripcion?: string;
   espesor?: string;
   ancho?: string;
@@ -69,6 +72,51 @@ function displayName(item: CatalogItem): string {
     return `${base} ${item.codigo}`.trim();
   }
   return base;
+}
+
+/**
+ * Las opciones del grupo, en la card.
+ *
+ * El catalogo dibuja una card por grupo, asi que sin esto un piso que viene en
+ * ocho colores se ve igual que uno que viene en uno solo, y la unica forma de
+ * enterarse es entrar. La card es donde esa informacion sirve, porque es donde
+ * se decide si entrar.
+ *
+ * **Miniaturas solo si distinguen algo.** Si las variantes comparten la foto
+ * —pasa cuando el grupo son medidas del mismo piso, o cuando todavia no se
+ * cargaron las fotos de cada color— cinco cuadraditos iguales no dicen nada:
+ * se pone el texto, "6 colores", que si dice.
+ *
+ * Cada miniatura es un link directo a esa variante: se elige el color desde la
+ * grilla, sin pasar por la ficha.
+ */
+function OpcionesDelGrupo({ resumen }: { resumen: ResumenGrupo }) {
+  const fotosDistintas = new Set(resumen.muestras.map((m) => m.imagen ?? "")).size > 1;
+  const resto = resumen.total - resumen.muestras.length;
+
+  if (!fotosDistintas) {
+    return (
+      <p className="text-[11px] text-gray-500">
+        Disponible en {pluralDeTipo(resumen.tipo, resumen.total)}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {resumen.muestras.map((m) => (
+        <Link
+          key={m.id}
+          href={`/catalogo/${m.id}`}
+          title={`${resumen.tipo}: ${m.valor}`}
+          className="relative block w-6 h-6 rounded-md overflow-hidden bg-gray-100 border border-gray-200 hover:border-[#DF8635] transition-colors shrink-0"
+        >
+          {m.imagen && <SafeImage src={m.imagen} alt={m.valor} fill sizes="24px" className="object-cover" />}
+        </Link>
+      ))}
+      {resto > 0 && <span className="text-[11px] text-gray-500">+{resto}</span>}
+    </div>
+  );
 }
 
 // ─── ProductCard ─────────────────────────────────────────────────────────────
@@ -122,6 +170,8 @@ function ProductCardBase({
         >
           {name}
         </Link>
+
+        {item.grupoVariantes && <OpcionesDelGrupo resumen={item.grupoVariantes} />}
 
         {(item.precioM2 || item.precioCaja || item.precio) && (
           <p className="text-[#DF8635] font-bold text-sm">

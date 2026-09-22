@@ -681,6 +681,32 @@ de las principales escondía opciones que sí devuelven resultados.
 > inventarles, pero el link tiene que existir igual — **ninguna hermana puede quedar sin forma
 > de abrirse**. En el panel se reportan como `sin-boton-que-lleve`, con el principal nombrado,
 > y el arreglo de fondo es escribir en cada una el valor que de verdad la distingue.
+
+> **La card del catálogo cuenta las opciones del grupo.** Como se dibuja una card por grupo, un
+> piso que viene en ocho colores se veía igual que uno que viene en uno solo: para enterarse
+> había que entrar, y nadie entra a algo que parece no tener lo que busca. `resumenDelGrupo()`
+> devuelve **un solo eje** —el primero con más de un valor— porque en una card no entra una
+> grilla, y de color y medidas el que decide una compra de un vistazo es el color.
+>
+> Se dibuja de dos formas según lo que haya: **miniaturas** cuando las variantes tienen fotos
+> distintas, cada una linkeando derecho a esa variante —se elige el color desde la grilla, sin
+> pasar por la ficha—, y **texto** ("Disponible en 4 colores") cuando comparten la foto, que
+> pasa cuando el grupo son medidas o cuando todavía no se cargó una foto por color. Cinco
+> cuadraditos iguales no dicen nada; la frase sí.
+>
+> Las variantes se consultan **después de cortar la página** y agrupadas por tabla: unas pocas
+> consultas por los ~24 productos que se van a dibujar, no por el catálogo entero. Mismo patrón
+> que los stickers. Si esa consulta falla, las cards salen sin las opciones, como salían antes.
+
+> **Agrupar no duplica, resta.** La pregunta aparece sola cuando medio catálogo ya estaba
+> cargado como productos sueltos: el `PUT` del grupo reconcilia **por SKU**, así que una fila
+> cuyo SKU ya existe en esa tabla se engancha al grupo en vez de crear una nueva. No se duplica
+> ninguna fila; lo único que cambia es cuál de las del grupo se lleva la card del catálogo.
+>
+> Por eso **sacar del grupo ya no apaga el producto**. Antes sí, y era una trampa: sacar del
+> grupo es justamente la marcha atrás de haber agrupado —volver a tener una card por color— y
+> lo que hacía era sacarlo del catálogo del todo. Un botón que dice "sacar del grupo" saca del
+> grupo; apagar un producto tiene su propio interruptor.
 >
 > Las reglas viven en `lib/visibilidad.ts` y no en la ruta para poder probarlas sin base: son
 > las mismas cuatro condiciones del `where` de `api/catalogo/todos`, y si se corren, el panel

@@ -135,11 +135,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
  *    se duplica. Es el caso de los productos que ya estaban cargados sueltos,
  *    que es exactamente lo que se quiere agrupar.
  *  - fila sin `id` con SKU nuevo → se crea copiando el principal
- *  - variante que estaba y ya no viene → se desvincula y se apaga
+ *  - variante que estaba y ya no viene → se desvincula, y sigue activa
  *
- * Nunca borra: una variante es un producto con su historial de precios. Sacarla
- * del grupo la deja apagada y fuera del catálogo, y se puede volver a prender
- * desde la lista de productos.
+ * Nunca borra: una variante es un producto con su historial de precios.
+ *
+ * Tampoco apaga. Antes sí, y era una trampa: la mitad del catálogo ya estaba
+ * cargada como productos sueltos, así que "sacar del grupo" es justamente la
+ * marcha atrás de haberlos agrupado —volver a tener una card por color— y lo
+ * que hacía era sacarlos del catálogo del todo. Un botón que dice "sacar del
+ * grupo" saca del grupo; apagar un producto tiene su propio interruptor.
  */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const originErr = verifyOrigin(req);
@@ -252,7 +256,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   );
   for (const h of sacadas) {
     await delegate
-      .update({ where: { id: String(h.id) }, data: { varianteDe: null, varianteOpciones: null, isActive: false } })
+      .update({ where: { id: String(h.id) }, data: { varianteDe: null, varianteOpciones: null } })
       .catch(() => errores.push(`No se pudo sacar del grupo ${String(h.sku ?? "")}.`));
   }
 

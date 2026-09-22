@@ -651,10 +651,11 @@ const VariantesEditor = forwardRef<VariantesHandle, Props>(function VariantesEdi
 
       <p className="text-[9px] text-[#bbb] leading-relaxed">
         Cada variante es un producto con su propio SKU. Si el SKU ya existe en esta categoría, ese
-        producto se engancha al grupo en vez de crearse uno nuevo: así se agrupan los que ya estaban
-        cargados sueltos. La descripción, las fichas y el resto de las fotos se editan abriendo la
-        variante desde la lista de productos. Sacarla del grupo con la cruz no la borra: queda
-        apagada y fuera del catálogo.
+        producto <strong>se engancha</strong> al grupo en vez de crearse uno nuevo: no se duplica
+        nada, así se agrupan los que ya estaban cargados sueltos. Lo único que cambia es que dejan
+        de tener card propia en el catálogo y pasan a verse acá adentro. La descripción, las fichas
+        y el resto de las fotos se editan abriendo la variante desde la lista de productos. La cruz
+        la saca del grupo y nada más: vuelve a ser un producto suelto, activo y con su card.
       </p>
     </div>
   );

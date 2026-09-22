@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOpciones, serializarOpciones, ejesDeVariantes, soloHermanas, variantesInalcanzables, type VarianteFila } from "./variantes";
+import { parseOpciones, serializarOpciones, ejesDeVariantes, pluralDeTipo, resumenDelGrupo, soloHermanas, variantesInalcanzables, type VarianteFila } from "./variantes";
 
 /**
  * La columna `varianteOpciones` es una sola celda de texto que viaja igual
@@ -208,5 +208,61 @@ describe("variantesInalcanzables", () => {
   it("un producto suelto no es un grupo", () => {
     expect(variantesInalcanzables([fila("a", "Color: Roble", true)])).toEqual([]);
     expect(variantesInalcanzables([])).toEqual([]);
+  });
+});
+
+describe("resumenDelGrupo", () => {
+  it("resume el primer eje, que es el que entra en una card", () => {
+    // De los dos ejes de un piso, el que decide una compra de un vistazo es
+    // el color; las medidas se ven entrando.
+    const grupo = [
+      fila("a", "Color: Roble ; Medidas: 120x20"),
+      fila("b", "Color: Nogal ; Medidas: 120x20"),
+      fila("c", "Color: Ceniza ; Medidas: 90x15"),
+    ];
+    const r = resumenDelGrupo(grupo)!;
+    expect(r.tipo).toBe("Color");
+    expect(r.total).toBe(3);
+    expect(r.muestras.map((m) => m.valor)).toEqual(["Roble", "Nogal", "Ceniza"]);
+  });
+
+  it("corta las muestras pero no el total", () => {
+    // La card dibuja unas pocas y pone "+N": el N sale del total, no de lo
+    // que se dibujó, o diría "+0" con ocho colores cargados.
+    const grupo = Array.from({ length: 8 }, (_, i) => fila(`v${i}`, `Color: C${i}`));
+    const r = resumenDelGrupo(grupo)!;
+    expect(r.muestras).toHaveLength(5);
+    expect(r.total).toBe(8);
+  });
+
+  it("un producto suelto no tiene nada que contar", () => {
+    expect(resumenDelGrupo([fila("a", "Color: Roble")])).toBeNull();
+    expect(resumenDelGrupo([])).toBeNull();
+  });
+
+  it("un grupo sin opción que lo distinga tampoco", () => {
+    // Los seis niveladores "Color: Plata": no hay eje, así que la card no
+    // puede prometer una elección que la ficha no va a ofrecer.
+    const mudo = [fila("a", "Color: Plata"), fila("b", "Color: Plata")];
+    expect(resumenDelGrupo(mudo)).toBeNull();
+  });
+});
+
+describe("pluralDeTipo", () => {
+  it("pluraliza los tipos que se usan de verdad", () => {
+    expect(pluralDeTipo("Color", 6)).toBe("6 colores");
+    expect(pluralDeTipo("Espesor", 3)).toBe("3 espesores");
+    expect(pluralDeTipo("Acabado", 2)).toBe("2 acabados");
+    // La tilde cae en el plural. Una falta de ortografía en la card la ve
+    // todo el que entra al catálogo.
+    expect(pluralDeTipo("Terminación", 4)).toBe("4 terminaciones");
+  });
+
+  it("no le agrega una s a lo que ya la tiene", () => {
+    expect(pluralDeTipo("Medidas", 2)).toBe("2 medidas");
+  });
+
+  it("en singular no pluraliza", () => {
+    expect(pluralDeTipo("Color", 1)).toBe("1 color");
   });
 });

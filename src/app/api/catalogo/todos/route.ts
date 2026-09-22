@@ -5,6 +5,8 @@ import { getCached, setCached } from "@/lib/catalog-cache";
 import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
 import { normalizarSticker, parseStickerIds, resolverStickers } from "@/lib/stickers";
+import { parseOpciones, resumenDelGrupo, type VarianteFila } from "@/lib/variantes";
+import { primeraImagen } from "@/lib/imagenes";
 
 export const runtime = "nodejs";
 
@@ -510,6 +512,71 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    /**
+     * Las opciones del grupo, para que la card las muestre.
+     *
+     * El catalogo dibuja una card por grupo, asi que hasta ahora un piso que
+     * viene en ocho colores se veia igual que uno que viene en uno solo: para
+     * enterarse habia que entrar. La card es el lugar donde esa informacion
+     * sirve, porque es donde se decide si entrar.
+     *
+     * Se consulta despues de cortar la pagina y agrupado por tabla: son unas
+     * pocas consultas por los ~24 productos que se van a dibujar, no por el
+     * catalogo entero. Mismo patron que los stickers.
+     */
+    const skusPorTabla = new Map<string, string[]>();
+    for (const p of allProducts) {
+      const fila = p as Record<string, unknown>;
+      const sku = String(fila.sku ?? "").trim();
+      if (!sku) continue;
+      const tabla = String(fila._tabla);
+      skusPorTabla.set(tabla, [...(skusPorTabla.get(tabla) ?? []), sku]);
+    }
+
+    await Promise.all(
+      [...skusPorTabla].map(async ([tabla, skus]) => {
+        const def = TABLES.find((t) => t.key === tabla);
+        if (!def) return;
+        // Tipado al minimo que hace falta en vez de `as any`: lo unico que se
+        // le pide a la tabla aca es un findMany que devuelva filas.
+        const delegate = def.delegate() as unknown as {
+          findMany: (args: object) => Promise<Record<string, unknown>[]>;
+        };
+        const hermanas = (await delegate
+          .findMany({
+            where: { varianteDe: { in: skus }, isActive: true },
+            select: { id: true, sku: true, nombre: true, varianteDe: true, varianteOpciones: true, imagenes: true },
+          })
+          // Que falle esto no puede dejar el catalogo sin productos: las cards
+          // salen sin las opciones, como salian antes.
+          .catch((err: unknown) => {
+            console.error(`[catalogo/todos] no se pudieron leer las variantes de ${tabla}:`, err);
+            return [];
+          })) as Record<string, unknown>[];
+        if (hermanas.length === 0) return;
+
+        const porPrincipal = new Map<string, Record<string, unknown>[]>();
+        for (const h of hermanas) {
+          const clave = String(h.varianteDe ?? "").trim();
+          porPrincipal.set(clave, [...(porPrincipal.get(clave) ?? []), h]);
+        }
+
+        for (const p of allProducts) {
+          const fila = p as Record<string, unknown>;
+          if (String(fila._tabla) !== tabla) continue;
+          const grupo = porPrincipal.get(String(fila.sku ?? "").trim());
+          if (!grupo) continue;
+          // El principal va primero y como `actual`: es a donde lleva la card,
+          // asi que su valor es el que aparece elegido.
+          const resumen = resumenDelGrupo([
+            aVarianteFila(fila, true),
+            ...grupo.map((h) => aVarianteFila(h, false)),
+          ]);
+          if (resumen) fila.grupoVariantes = resumen;
+        }
+      }),
+    );
+
     // Categories available
     const categorias = TABLES.map((t) => ({ key: t.key, label: t.label }));
 
@@ -556,4 +623,16 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/** Una fila cruda, como la espera `resumenDelGrupo`. */
+function aVarianteFila(f: Record<string, unknown>, esPrincipal: boolean): VarianteFila {
+  return {
+    id: String(f.id ?? ""),
+    sku: String(f.sku ?? ""),
+    nombre: String(f.nombre ?? f.especie ?? f.sku ?? ""),
+    opciones: parseOpciones(f.varianteOpciones),
+    imagen: primeraImagen(f.imagenes),
+    actual: esPrincipal,
+  };
 }
