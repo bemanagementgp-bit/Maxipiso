@@ -1,3 +1,5 @@
+import { UNIDADES } from "@/lib/unidad-precio";
+
 /**
  * Listas cerradas que ofrece el ABM para algunos campos.
  *
@@ -65,6 +67,10 @@ export function unirMultiple(valores: string[]): string {
 
 export const OPCIONES_FIJAS: Record<string, string[]> = {
   compatibleCon: [...CATEGORIAS_DEL_CATALOGO],
+  // Por qué unidad se cobra. Sigue siendo abierta —se puede escribir otra—
+  // pero tenerla evita que el mismo rollo quede cargado como "rollo", "Rollo"
+  // y "x rollo", que en la ficha se leen como tres cosas distintas.
+  unidadMedida: [...UNIDADES],
   tono: [
     "Beige",
     "Blanco",

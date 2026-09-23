@@ -19,6 +19,7 @@ import type { Sticker } from "@/lib/stickers";
 import { useT } from "@/components/providers/IdiomaProvider";
 import { interpolar } from "@/lib/i18n";
 import { pluralDeTipo, type ResumenGrupo } from "@/lib/variantes";
+import { unidadDeFila } from "@/lib/unidad-precio";
 import { primeraImagen } from "@/lib/imagenes";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -185,7 +186,10 @@ function ProductCardBase({
           <p className="text-[#DF8635] font-bold text-sm">
             {((item.precioM2 ?? item.precioCaja ?? item.precio) ?? 0) > 500 ? "$" : "u$d"}{" "}
             {(item.precioM2 ?? item.precioCaja ?? item.precio)?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-            {item.precioM2 ? " /m²" : item.precioCaja ? " /caja" : ""}
+            {/* Antes salia "/m²" o "/caja" y nada mas: un accesorio, que cobra
+                `precio` a secas, mostraba el numero pelado y no habia forma de
+                saber si era por metro, por rollo o por unidad. */}
+            {unidadDeFila(item) ? ` /${unidadDeFila(item)}` : ""}
           </p>
         )}
 

@@ -120,6 +120,7 @@ model PisoFlotante {
   baseUm              String?
   tablasPorCaja       Int?
   precioM2            Float?
+  unidadMedida        String?
   moneda              String?
   precioCaja          Float?
   pesoCaja            Float?
@@ -177,6 +178,7 @@ model Porcellanato {
   base                String?
   baseUm              String?
   precioM2            Float?
+  unidadMedida        String?
   moneda              String?
   precioCaja          Float?
   stock               Int?
@@ -229,6 +231,7 @@ model Revestimiento {
   precioTabla        Float?
   precioM2           Float?
   precioMl           Float?
+  unidadMedida       String?
   moneda             String?
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
@@ -287,6 +290,7 @@ model PisoVinilico {
   bisel                String?
   tono                 String?
   precioM2             Float?
+  unidadMedida         String?
   moneda               String?
   precioCaja           Float?
   cajasPallet          Int?
@@ -348,6 +352,7 @@ model PisoMadera {
   baseUm              String?
   bisel               String?
   precioM2            Float?
+  unidadMedida        String?
   moneda              String?
   precioCaja          Float?
   stock               Int?
@@ -398,6 +403,7 @@ model Deck {
   precioTabla        Float?
   precioM2           Float?
   precioMLineal      Float?
+  unidadMedida       String?
   moneda             String?
   imagenes           String?
   stickers           String? // JSON array de ids de Sticker
@@ -475,6 +481,7 @@ model Accesorio {
   /// Precio de venta. Los accesorios se venden por unidad, bolsa o rollo, asi
   /// que es un importe a secas y no uno por m2 como en los pisos.
   precio           Float?
+  unidadMedida     String?
   moneda           String?
   stock            Int?
   imagenes         String?

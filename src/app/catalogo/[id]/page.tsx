@@ -30,6 +30,7 @@ import { textos } from "@/lib/i18n/servidor";
 import SelectorVariantes from "@/components/catalog/SelectorVariantes";
 import { ejesDeVariantes, filasDelGrupo, variantesInalcanzables } from "@/lib/variantes";
 import { parseImagenes } from "@/lib/imagenes";
+import { unidadDeFila } from "@/lib/unidad-precio";
 
 /**
  * Placa de "Beneficios de comprar en Maxipiso" que se agrega al final de la
@@ -342,7 +343,9 @@ export default async function ProductPage({
     galeria,
     specs,
     destacado:    false,
-    unidadMedida: (raw.unidadMedida as string) ?? null,
+    // Lo cargado a mano manda, y si no hay nada se deduce de la columna de
+    // precio: un `precioM2` se sigue mostrando "/m²" como siempre.
+    unidadMedida: unidadDeFila(raw),
     moneda:       (raw.moneda as string) ?? null,
   };
 

@@ -1304,6 +1304,39 @@ problemas propios, los dos visibles desde el mostrador como "el filtro no sirve"
 > uno por letra. De ahí el `onCommit` del `Combobox`, que los campos de un solo valor no usan
 > porque ahí cada tecla ya es el valor.
 
+### 8.2 decies Por qué unidad se cobra
+
+Un cliente preguntó si los $11.200 de una manta bajo piso eran por metro, por rollo o por
+unidad, y la ficha no lo decía. La card sabía poner "/m²" cuando el precio venía en `precioM2`
+y "/caja" cuando venía en `precioCaja`, pero un accesorio cobra `precio` a secas y ahí no había
+nada que deducir: se mostraba el número pelado. Tampoco había dónde cargarlo, así que no era un
+dato que faltara sino uno que no existía.
+
+`unidadMedida` ya vivía en `maderas` y hacía exactamente esto; la migración 9 la lleva a las
+otras siete para que la respuesta sea la misma en todo el catálogo.
+
+> **Lo cargado manda, y si no hay nada se deduce.** `unidadDePrecio()` devuelve lo que diga
+> `unidadMedida`, y sólo si está vacío mira de qué columna salió el importe: `precioM2` → m²,
+> `precioMl`/`precioMLineal` → ml, `precioCaja` → caja. Esa deducción no es una comodidad, es
+> lo que hace que los cientos de productos ya cargados sigan mostrando lo mismo que antes:
+> **sólo cambia donde no se podía decir nada**.
+>
+> La card recibe la fila entera y no sabe de qué tabla salió, así que `unidadDeFila()` descubre
+> la columna por cuál tiene valor, en orden: un piso con precio por m² y por caja se cotiza por
+> metro. Un precio en cero no cuenta como "la columna que se usa" — "sin cargar" no puede
+> decidir cómo se lee el precio de al lado.
+
+> La lista de unidades (`UNIDADES`) es **abierta**: el campo sigue aceptando lo que se escriba.
+> Tenerla evita que el mismo rollo quede cargado como "rollo", "Rollo" y "x rollo", que en la
+> ficha se leen como tres cosas distintas — y, desde que los filtros agrupan por escritura, se
+> leerían como una sola opción mal nombrada.
+
+> El editor tiene **dos** fuentes de etiquetas: `CATEGORY_CONFIGS` y su propio `FIELD_LABELS`,
+> que gana. `unidadMedida` entró como "Unidad de precio" en la config y el editor la seguía
+> mostrando como "Unidad medida". Hay un test que compara las etiquetas de los campos de precio
+> entre categorías, pero no cruza los dos mapas: si aparece una tercera divergencia, ese es el
+> lugar para mirar.
+
 ### 8.3 Orden manual (`sortOrder`)
 
 Dos caminos:

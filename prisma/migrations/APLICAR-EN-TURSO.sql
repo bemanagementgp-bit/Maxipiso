@@ -206,3 +206,30 @@ ALTER TABLE "stickers" ADD COLUMN "escala" INTEGER NOT NULL DEFAULT 100;
 
 ALTER TABLE "accesorios" ADD COLUMN "precio" REAL;
 ALTER TABLE "accesorios" ADD COLUMN "moneda" TEXT;
+
+-- ── 9. UNIDAD DE MEDIDA EN TODAS LAS TABLAS (20260923000000) ─ URGENTE ───
+-- APLICAR ANTES DE DEPLOYAR: el codigo lee esta columna al abrir cualquier
+-- producto en el panel y al dibujar el precio en el catalogo.
+--
+-- Un cliente pregunto si los $11.200 de una manta bajo piso eran por metro,
+-- por rollo o por unidad, y la ficha no lo decia: la card solo sabia poner
+-- "/m2" cuando el precio venia en `precioM2`, y un accesorio cobra `precio` a
+-- secas. Tampoco habia donde cargarlo, asi que no era un dato que faltara sino
+-- uno que no existia.
+--
+-- `unidadMedida` ya vivia en `maderas` y hacia exactamente esto. Se lleva a las
+-- otras siete para que la respuesta sea la misma en todo el catalogo.
+--
+-- Queda vacia en lo ya cargado, y eso esta bien: sin valor, el catalogo la
+-- deduce de la columna de precio -m2 para `precioM2`, ml para `precioMl`- que
+-- es lo que mostraba antes. Solo cambia donde no se podia deducir nada.
+--
+-- Son siete lineas.
+
+ALTER TABLE "pisos_flotantes" ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "porcellanatos"   ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "revestimientos"  ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "pisos_vinilicos" ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "pisos_madera"    ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "decks"           ADD COLUMN "unidadMedida" TEXT;
+ALTER TABLE "accesorios"      ADD COLUMN "unidadMedida" TEXT;

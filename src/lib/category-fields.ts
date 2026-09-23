@@ -21,6 +21,7 @@ const COMMON_FIELDS: FieldDef[] = [
   { key: "marca",       label: "Marca",       type: "text",   gridVisible: true },
   { key: "stock",       label: "Stock",       type: "number", gridVisible: true },
   { key: "moneda",      label: "Moneda",      type: "text" },
+  { key: "unidadMedida", label: "Unidad de precio", type: "text" },
   { key: "descripcion", label: "Descripción", type: "textarea" },
   { key: "isActive",    label: "Estado",      type: "select", options: ["true", "false"] },
 ];
@@ -202,6 +203,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "marca",       label: "Marca",       type: "text",   gridVisible: true },
       { key: "stock",       label: "Stock",       type: "number", gridVisible: true },
       { key: "moneda",      label: "Moneda",      type: "text" },
+      { key: "unidadMedida", label: "Unidad de precio", type: "text" },
       { key: "descripcion", label: "Descripción", type: "textarea" },
       { key: "varianteDe",         label: "Variante de (SKU)", type: "text" },
       { key: "varianteOpciones",   label: "Opciones variante", type: "text" },
@@ -282,7 +284,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: "medidas",              label: "Medidas",            type: "text",   gridVisible: true },
       { key: "secado",               label: "Secado",             type: "text",   gridVisible: true },
       { key: "precio",               label: "Precio",             type: "number", gridVisible: true },
-      { key: "unidadMedida",         label: "Unidad de medida",   type: "text" },
+      { key: "unidadMedida",         label: "Unidad de precio",   type: "text" },
       ...FICHA_FIELDS,
     ],
   },
@@ -298,6 +300,7 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       // cargar el precio y quedaba fuera de la grilla de precios.
       { key: "precio",       label: "Precio",       type: "number", gridVisible: true },
       { key: "moneda",       label: "Moneda",       type: "select", options: ["ARS", "USD"] },
+      { key: "unidadMedida", label: "Unidad de precio", type: "text" },
       { key: "stock",        label: "Stock",        type: "number", gridVisible: true },
       { key: "descripcion",  label: "Descripción",  type: "textarea" },
       { key: "varianteDe",         label: "Variante de (SKU)", type: "text" },

@@ -86,7 +86,7 @@ const FIELD_LABELS: Record<string, string> = {
   secado: "Secado", espesoresDisponibles: "Espesores disponibles",
   tablasPorCaja: "Tablas x caja", precioM2: "Precio x m²", precio: "Precio",
   precioTabla: "Precio x tabla", precioMLineal: "Precio m lineal", precioMl: "Precio x ml",
-  moneda: "Moneda", unidadMedida: "Unidad medida", precioCaja: "Precio x caja",
+  moneda: "Moneda", unidadMedida: "Unidad de precio", precioCaja: "Precio x caja",
   precioEnvioCaja: "Envío x caja", flete: "Flete", pesoCaja: "Peso x caja",
   cajasPallet: "Cajas x pallet", pesoPallet: "Peso x pallet", stock: "Stock",
   garantia: "Garantía", fichaTecnica: "Ficha técnica", archivoInstalacion: "Archivo instalación",
