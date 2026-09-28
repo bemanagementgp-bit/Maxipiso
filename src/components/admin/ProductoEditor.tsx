@@ -9,6 +9,7 @@ import { ALLOWED_IMAGE_HOSTS, validateImageRef } from "@/lib/image-hosts";
 import { MetadataEditor } from "./MetadataEditor";
 import Combobox from "./Combobox";
 import MultiCombobox from "./MultiCombobox";
+import MoverCategoria from "./MoverCategoria";
 import { normalizarLinkDoc } from "@/lib/doc-links";
 import { CAMPOS_MULTIPLES, opcionesDe, partirMultiple } from "@/lib/opciones-fijas";
 import StickerPicker from "./StickerPicker";
@@ -182,6 +183,14 @@ export default function ProductoEditor({ productId, duplicateOfId = null, volver
    * foco a la vez, asi que alcanza con uno: nace al tipear y muere al salir.
    */
   const [borradorNum, setBorradorNum] = useState<{ clave: string; texto: string } | null>(null);
+  /**
+   * La categoria elegida en el desplegable cuando no es la actual.
+   *
+   * Cambiarla no es editar un campo: mueve el producto a otra tabla, y puede
+   * costar datos. Asi que el desplegable no la aplica solo, abre el cartel que
+   * muestra que se pierde y pide confirmar. Ver `MoverCategoria`.
+   */
+  const [mudanzaA, setMudanzaA] = useState("");
   const [tabla, setTabla] = useState("");
   const [metadatos, setMetadatos] = useState<Meta[]>([]);
   /**
@@ -748,14 +757,36 @@ export default function ProductoEditor({ productId, duplicateOfId = null, volver
               <div>
                 <label className={labelClass}>Categoría *</label>
                 <select
-                  value={tabla}
-                  onChange={(e) => setTabla(e.target.value)}
-                  disabled={!isNew}
-                  className={`${fieldClass} ${!isNew ? "bg-[#FAFAF8] text-[#aaa]" : ""}`}
+                  value={mudanzaA || tabla}
+                  onChange={(e) => {
+                    // En el alta se cambia y ya. En la edicion, elegir otra
+                    // categoria abre el cartel y no toca nada hasta confirmar.
+                    if (isNew) { setTabla(e.target.value); return; }
+                    setMudanzaA(e.target.value === tabla ? "" : e.target.value);
+                  }}
+                  className={fieldClass}
                 >
                   <option value="">Seleccionar categoría</option>
                   {TABLA_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
+                {!isNew && mudanzaA && productId && (
+                  <MoverCategoria
+                    // Uno nuevo por destino: asi el cartel arranca en blanco
+                    // sin resetear estado dentro de un efecto.
+                    key={mudanzaA}
+                    productoId={productId}
+                    destino={mudanzaA}
+                    etiquetas={FIELD_LABELS}
+                    onCancelar={() => setMudanzaA("")}
+                    onMovido={(label) => {
+                      // El producto ya no esta en esta tabla: quedarse en el
+                      // formulario con los campos de la categoria vieja
+                      // guardaria contra una fila que no existe.
+                      router.push(urlDelPanel(`movido=${encodeURIComponent(label)}`));
+                      router.refresh();
+                    }}
+                  />
+                )}
               </div>
               <div>
                 <label className={labelClass}>Estado</label>

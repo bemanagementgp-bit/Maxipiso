@@ -1361,6 +1361,43 @@ otras siete para que la respuesta sea la misma en todo el catálogo.
 > entre categorías, pero no cruza los dos mapas: si aparece una tercera divergencia, ese es el
 > lugar para mirar.
 
+### 8.2 undecies Cambiar un producto de categoría
+
+Las 8 categorías son 8 tablas, así que esto no es editar un campo: crea la fila en la tabla
+destino y borra la de origen. Por eso el desplegable estaba bloqueado en la edición, y por eso
+destrabarlo no alcanzaba.
+
+> **El id se conserva.** Es lo que hace que la mudanza no rompa nada alrededor: la URL pública
+> (`/catalogo/<id>`) sigue andando, los productos que lo tienen como complementario lo siguen
+> encontrando, y el historial cuelga del mismo id. Con un id nuevo habría que salir a reescribir
+> los tres, y cualquiera que se escape queda roto sin avisar. Nada lo impide: el id es la clave
+> primaria de cada tabla por separado, y el producto vive en una sola a la vez.
+
+> **Qué viaja.** Las 8 tablas comparten 17 columnas —sku, nombre, fotos, stickers,
+> complementarios, descripción, stock, moneda, unidad, orden, fecha de alta— así que lo que
+> define al producto llega entero. Lo que puede perderse son las specs de la categoría vieja: la
+> abrasión de un piso flotante no existe en accesorios. **Se dice antes de mover**, con nombre y
+> valor a la vista, como el detector de tonos y el de invisibles.
+>
+> El precio cambia de columna si hace falta (`precioM2` → `precio`), porque perderlo en una
+> mudanza se descubre cuando alguien cotiza mal. Las columnas del destino salen del esquema
+> (`Prisma.dmmf`) y no de `CATEGORY_CONFIGS`: esa lista es la del ABM y no incluye las columnas
+> técnicas, que también tienen que viajar.
+
+> **Dos casos en los que se niega**, los dos porque dejarían datos rotos:
+>
+>  - **El SKU ya existe en la categoría destino.** Son dos productos distintos con el mismo
+>    número. El `create` fallaría igual, pero con un mensaje de Prisma que no le dice nada a
+>    nadie.
+>  - **Es el principal de un grupo con variantes.** Sus hermanas quedarían apuntando a un SKU
+>    que en su tabla ya no existe: cargadas, activas, con foto y sin forma de abrirse — el bug
+>    que costó encontrar. Una variante suelta **sí** se puede mover: sale del grupo, y allá es un
+>    producto con su propia card.
+
+> El `create` y el `delete` van en una transacción: si el create falla, el producto tiene que
+> seguir donde estaba y no evaporarse. Y el historial se reapunta a la tabla nueva, porque
+> cuelga de (tabla, id) y sin eso el producto llega a su categoría nueva sin pasado.
+
 ### 8.3 Orden manual (`sortOrder`)
 
 Dos caminos:

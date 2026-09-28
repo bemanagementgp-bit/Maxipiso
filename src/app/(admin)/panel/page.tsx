@@ -144,6 +144,13 @@ export default function ProductosPage() {
    * `?guardado=1` y el aviso se muestra aca, ya en la lista actualizada.
    */
   useEffect(() => {
+    const movido = busquedaParams.get("movido");
+    if (movido) {
+      addToast("success", `Producto movido a ${movido}`);
+      setTableRefreshKey((v) => v + 1);
+      router.replace(conFiltros(escribirFiltros(inicial)));
+      return;
+    }
     if (!busquedaParams.get("guardado")) return;
     addToast("success", "Producto guardado");
     setTableRefreshKey((v) => v + 1);
