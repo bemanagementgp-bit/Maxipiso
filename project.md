@@ -682,6 +682,20 @@ de las principales escondía opciones que sí devuelven resultados.
 > de abrirse**. En el panel se reportan como `sin-boton-que-lleve`, con el principal nombrado,
 > y el arreglo de fondo es escribir en cada una el valor que de verdad la distingue.
 
+> **Muchas opciones se muestran como desplegable, no como botones.** Una cuarta caña de MDF
+> viene en treinta terminaciones, y treinta botones con foto son una pared que ocupa la pantalla
+> entera y empuja el precio y la descripción fuera de la vista: el cliente llegaba a la ficha y
+> no entendía qué estaba mirando. A partir de `MAX_BOTONES` (6, que son dos filas en la columna
+> de la ficha) el eje pasa a un `select`, con la cantidad al lado del título.
+>
+> Los botones no se van porque con pocos valores son mejores: se elige mirando la foto, que es
+> lo único que hacen mejor que una lista. Arriba de seis eso ya no se abarca de un vistazo.
+>
+> Es un `select` nativo y no un menú dibujado a mano: en el teléfono abre el selector del
+> sistema, que es el que la gente ya sabe usar. Lo mismo vale para "Otras versiones", que además
+> se nombra con el nombre entero del producto —no hay opción que las distinga, de eso se trata—
+> así que amontonadas son treinta botones con el mismo texto largo.
+
 > **La card del catálogo cuenta las opciones del grupo.** Como se dibuja una card por grupo, un
 > piso que viene en ocho colores se veía igual que uno que viene en uno solo: para enterarse
 > había que entrar, y nadie entra a algo que parece no tener lo que busca. `resumenDelGrupo()`

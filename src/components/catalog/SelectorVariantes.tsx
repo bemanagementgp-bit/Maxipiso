@@ -1,6 +1,21 @@
 import Link from "next/link";
 import SafeImage from "./SafeImage";
+import DesplegableVariantes from "./DesplegableVariantes";
 import type { EjeVariante, VarianteFila } from "@/lib/variantes";
+
+/**
+ * A partir de cuántas opciones el eje pasa a ser un desplegable.
+ *
+ * Con pocas, los botones con foto son lo mejor que se puede mostrar: se elige
+ * mirando. Con treinta —una cuarta caña de MDF viene en treinta
+ * terminaciones— son una pared de botones iguales que ocupa la pantalla
+ * entera y empuja el precio y la descripción fuera de la vista.
+ *
+ * Seis es dos filas de botones en la columna de la ficha. Más que eso ya no se
+ * abarca de un vistazo, que es lo único que los botones hacen mejor que una
+ * lista.
+ */
+const MAX_BOTONES = 6;
 
 /**
  * El selector de variantes de la ficha.
@@ -42,6 +57,20 @@ export default function SelectorVariantes({
         // Si todos los valores del eje llevan fotos distintas, la miniatura
         // ayuda; si son todas la misma, es ruido.
         const conFoto = new Set(eje.valores.map((v) => v.imagen ?? "")).size > 1;
+
+        if (eje.valores.length > MAX_BOTONES) {
+          return (
+            <div key={eje.tipo}>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#111111] mb-1.5">
+                {eje.tipo}
+                <span className="ml-1.5 font-normal text-gray-400 normal-case tracking-normal">
+                  {eje.valores.length} opciones
+                </span>
+              </p>
+              <DesplegableVariantes etiqueta={eje.tipo} opciones={eje.valores} />
+            </div>
+          );
+        }
 
         return (
           <div key={eje.tipo}>
@@ -89,20 +118,35 @@ export default function SelectorVariantes({
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#111111] mb-1.5">
             Otras versiones
+            {sueltas.length > MAX_BOTONES && (
+              <span className="ml-1.5 font-normal text-gray-400 normal-case tracking-normal">
+                {sueltas.length} opciones
+              </span>
+            )}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {sueltas.map((v) => (
-              <Link
-                key={v.id}
-                href={`/catalogo/${v.id}`}
-                prefetch
-                className="flex items-center gap-2 py-1 pl-1 pr-3 border-2 border-gray-200 rounded-lg hover:border-[#DF8635]/60 transition-colors"
-              >
-                <Miniatura src={v.imagen} />
-                <span className="text-[12px] font-medium text-[#111111]">{v.nombre || v.sku}</span>
-              </Link>
-            ))}
-          </div>
+          {sueltas.length > MAX_BOTONES ? (
+            // Estas se nombran con el nombre entero del producto —no hay
+            // opción que las distinga, de eso se trata— asi que amontonadas
+            // son treinta botones con el mismo texto largo.
+            <DesplegableVariantes
+              etiqueta="Otras versiones"
+              opciones={sueltas.map((v) => ({ valor: v.nombre || v.sku, id: v.id }))}
+            />
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {sueltas.map((v) => (
+                <Link
+                  key={v.id}
+                  href={`/catalogo/${v.id}`}
+                  prefetch
+                  className="flex items-center gap-2 py-1 pl-1 pr-3 border-2 border-gray-200 rounded-lg hover:border-[#DF8635]/60 transition-colors"
+                >
+                  <Miniatura src={v.imagen} />
+                  <span className="text-[12px] font-medium text-[#111111]">{v.nombre || v.sku}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
