@@ -1300,11 +1300,21 @@ problemas propios, los dos visibles desde el mostrador como "el filtro no sirve"
 > original. Las equivalencias salen de una consulta extra, una sola, y nada más que cuando hay
 > algún filtro puesto.
 
-> **Un filtro de un solo valor no separa nada.** "Tipo de accesorio: Accesorios" ocupaba lugar,
-> invitaba a un click y devolvía exactamente lo que ya estaba en pantalla. Se piden `MIN_VALORES`
-> (2) valores distintos, la misma regla que el ABM usa para decidir qué filtros ofrecer — salvo
-> que ese filtro esté puesto, porque esconderlo dejaría al cliente filtrado sin forma de
-> destildarlo.
+> **Un filtro se esconde si no separa el catálogo en dos**, que no es lo mismo que "tiene un
+> solo valor". Dos casos que parecen iguales:
+>
+>  - "Tipo de accesorio: Accesorios", con los 40 accesorios cargados así. Tildarlo devuelve
+>    exactamente lo que ya estaba en pantalla. **No sirve.**
+>  - "Compatible con: Pisos Flotantes", cargado en 3 de 40. También un solo valor, pero deja
+>    3 de 40. **Sirve, y mucho.**
+>
+> La primera versión pedía dos valores distintos y escondía el segundo — justo el caso de un
+> campo que se está empezando a cargar. Cargabas "Compatible con" en el primer accesorio, ibas
+> al catálogo y no aparecía nada: desde afuera se ve como que cargarlo no sirvió para nada. Lo
+> decide `valeLaPenaFiltrar()`, que compara cuántos productos tienen valor contra cuántos hay.
+>
+> Un filtro puesto se muestra siempre, tenga los valores que tenga: esconderlo dejaría al
+> cliente filtrado sin forma de destildarlo.
 
 > **"Compatible con" guarda varias categorías en una celda**, separadas por ` | `, y el catálogo
 > las parte para el filtro (`CAMPOS_MULTIPLES` en `lib/opciones-fijas`). Con una sola cadena

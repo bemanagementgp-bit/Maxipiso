@@ -6,7 +6,7 @@ import { sanitizeText, parseIntSafe } from "@/lib/security";
 import { formatMeasureFields } from "@/lib/all-products";
 import { normalizarSticker, parseStickerIds, resolverStickers } from "@/lib/stickers";
 import { parseOpciones, resumenDelGrupo, type VarianteFila } from "@/lib/variantes";
-import { claveDeValor, MIN_VALORES, opcionesDeFiltro } from "@/lib/filtros-catalogo";
+import { claveDeValor, opcionesDeFiltro, valeLaPenaFiltrar } from "@/lib/filtros-catalogo";
 import { CAMPOS_MULTIPLES } from "@/lib/opciones-fijas";
 import { primeraImagen } from "@/lib/imagenes";
 
@@ -507,15 +507,19 @@ export async function GET(req: NextRequest) {
     const filtros: Record<string, { label: string; values: string[] }> = {};
     for (let i = 0; i < filterFields.length; i++) {
       const fd = filterFields[i];
+      const filas = filterResults[i] ?? [];
       const opciones = opcionesDeFiltro(
-        (filterResults[i] ?? []).map((r) => r[fd.key]),
+        filas.map((r) => r[fd.key]),
         { multiple: MULTI_VALUE_FIELDS.has(fd.key), alias: BRAND_ALIASES },
       );
-      // Un filtro de un solo valor no separa nada: "Tipo de accesorio:
-      // Accesorios" ocupa lugar, invita a un click y devuelve lo mismo que ya
-      // estaba en pantalla. Se muestra igual si ese filtro esta puesto, porque
-      // esconderlo dejaria al cliente filtrado sin forma de destildarlo.
-      if (opciones.length < MIN_VALORES && !activeFilters[fd.key]) continue;
+      // Se esconde el filtro que no separa nada —un valor que tienen todos los
+      // productos— pero no el que tienen solo algunos, que es justo el caso de
+      // un campo recien empezado a cargar. Ver `valeLaPenaFiltrar`.
+      //
+      // Se muestra igual si ese filtro esta puesto: esconderlo dejaria al
+      // cliente filtrado sin forma de destildarlo.
+      const conValor = filas.filter((r) => typeof r[fd.key] === "string" && String(r[fd.key]).trim() !== "").length;
+      if (!valeLaPenaFiltrar(opciones, { conValor, total: filas.length }) && !activeFilters[fd.key]) continue;
       filtros[fd.key] = { label: fd.label, values: opciones.map((o) => o.valor) };
     }
 

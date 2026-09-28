@@ -41,14 +41,33 @@ export function claveDeValor(v: string): string {
 }
 
 /**
- * Cuantos valores distintos tiene que tener un campo para que valga como
- * filtro.
+ * Si el filtro sirve de algo, o solo ocupa lugar.
  *
- * Con uno solo no separa nada: "Tipo de accesorio: Accesorios" ocupa lugar,
- * invita a un click y devuelve exactamente lo mismo que estaba. El ABM ya usa
- * esta misma regla para decidir que filtros ofrecer.
+ * La pregunta no es cuantos valores distintos tiene: es **si separa el
+ * catalogo en dos**. Dos casos que parecen iguales y no lo son:
+ *
+ *  - "Tipo de accesorio: Accesorios", con los 40 accesorios cargados asi. Un
+ *    solo valor, y lo tienen todos: tildarlo devuelve exactamente lo que ya
+ *    estaba en pantalla. No sirve.
+ *  - "Compatible con: Pisos Flotantes", cargado en 3 de 40. Tambien es un solo
+ *    valor, pero **si** separa: deja 3 de 40. Sirve, y mucho.
+ *
+ * La primera version de esto pedia dos valores distintos y escondia el
+ * segundo caso, que es justo el que hacia falta al empezar a cargar un campo
+ * nuevo: el primer accesorio con "Compatible con" no mostraba nada, y desde
+ * afuera se ve como que cargarlo no sirvio para nada.
+ *
+ * Con dos o mas valores siempre separa, se llene o no todo el catalogo.
  */
-export const MIN_VALORES = 2;
+export function valeLaPenaFiltrar(
+  opciones: OpcionFiltro[],
+  { conValor, total }: { conValor: number; total: number },
+): boolean {
+  if (opciones.length === 0) return false;
+  if (opciones.length > 1) return true;
+  // Un solo valor: sirve solo si hay productos que no lo tienen.
+  return conValor < total;
+}
 
 export function opcionesDeFiltro(
   crudos: unknown[],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claveDeValor, MIN_VALORES, opcionesDeFiltro } from "./filtros-catalogo";
+import { claveDeValor, opcionesDeFiltro, valeLaPenaFiltrar } from "./filtros-catalogo";
 
 /**
  * Los filtros del catálogo se arman con lo que hay cargado, así que cualquier
@@ -81,10 +81,30 @@ describe("claveDeValor", () => {
   });
 });
 
-describe("MIN_VALORES", () => {
-  it("un filtro de un solo valor no separa nada", () => {
-    // "Tipo de accesorio: Accesorios" ocupa lugar, invita a un click y
-    // devuelve exactamente lo mismo que ya estaba en pantalla.
-    expect(MIN_VALORES).toBe(2);
+describe("valeLaPenaFiltrar", () => {
+  const una = opcionesDeFiltro(["Pisos Flotantes"]);
+  const dos = opcionesDeFiltro(["Pisos Flotantes", "Decks"]);
+
+  it("un valor que tienen todos no separa nada", () => {
+    // "Tipo de accesorio: Accesorios", con los 40 cargados así: tildarlo
+    // devuelve exactamente lo que ya estaba en pantalla.
+    expect(valeLaPenaFiltrar(una, { conValor: 40, total: 40 })).toBe(false);
+  });
+
+  it("un valor que tienen algunos sí separa", () => {
+    // "Compatible con: Pisos Flotantes" en 3 de 40 deja 3 de 40. Es el caso
+    // de un campo que se está empezando a cargar, y esconderlo hace parecer
+    // que cargarlo no sirvió para nada.
+    expect(valeLaPenaFiltrar(una, { conValor: 3, total: 40 })).toBe(true);
+    expect(valeLaPenaFiltrar(una, { conValor: 39, total: 40 })).toBe(true);
+  });
+
+  it("con dos o más valores siempre separa", () => {
+    expect(valeLaPenaFiltrar(dos, { conValor: 40, total: 40 })).toBe(true);
+    expect(valeLaPenaFiltrar(dos, { conValor: 2, total: 40 })).toBe(true);
+  });
+
+  it("sin ningún valor cargado no hay filtro", () => {
+    expect(valeLaPenaFiltrar([], { conValor: 0, total: 40 })).toBe(false);
   });
 });
